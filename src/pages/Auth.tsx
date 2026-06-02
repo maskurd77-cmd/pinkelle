@@ -1,17 +1,11 @@
 import React, { useState } from 'react';
-import { auth, db } from '../firebase';
-import { 
-  createUserWithEmailAndPassword, 
-  signInWithEmailAndPassword 
-} from 'firebase/auth';
-import { doc, getDoc, setDoc, getDocs, collection, query, limit } from 'firebase/firestore';
-import { Mail, Lock, User, AlertCircle } from 'lucide-react';
+import { auth } from '../firebase';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { Mail, Lock, AlertCircle } from 'lucide-react';
 
 export default function AuthPage() {
-  const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -21,29 +15,7 @@ export default function AuthPage() {
     setLoading(true);
 
     try {
-      if (isLogin) {
-        await signInWithEmailAndPassword(auth, email, password);
-      } else {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
-
-        // Check if this is the very first user in the users collection
-        const q = query(collection(db, 'users'), limit(1));
-        const qSnap = await getDocs(q);
-        
-        let role = 'user';
-        if (qSnap.empty) {
-          role = 'admin'; // First user becomes super admin
-        }
-
-        // Store user document
-        await setDoc(doc(db, 'users', user.uid), {
-          name: name || email.split('@')[0],
-          email: email,
-          role: role,
-          createdAt: new Date().toISOString()
-        });
-      }
+      await signInWithEmailAndPassword(auth, email, password);
     } catch (err: any) {
       console.error(err);
       setError(err.message || 'هەڵەیەک ڕوویدا');
@@ -57,7 +29,7 @@ export default function AuthPage() {
       <div className="sm:mx-auto sm:w-full sm:max-w-md flex flex-col items-center">
         <img src="https://skilled-indigo-cux52hz9.edgeone.app/Pink%20Elle%20logo%20new-1_page-0001.jpg" alt="Pink Elle Logo" className="w-24 h-24 object-contain rounded-2xl shadow-lg" />
         <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-          {isLogin ? 'چوونە ژوورەوە' : 'دروستکردنی هەژمار'}
+          چوونە ژوورەوە
         </h2>
         <p className="mt-2 text-center text-sm text-gray-600">
           سیستەمی فرۆشتن و بەڕێوەبردن
@@ -76,27 +48,6 @@ export default function AuthPage() {
           )}
 
           <form className="space-y-6" onSubmit={handleSubmit}>
-            {!isLogin && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  ناو
-                </label>
-                <div className="mt-1 relative rounded-md shadow-sm">
-                  <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                    <User className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    type="text"
-                    required
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="focus:ring-indigo-500 focus:border-indigo-500 block w-full pr-10 sm:text-sm border-gray-300 rounded-md h-10 border px-3"
-                    placeholder="ناوەکەت بنووسە"
-                  />
-                </div>
-              </div>
-            )}
-
             <div>
               <label className="block text-sm font-medium text-gray-700">
                 ئیمەیڵ
@@ -143,33 +94,10 @@ export default function AuthPage() {
                 disabled={loading}
                 className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
               >
-                {loading ? 'چاوەڕێ بە...' : (isLogin ? 'چوونە ژوورەوە' : 'دروستکردن')}
+                {loading ? 'چاوەڕێ بە...' : 'چوونە ژوورەوە'}
               </button>
             </div>
           </form>
-
-          <div className="mt-6">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300" />
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">
-                  یان
-                </span>
-              </div>
-            </div>
-
-            <div className="mt-6 text-center">
-              <button
-                type="button"
-                onClick={() => setIsLogin(!isLogin)}
-                className="font-medium text-indigo-600 hover:text-indigo-500"
-              >
-                {isLogin ? 'هەژمارت نییە؟ دروستی بکە' : 'هەژمارت هەیە؟ بچۆ ژوورەوە'}
-              </button>
-            </div>
-          </div>
         </div>
       </div>
     </div>
