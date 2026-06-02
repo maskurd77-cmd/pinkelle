@@ -1,0 +1,8 @@
+{
+  "name": "Pink Elle - POS & Accounting",
+  "description": "سیستەمی حسابات بۆ گرۆپی Pink Elle",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
