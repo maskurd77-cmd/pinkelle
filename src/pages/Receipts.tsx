@@ -323,6 +323,18 @@ export function ReceiptPrintLayout({ receipt }: { receipt: any }) {
                         <td className="border border-black p-2 w-32 font-mono text-sm text-red-600">{receipt.paymentType === 'قەرز' ? formatCurrency(receipt.totalAmount || receipt.total || 0, 'IQD').replace('IQD','') : '0'}</td>
                         <td className="border border-black p-2 bg-gray-100">بڕی ماوە (المتبقي)</td>
                      </tr>
+                     {(receipt.discount || receipt.discountAmount) > 0 && (
+                        <>
+                           <tr>
+                              <td className="border border-black p-2 w-32 font-mono text-sm text-gray-600">{formatCurrency(receipt.subtotal || 0, 'IQD').replace('IQD','')}</td>
+                              <td className="border border-black p-2 bg-gray-100">بڕی بێ داشکاندن</td>
+                           </tr>
+                           <tr>
+                              <td className="border border-black p-2 w-32 font-mono text-sm text-red-600">{formatCurrency(receipt.discount || receipt.discountAmount || 0, 'IQD').replace('IQD','')}</td>
+                              <td className="border border-black p-2 bg-gray-100">داشکاندن (الخصم)</td>
+                           </tr>
+                        </>
+                     )}
                      <tr>
                         <td className="border border-black p-2 w-32 font-mono text-lg font-black bg-pink-50">{formatCurrency(receipt.totalAmount || receipt.total || 0, 'IQD').replace('IQD','')}</td>
                         <td className="border border-black p-2 bg-pink-100 text-lg font-black">المجموع (کۆی گشتی)</td>
@@ -336,7 +348,7 @@ export function ReceiptPrintLayout({ receipt }: { receipt: any }) {
       {/* Footer Info */}
       <div className="mt-8 pt-2 border-t border-black text-center flex justify-between text-[10px] text-gray-500 font-bold items-end">
           <div><span className="font-mono">{new Date().toLocaleString('en-US')}</span> کاتی چاپکردن:</div>
-          <div>سیستەمی حساباتی PINK ELLE</div>
+          <div>سیستەمی حساباتی PINK ELLE <br/> <span className="font-sans text-[8px] tracking-wider text-pink-500">Powered by Masmenu</span></div>
           <div>کۆی ئایتمەکان: {receipt.totalItems || receipt.items?.reduce((a:any,b:any) => a + b.quantity, 0) || 0}</div>
       </div>
     </div>

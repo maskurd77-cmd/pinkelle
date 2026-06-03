@@ -9,6 +9,8 @@ import { MapIcon } from 'lucide-react';
 
 interface CartItem extends Product {
   quantity: number;
+  originalUnitPrice?: number;
+  editedPrice?: number;
 }
 
 export default function POS() {
@@ -40,12 +42,17 @@ export default function POS() {
   const [customers, setCustomers] = useState<any[]>([]);
   const [exchangeRate, setExchangeRate] = useState<number>(1500);
   const [mandubName, setMandubName] = useState('مەندوب');
+  const [userPermissions, setUserPermissions] = useState<string[]>([]);
+  const [userRole, setUserRole] = useState<string>('');
 
   useEffect(() => {
     if (auth.currentUser) {
       getDoc(doc(db, 'users', auth.currentUser.uid)).then((snap) => {
-         if (snap.exists() && snap.data().name) {
-            setMandubName(snap.data().name);
+         if (snap.exists()) {
+            const data = snap.data();
+            if (data.name) setMandubName(data.name);
+            if (data.permissions) setUserPermissions(data.permissions);
+            if (data.role) setUserRole(data.role);
          }
       });
     }
@@ -83,6 +90,9 @@ export default function POS() {
     });
   }, [searchTerm, selectedCategory, products]);
 
+  const [discountType, setDiscountType] = useState<'amount'|'percentage'>('amount');
+  const [discountValue, setDiscountValue] = useState<number|''>('');
+
   const addToCart = (product: Product) => {
     setCart(prev => {
       const existing = prev.find(item => item.id === product.id);
@@ -90,7 +100,7 @@ export default function POS() {
         if (existing.quantity >= product.stock) return prev;
         return prev.map(item => item.id === product.id ? { ...item, quantity: item.quantity + 1} : item);
       }
-      return [...prev, { ...product, quantity: 1 }];
+      return [...prev, { ...product, quantity: 1, originalUnitPrice: product.unitPrice }];
     });
   };
 
@@ -110,15 +120,25 @@ export default function POS() {
     setCart(prev => prev.filter(item => item.id !== id));
   };
   
+  const updateItemPrice = (id: string, newPrice: number) => {
+    setCart(prev => prev.map(item => item.id === id ? { ...item, editedPrice: newPrice } : item));
+  };
+
   const clearCart = () => setCart([]);
 
   const subtotal = cart.reduce((sum, item) => {
-     const applicablePrice = isWholesale ? (item.wholesalePrice || item.unitPrice) : item.unitPrice;
+     let applicablePrice;
+     if (item.editedPrice !== undefined) {
+         applicablePrice = item.editedPrice;
+     } else {
+         applicablePrice = isWholesale ? (item.wholesalePrice || item.unitPrice) : item.unitPrice;
+     }
      const priceInIQD = item.currency === 'USD' ? applicablePrice * exchangeRate : applicablePrice;
      return sum + (priceInIQD * item.quantity);
   }, 0);
-  const discount = 0;
-  const total = subtotal - discount;
+  
+  const discountAmount = discountType === 'amount' ? (Number(discountValue) || 0) : (subtotal * (Number(discountValue) || 0) / 100);
+  const total = Math.max(0, subtotal - discountAmount);
   const cartItemCount = cart.reduce((s, i) => s + i.quantity, 0);
 
   const handleCheckoutSubmit = async (e: React.FormEvent) => {
@@ -156,15 +176,22 @@ export default function POS() {
         exchangeRate,
         isWholesale,
         items: cart.map(c => {
-           const applicablePrice = isWholesale ? (c.wholesalePrice || c.unitPrice) : c.unitPrice;
+           let applicablePrice;
+           if (c.editedPrice !== undefined) {
+               applicablePrice = c.editedPrice;
+           } else {
+               applicablePrice = isWholesale ? (c.wholesalePrice || c.unitPrice) : c.unitPrice;
+           }
            const priceInIQD = c.currency === 'USD' ? applicablePrice * exchangeRate : applicablePrice;
+           const originalBasePrice = isWholesale ? (c.wholesalePrice || c.unitPrice) : c.unitPrice;
+           const originalPriceInIQD = c.currency === 'USD' ? originalBasePrice * exchangeRate : originalBasePrice;
            const costInIQD = c.currency === 'USD' ? (c.unitCost || 0) * exchangeRate : (c.unitCost || 0);
            return {
              productId: c.id,
              name: c.name,
              quantity: c.quantity,
              currency: c.currency || 'IQD',
-             originalUnitPrice: applicablePrice,
+             originalUnitPrice: originalPriceInIQD,
              originalUnitCost: c.unitCost || 0,
              unitPrice: priceInIQD, // store as IQD equivalent for easy backend processing
              isWholesale: isWholesale && Boolean(c.wholesalePrice),
@@ -174,6 +201,8 @@ export default function POS() {
            }
         }),
         totalItems: cartItemCount,
+        subtotal: subtotal,
+        discountAmount: discountAmount,
         totalAmount: total, // IQD
         timestamp: Timestamp.now()
       });
@@ -438,12 +467,29 @@ export default function POS() {
                        <Box size={24} strokeWidth={1.5} />
                     )}
                   </div>
-                  <div className="flex-1 min-w-0 py-0.5">
+                  <div className="flex-1 min-w-0 py-0.5 relative">
                     <h4 className="text-[13px] font-bold text-slate-800 truncate mb-1.5">{item.name}</h4>
-                    <p className={`text-[11px] font-mono font-bold ${isWholesale ? 'text-indigo-600' : 'text-pink-600'}`}>
-                      {isWholesale ? 'جوملە: ' : 'تاک: '}
-                      {formatCurrency(isWholesale ? (item.wholesalePrice || item.unitPrice) : item.unitPrice, item.currency)}
-                    </p>
+                    {(userPermissions.includes('pos_allow_edit_price') || userRole === 'admin') ? (
+                       <div className="flex items-center gap-1">
+                          <span className={`text-[11px] font-bold ${isWholesale ? 'text-indigo-600' : 'text-pink-600'}`}>
+                             {isWholesale ? 'جوملە:' : 'تاک:'}
+                          </span>
+                          <input 
+                             type="number" 
+                             min="0"
+                             step="any"
+                             className="w-20 text-[11px] font-mono font-bold border-b border-slate-300 focus:border-pink-500 outline-none max-w-full bg-transparent p-0 m-0"
+                             value={item.editedPrice !== undefined ? item.editedPrice : (isWholesale ? (item.wholesalePrice || item.unitPrice) : item.unitPrice)}
+                             onChange={(e) => updateItemPrice(item.id, Number(e.target.value))}
+                             dir="ltr"
+                          />
+                       </div>
+                    ) : (
+                       <p className={`text-[11px] font-mono font-bold ${isWholesale ? 'text-indigo-600' : 'text-pink-600'}`}>
+                         {isWholesale ? 'جوملە: ' : 'تاک: '}
+                         {formatCurrency(item.editedPrice !== undefined ? item.editedPrice : (isWholesale ? (item.wholesalePrice || item.unitPrice) : item.unitPrice), item.currency)}
+                       </p>
+                    )}
                   </div>
                   
                   <div className="flex flex-col items-end justify-between">
@@ -483,6 +529,33 @@ export default function POS() {
               <span>گشتی کالا ({cartItemCount})</span>
               <span className="font-mono text-slate-700">{formatCurrency(subtotal)}</span>
             </div>
+            
+            {(userPermissions.includes('pos_allow_discount') || userRole === 'admin') && (
+               <div className="flex justify-between items-center text-[13px] text-slate-500 font-bold border-t border-slate-100 pt-3">
+                  <span className="flex items-center gap-2">
+                     داشکاندن
+                     <select 
+                        value={discountType} 
+                        onChange={(e) => setDiscountType(e.target.value as 'amount'|'percentage')}
+                        className="text-xs bg-slate-50 border border-slate-200 rounded p-1 outline-none focus:border-pink-500 font-bold"
+                     >
+                        <option value="amount">بڕ</option>
+                        <option value="percentage">%</option>
+                     </select>
+                  </span>
+                  <input 
+                     type="number" 
+                     min="0"
+                     step="any"
+                     placeholder="0"
+                     value={discountValue}
+                     onChange={(e) => setDiscountValue(e.target.value ? Number(e.target.value) : '')}
+                     className="w-24 text-sm font-mono font-bold border border-slate-200 rounded-lg py-1 px-2 focus:border-pink-500 outline-none focus:ring-1 focus:ring-pink-500 text-left bg-slate-50 transition-colors"
+                     dir="ltr"
+                  />
+               </div>
+            )}
+
             <div className="pt-3 border-t text-pink-600 border-slate-100 flex justify-between items-end">
               <span className="text-[15px] font-extrabold text-slate-800 tracking-tight">کۆی گشتی</span>
               <span className="text-2xl font-black font-mono tracking-tight">{formatCurrency(total)}</span>

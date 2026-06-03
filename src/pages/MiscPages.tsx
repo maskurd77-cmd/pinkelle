@@ -596,6 +596,8 @@ export function UsersPage() {
     { id: "exchanges", label: "گۆڕینەوە (استبدال)" },
     { id: "users", label: "بەڕێوەبردنی بەکارهێنەران" },
     { id: "settings", label: "ڕێکخستنی سیستەم" },
+    { id: "pos_allow_discount", label: "ڕێگەدان بە داشکاندن (لە فرۆشتن)" },
+    { id: "pos_allow_edit_price", label: "ڕێگەدان بە گۆڕینی نرخ (لە فرۆشتن)" },
   ];
 
   useEffect(() => {
