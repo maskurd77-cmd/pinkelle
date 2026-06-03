@@ -2,8 +2,10 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Search, ShoppingCart, Plus, Minus, Trash2, Store, Phone, MapPin, Receipt, CheckCircle2, X, Box, FileText, CreditCard, Banknote, History } from 'lucide-react';
 import { formatCurrency } from '../data';
 import { Product } from '../types';
-import { collection, onSnapshot, getDocs, doc, writeBatch, Timestamp } from 'firebase/firestore';
-import { db } from '../firebase';
+import { collection, onSnapshot, getDocs, doc, writeBatch, Timestamp, query, where, limit, getDoc } from 'firebase/firestore';
+import { db, auth } from '../firebase';
+import LocationPickerModal from '../components/LocationPickerModal';
+import { MapIcon } from 'lucide-react';
 
 interface CartItem extends Product {
   quantity: number;
@@ -15,6 +17,7 @@ export default function POS() {
   
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [isWholesale, setIsWholesale] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [mobileCartOpen, setMobileCartOpen] = useState(false);
   
@@ -23,17 +26,30 @@ export default function POS() {
     shopName: '',
     phone: '',
     address: '',
+    locationUrl: '',
+    lat: null as number | null,
+    lng: null as number | null,
     notes: '',
     paymentType: 'cash'
   });
   const [saleCompleted, setSaleCompleted] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isLocationPickerOpen, setIsLocationPickerOpen] = useState(false);
   const [currentReceiptId, setCurrentReceiptId] = useState<string | null>(null);
 
   const [customers, setCustomers] = useState<any[]>([]);
   const [exchangeRate, setExchangeRate] = useState<number>(1500);
+  const [mandubName, setMandubName] = useState('مەندوب');
 
   useEffect(() => {
+    if (auth.currentUser) {
+      getDoc(doc(db, 'users', auth.currentUser.uid)).then((snap) => {
+         if (snap.exists() && snap.data().name) {
+            setMandubName(snap.data().name);
+         }
+      });
+    }
+
     const unsubProds = onSnapshot(collection(db, 'products'), (snap) => {
       const prods = snap.docs.map(d => ({ id: d.id, ...d.data() } as Product));
       setProducts(prods);
@@ -97,7 +113,8 @@ export default function POS() {
   const clearCart = () => setCart([]);
 
   const subtotal = cart.reduce((sum, item) => {
-     const priceInIQD = item.currency === 'USD' ? item.unitPrice * exchangeRate : item.unitPrice;
+     const applicablePrice = isWholesale ? (item.wholesalePrice || item.unitPrice) : item.unitPrice;
+     const priceInIQD = item.currency === 'USD' ? applicablePrice * exchangeRate : applicablePrice;
      return sum + (priceInIQD * item.quantity);
   }, 0);
   const discount = 0;
@@ -110,6 +127,15 @@ export default function POS() {
     
     setIsProcessing(true);
     try {
+      let existingDebt: any = null;
+      if (customerDetails.paymentType === 'debt' && customerDetails.shopName) {
+         const debtsQ = query(collection(db, 'debts'), where('customerName', '==', customerDetails.shopName), limit(1));
+         const debtsSnap = await getDocs(debtsQ);
+         if (!debtsSnap.empty) {
+             existingDebt = { id: debtsSnap.docs[0].id, ...debtsSnap.docs[0].data() };
+         }
+      }
+
       const batch = writeBatch(db);
       
       // Update stocks
@@ -122,22 +148,26 @@ export default function POS() {
       const receiptRef = doc(collection(db, 'receipts'));
       batch.set(receiptRef, {
         customerName: customerDetails.shopName,
+        mandubName: mandubName,
         phone: customerDetails.phone,
         address: customerDetails.address,
         notes: customerDetails.notes,
         paymentType: customerDetails.paymentType === 'cash' ? 'نەقد' : 'قەرز',
         exchangeRate,
+        isWholesale,
         items: cart.map(c => {
-           const priceInIQD = c.currency === 'USD' ? c.unitPrice * exchangeRate : c.unitPrice;
+           const applicablePrice = isWholesale ? (c.wholesalePrice || c.unitPrice) : c.unitPrice;
+           const priceInIQD = c.currency === 'USD' ? applicablePrice * exchangeRate : applicablePrice;
            const costInIQD = c.currency === 'USD' ? (c.unitCost || 0) * exchangeRate : (c.unitCost || 0);
            return {
              productId: c.id,
              name: c.name,
              quantity: c.quantity,
              currency: c.currency || 'IQD',
-             originalUnitPrice: c.unitPrice,
+             originalUnitPrice: applicablePrice,
              originalUnitCost: c.unitCost || 0,
              unitPrice: priceInIQD, // store as IQD equivalent for easy backend processing
+             isWholesale: isWholesale && Boolean(c.wholesalePrice),
              unitCost: costInIQD,
              category: c.category || 'ගشتی',
              total: priceInIQD * c.quantity
@@ -148,18 +178,46 @@ export default function POS() {
         timestamp: Timestamp.now()
       });
 
-      // If debt, add to debt book
+      // If debt, add to debt book or update existing
       if (customerDetails.paymentType === 'debt') {
-        const debtRef = doc(collection(db, 'debts'));
-        batch.set(debtRef, {
-          customerName: customerDetails.shopName,
-          phone: customerDetails.phone,
-          amount: total,
-          remainingAmount: total,
-          status: 'unpaid',
-          notes: 'پاشماوەی وەسڵ: ' + receiptRef.id,
-          timestamp: Timestamp.now()
-        });
+        if (existingDebt) {
+          const debtRef = doc(db, 'debts', existingDebt.id);
+          batch.update(debtRef, {
+            amount: existingDebt.amount + total,
+            remainingAmount: existingDebt.remainingAmount + total,
+            status: 'active',
+            lastPaymentDate: Timestamp.now()
+          });
+          
+          const debtTxRef = doc(collection(db, 'debt_transactions'));
+          batch.set(debtTxRef, {
+            debtId: existingDebt.id,
+            amount: total,
+            type: 'add',
+            timestamp: Timestamp.now(),
+            notes: 'زیادبوونی قەرز لە وەسڵی ژمارە: ' + receiptRef.id.slice(-8).toUpperCase()
+          });
+        } else {
+          const debtRef = doc(collection(db, 'debts'));
+          batch.set(debtRef, {
+            customerName: customerDetails.shopName,
+            phone: customerDetails.phone,
+            amount: total,
+            remainingAmount: total,
+            status: 'active',
+            notes: 'پاشماوەی وەسڵ: ' + receiptRef.id.slice(-8).toUpperCase(),
+            timestamp: Timestamp.now()
+          });
+          
+          const debtTxRef = doc(collection(db, 'debt_transactions'));
+          batch.set(debtTxRef, {
+            debtId: debtRef.id,
+            amount: total,
+            type: 'add',
+            timestamp: Timestamp.now(),
+            notes: 'قەرزی نوێ لە وەسڵی ژمارە: ' + receiptRef.id.slice(-8).toUpperCase()
+          });
+        }
       }
 
       // Save customer if new
@@ -169,6 +227,9 @@ export default function POS() {
             batch.update(doc(db, 'customers', existingCus.id), {
                phone: customerDetails.phone || existingCus.phone || '',
                address: customerDetails.address || existingCus.address || '',
+               locationUrl: customerDetails.locationUrl || existingCus.locationUrl || '',
+               lat: customerDetails.lat || existingCus.lat || null,
+               lng: customerDetails.lng || existingCus.lng || null,
                lastPurchase: Timestamp.now()
             });
          } else {
@@ -177,6 +238,9 @@ export default function POS() {
                name: customerDetails.shopName,
                phone: customerDetails.phone || '',
                address: customerDetails.address || '',
+               locationUrl: customerDetails.locationUrl || '',
+               lat: customerDetails.lat || null,
+               lng: customerDetails.lng || null,
                createdAt: Timestamp.now(),
                lastPurchase: Timestamp.now()
             });
@@ -210,16 +274,27 @@ export default function POS() {
       
       {/* LEFT / MAIN AREA: Products */}
       <div className="flex-1 flex flex-col bg-slate-50/50 lg:bg-white lg:rounded-[24px] lg:border border-slate-200 shadow-sm overflow-hidden h-full -mx-3 sm:mx-0">
-        <div className="p-3 lg:p-5 border-b border-slate-200/60 bg-white flex flex-col sm:flex-row gap-3 xl:gap-4 shrink-0 shadow-sm z-10 sticky top-0">
-          <div className="relative flex-1">
-            <Search className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-            <input 
-              type="text" 
-              placeholder="گەڕان بۆ کالا یان بارکۆد..." 
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 pr-11 pl-4 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 transition-all font-medium text-slate-800"
-            />
+        <div className="p-3 lg:p-5 border-b border-slate-200/60 bg-white flex flex-col gap-3 shrink-0 shadow-sm z-10 sticky top-0">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full">
+            <div className="relative flex-1">
+              <Search className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+              <input 
+                type="text" 
+                placeholder="گەڕان بۆ کالا یان بارکۆد..." 
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 pr-11 pl-4 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 transition-all font-medium text-slate-800"
+              />
+            </div>
+            {/* Mobile Wholesale Toggle */}
+            <div className="lg:hidden flex items-center bg-slate-100 p-1.5 rounded-xl border border-slate-200/60 shadow-inner h-[46px]">
+               <button 
+                  onClick={() => setIsWholesale(false)} 
+                  className={`px-4 py-1.5 text-sm font-extrabold rounded-lg transition-all duration-200 flex-1 text-center h-full flex items-center justify-center ${!isWholesale ? 'bg-white shadow-sm text-slate-800 scale-100 ring-1 ring-slate-200/50' : 'text-slate-500 hover:text-slate-700 scale-95 hover:bg-slate-200/50'}`}>تاک (Retail)</button>
+               <button 
+                  onClick={() => setIsWholesale(true)} 
+                  className={`px-4 py-1.5 text-sm font-extrabold rounded-lg transition-all duration-200 flex-1 text-center h-full flex items-center justify-center ${isWholesale ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20 scale-100' : 'text-slate-500 hover:text-slate-700 scale-95 hover:bg-slate-200/50'}`}>جوملە (Wholesale)</button>
+            </div>
           </div>
           <div className="flex gap-2 overflow-x-auto custom-scrollbar pb-1 sm:pb-0 hide-scrollbar -mx-3 px-3 sm:mx-0 sm:px-0">
             <button
@@ -264,8 +339,8 @@ export default function POS() {
                   
                   <div className="mt-auto flex items-end justify-between pt-2">
                     <div>
-                      <p className="text-[10px] text-slate-400 mb-0.5 font-medium">نرخ</p>
-                      <p className="text-pink-600 font-extrabold font-mono text-sm tracking-tight">{formatCurrency(product.unitPrice, product.currency)}</p>
+                      <p className="text-[10px] text-slate-400 mb-0.5 font-medium">نرخ {isWholesale ? '(جوملە)' : '(تاک)'}</p>
+                      <p className={`${isWholesale ? 'text-indigo-600' : 'text-pink-600'} font-extrabold font-mono text-sm tracking-tight`}>{formatCurrency(isWholesale ? (product.wholesalePrice || product.unitPrice) : product.unitPrice, product.currency)}</p>
                     </div>
                   </div>
                   
@@ -293,7 +368,7 @@ export default function POS() {
       </div>
 
       {/* MOBILE CART BUTTON (Floating) */}
-      <div className="lg:hidden fixed bottom-6 left-4 right-4 z-40 print:hidden">
+      <div className="lg:hidden fixed bottom-[90px] left-4 right-4 z-40 print:hidden">
         <button 
           onClick={() => setMobileCartOpen(true)}
           className="w-full bg-slate-900 text-white py-4 rounded-2xl font-bold text-[15px] flex items-center justify-between px-6 shadow-xl shadow-slate-900/20 active:scale-[0.98] transition-transform backdrop-blur-md bg-opacity-95"
@@ -307,7 +382,12 @@ export default function POS() {
             </div>
             <span>بینینی پسوولە</span>
           </div>
-          <span className="font-mono text-lg tracking-tight">{formatCurrency(total)}</span>
+          <div className="flex flex-col items-end">
+            <span className="font-mono text-lg tracking-tight">{formatCurrency(total)}</span>
+            <span className={`text-[10px] font-bold tracking-widest ${isWholesale ? 'text-indigo-400' : 'text-pink-400'}`}>
+               {isWholesale ? 'جوملە (WHOLESALE)' : 'تاک (RETAIL)'}
+            </span>
+          </div>
         </button>
       </div>
 
@@ -318,8 +398,19 @@ export default function POS() {
             <button onClick={() => setMobileCartOpen(false)} className="lg:hidden p-1 mr-[-8px] text-slate-500 hover:bg-slate-200 rounded-lg">
               <X size={24} />
             </button>
-            <ShoppingCart size={20} className="text-pink-600 hidden lg:block" />
-            <span>کاشێر / پسوولە</span>
+            <div className="hidden lg:flex items-center gap-2 text-pink-600 bg-pink-50 px-2.5 py-1 rounded-lg">
+               <ShoppingCart size={18} />
+               <span className="text-sm">کاشێر</span>
+            </div>
+            
+            <div className="flex items-center gap-1 mr-2 bg-slate-100 p-1.5 rounded-xl border border-slate-200/60 shadow-inner">
+               <button 
+                  onClick={() => setIsWholesale(false)} 
+                  className={`px-4 py-1.5 text-xs sm:text-sm font-extrabold rounded-lg transition-all duration-200 flex-1 text-center min-w-[70px] ${!isWholesale ? 'bg-white shadow-sm text-slate-800 scale-100 ring-1 ring-slate-200/50' : 'text-slate-500 hover:text-slate-700 scale-95 hover:bg-slate-200/50'}`}>تاک</button>
+               <button 
+                  onClick={() => setIsWholesale(true)} 
+                  className={`px-4 py-1.5 text-xs sm:text-sm font-extrabold rounded-lg transition-all duration-200 flex-1 text-center min-w-[70px] ${isWholesale ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20 scale-100' : 'text-slate-500 hover:text-slate-700 scale-95 hover:bg-slate-200/50'}`}>جوملە</button>
+            </div>
           </div>
           {cart.length > 0 && (
             <button onClick={clearCart} className="text-xs text-red-500 hover:bg-red-50 px-2 py-1 rounded transition-colors font-semibold">
@@ -349,7 +440,10 @@ export default function POS() {
                   </div>
                   <div className="flex-1 min-w-0 py-0.5">
                     <h4 className="text-[13px] font-bold text-slate-800 truncate mb-1.5">{item.name}</h4>
-                    <p className="text-xs font-mono text-slate-500 font-semibold">{formatCurrency(item.unitPrice, item.currency)}</p>
+                    <p className={`text-[11px] font-mono font-bold ${isWholesale ? 'text-indigo-600' : 'text-pink-600'}`}>
+                      {isWholesale ? 'جوملە: ' : 'تاک: '}
+                      {formatCurrency(isWholesale ? (item.wholesalePrice || item.unitPrice) : item.unitPrice, item.currency)}
+                    </p>
                   </div>
                   
                   <div className="flex flex-col items-end justify-between">
@@ -555,6 +649,50 @@ export default function POS() {
                     </div>
 
                     <div className="space-y-1.5">
+                       <label className="flex items-center justify-between text-sm font-bold text-slate-700">
+                          <span className="flex items-center gap-1.5">
+                             <MapIcon size={16} className="text-blue-500" />
+                             لینکی نەخشە (یان شوێن دیاریبکە)
+                          </span>
+                          <div className="flex gap-2">
+                             <button 
+                               type="button" 
+                               onClick={() => setIsLocationPickerOpen(true)}
+                               className="text-xs text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-2 py-1 rounded-md font-semibold transition-colors"
+                             >
+                                دیاریکردن لە نەخشە
+                             </button>
+                             <button 
+                               type="button" 
+                               onClick={() => {
+                                  if ('geolocation' in navigator) {
+                                     navigator.geolocation.getCurrentPosition((position) => {
+                                         setCustomerDetails({
+                                            ...customerDetails, 
+                                            locationUrl: `https://maps.google.com/?q=${position.coords.latitude},${position.coords.longitude}`
+                                         });
+                                     }, (error) => {
+                                         console.error("Error getting location:", error);
+                                     });
+                                  }
+                               }}
+                               className="text-xs text-blue-600 bg-blue-50 hover:bg-blue-100 px-2 py-1 rounded-md font-semibold transition-colors"
+                             >
+                                GPS 
+                             </button>
+                          </div>
+                       </label>
+                       <input 
+                         type="url" 
+                         value={customerDetails.locationUrl || ''} 
+                         onChange={e => setCustomerDetails({...customerDetails, locationUrl: e.target.value})} 
+                         dir="ltr" 
+                         placeholder="https://maps.google.com/?q=..." 
+                         className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-blue-500/50 font-mono text-left text-sm" 
+                       />
+                    </div>
+
+                    <div className="space-y-1.5">
                       <label className="text-sm font-bold text-slate-700 flex items-center gap-1.5">
                         <FileText size={16} className="text-slate-400" /> تێبینی 
                       </label>
@@ -598,6 +736,19 @@ export default function POS() {
           </div>
         </div>
       )}
+
+      <LocationPickerModal 
+        isOpen={isLocationPickerOpen} 
+        onClose={() => setIsLocationPickerOpen(false)}
+        onSelectLocation={(lat, lng) => {
+           setCustomerDetails({
+               ...customerDetails,
+               locationUrl: `https://maps.google.com/?q=${lat},${lng}`,
+               lat: lat,
+               lng: lng
+           });
+        }}
+      />
     </div>
   );
 }

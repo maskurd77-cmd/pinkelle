@@ -24,6 +24,8 @@ export default function Products() {
   const [company, setCompany] = useState('');
   const [unitCost, setUnitCost] = useState('');
   const [unitPrice, setUnitPrice] = useState('');
+  const [wholesaleCost, setWholesaleCost] = useState('');
+  const [wholesalePrice, setWholesalePrice] = useState('');
   const [stock, setStock] = useState('');
   const [currency, setCurrency] = useState<'IQD'|'USD'>('IQD');
   const [imageUrl, setImageUrl] = useState('');
@@ -67,14 +69,14 @@ export default function Products() {
   const openAddModal = () => {
     setEditingProduct(null);
     setName(''); setBarcode(''); setCategory(availableCategories[0] || ''); setCompany(availableCompanies[0] || '');
-    setUnitCost(''); setUnitPrice(''); setStock(''); setCurrency('IQD'); setImageUrl(''); setInputType('url');
+    setUnitCost(''); setUnitPrice(''); setWholesalePrice(''); setStock(''); setCurrency('IQD'); setImageUrl(''); setInputType('url');
     setIsModalOpen(true);
   };
 
   const openEditModal = (p: any) => {
     setEditingProduct(p);
     setName(p.name || ''); setBarcode(p.barcode || ''); setCategory(p.category || ''); setCompany(p.company || '');
-    setUnitCost(p.unitCost ?? ''); setUnitPrice(p.unitPrice ?? ''); setStock(p.stock ?? ''); setCurrency(p.currency || 'IQD');
+    setUnitCost(p.unitCost ?? ''); setUnitPrice(p.unitPrice ?? ''); setWholesaleCost(p.wholesaleCost ?? ''); setWholesalePrice(p.wholesalePrice ?? ''); setStock(p.stock ?? ''); setCurrency(p.currency || 'IQD');
     setImageUrl(p.imageUrl || ''); setInputType('url');
     setIsModalOpen(true);
   };
@@ -94,6 +96,8 @@ export default function Products() {
       company,
       unitCost: parseFloat(unitCost) || 0,
       unitPrice: parseFloat(unitPrice) || 0,
+      wholesaleCost: wholesaleCost ? parseFloat(wholesaleCost) : 0,
+      wholesalePrice: wholesalePrice ? parseFloat(wholesalePrice) : 0,
       stock: parseInt(stock, 10) || 0,
       currency,
       imageUrl,
@@ -200,9 +204,10 @@ export default function Products() {
                 <th className="px-6 py-3 font-semibold">ناوی کالا</th>
                 <th className="px-6 py-3 font-semibold">کەتەگۆری</th>
                 <th className="px-6 py-3 font-semibold">شەریکە</th>
-                <th className="px-6 py-3 font-semibold">تێچوو</th>
-                <th className="px-6 py-3 font-semibold">نرخ</th>
-                <th className="px-6 py-3 font-semibold">قازانج</th>
+                <th className="px-6 py-3 font-semibold text-right">تێچوو (دانە/جوملە)</th>
+                <th className="px-6 py-3 font-semibold text-right">نرخ (دانە)</th>
+                <th className="px-6 py-3 font-semibold text-right">نرخ (جوملە)</th>
+                <th className="px-6 py-3 font-semibold text-right">قازانج (دانە/جوملە)</th>
                 <th className="px-6 py-3 font-semibold">ستۆک</th>
                 <th className="px-6 py-3 font-semibold text-center">کردار</th>
               </tr>
@@ -212,6 +217,7 @@ export default function Products() {
                 const pCost = product.unitCost || 0;
                 const pPrice = product.unitPrice || 0;
                 const profitPerUnit = pPrice - pCost;
+                const profitPerWholesale = product.wholesalePrice ? (product.wholesalePrice - (product.wholesaleCost || pCost)) : null;
                 const pStock = product.stock || 0;
                 const isLowStock = pStock <= 10 && pStock > 0;
                 const isOutOfStock = pStock === 0;
@@ -233,9 +239,18 @@ export default function Products() {
                     </td>
                     <td className="px-6 py-4 text-slate-600">{product.category}</td>
                     <td className="px-6 py-4 text-slate-600">{product.company}</td>
-                    <td className="px-6 py-4 font-mono text-slate-600">{formatCurrency(pCost, product.currency)}</td>
-                    <td className="px-6 py-4 font-mono text-slate-900">{formatCurrency(pPrice, product.currency)}</td>
-                    <td className="px-6 py-4 text-green-600 font-bold font-mono">+{formatCurrency(profitPerUnit, product.currency)}</td>
+                    <td className="px-6 py-4 font-mono">
+                      <div className="text-slate-600">{formatCurrency(pCost, product.currency)}</div>
+                      {product.wholesaleCost && <div className="text-xs text-slate-400 mt-1">{formatCurrency(product.wholesaleCost, product.currency)}</div>}
+                    </td>
+                    <td className="px-6 py-4 font-mono">
+                      <div className="text-slate-900">{formatCurrency(pPrice, product.currency)}</div>
+                    </td>
+                    <td className="px-6 py-4 font-mono text-indigo-600 font-bold">{product.wholesalePrice ? formatCurrency(product.wholesalePrice, product.currency) : '-'}</td>
+                    <td className="px-6 py-4 font-mono">
+                      <div className="text-green-600 font-bold">+{formatCurrency(profitPerUnit, product.currency)}</div>
+                      {profitPerWholesale !== null && <div className="text-xs text-green-500 font-bold mt-1">+{formatCurrency(profitPerWholesale, product.currency)}</div>}
+                    </td>
                     <td className="px-6 py-4">
                       <span className={`px-2 py-1 rounded text-xs ${
                         isOutOfStock ? 'bg-red-100 text-red-800 font-bold' :
@@ -342,15 +357,23 @@ export default function Products() {
                  </div>
 
                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">تێچوو (بەکڕین)</label>
-                    <input required type="number" min="0" value={unitCost} onChange={e=>setUnitCost(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-pink-500 font-mono text-left" dir="ltr" />
+                    <label className="block text-sm font-medium text-slate-700 mb-1">تێچوو (دانە)</label>
+                    <input required type="number" min="0" step="any" value={unitCost} onChange={e=>setUnitCost(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-pink-500 font-mono text-left" dir="ltr" />
                  </div>
                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">نرخی فرۆشتن</label>
-                    <input required type="number" min="0" value={unitPrice} onChange={e=>setUnitPrice(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-pink-500 font-mono text-left" dir="ltr" />
+                    <label className="block text-sm font-medium text-slate-700 mb-1">نرخی فرۆشتن (دانە)</label>
+                    <input required type="number" min="0" step="any" value={unitPrice} onChange={e=>setUnitPrice(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-pink-500 font-mono text-left" dir="ltr" />
                  </div>
                  
-                 <div className="col-span-2">
+                 <div className="col-span-2 sm:col-span-1">
+                    <label className="block text-sm font-medium text-slate-700 mb-1">تێچوو (جوملە)</label>
+                    <input type="number" min="0" step="any" value={wholesaleCost} onChange={e=>setWholesaleCost(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-pink-500 font-mono text-left" dir="ltr" placeholder="ئارەزوومەندانە" />
+                 </div>
+                 <div className="col-span-2 sm:col-span-1">
+                    <label className="block text-sm font-medium text-slate-700 mb-1">نرخی فرۆشتن (جوملە)</label>
+                    <input type="number" min="0" step="any" value={wholesalePrice} onChange={e=>setWholesalePrice(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-pink-500 font-mono text-left" dir="ltr" placeholder="ئارەزوومەندانە" />
+                 </div>
+                 <div className="col-span-2 sm:col-span-1">
                     <label className="block text-sm font-medium text-slate-700 mb-1">بڕی بەردەست (ستۆک)</label>
                     <input required type="number" min="0" value={stock} onChange={e=>setStock(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-pink-500 font-mono text-left" dir="ltr" />
                  </div>

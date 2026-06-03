@@ -4,16 +4,19 @@ import { onAuthStateChanged, User } from 'firebase/auth';
 import { doc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
+import MenuPage from './pages/Menu';
 import Products from './pages/Products';
 import Warehouse from './pages/Warehouse';
 import POS from './pages/POS';
 import Companies from './pages/Companies';
 import Categories from './pages/Categories';
+import Customers from './pages/Customers';
 import DebtBook from './pages/DebtBook';
 import Receipts from './pages/Receipts';
 import Expenses from './pages/Expenses';
 import Reports from './pages/Reports';
 import { Returns, Exchanges, UsersPage, SettingsPage } from './pages/MiscPages';
+import VisitsPage from './pages/Visits';
 import Placeholder from './pages/Placeholder';
 import AuthPage from './pages/Auth';
 
@@ -74,23 +77,17 @@ export default function App() {
   };
 
   const renderPage = () => {
-    // Pages that don't need strict content hiding if missing, or use default rules:
-    if (['settings', 'users', 'returns', 'exchanges'].includes(currentRoute)) {
-       // Only admin can access these system sections generally, or handle locally
-       if (userData?.role !== 'admin') {
-          return <div className="text-center py-20 text-red-500 font-bold text-xl flex h-full items-center justify-center">ببورە، تەنها بەڕێوەبەر بۆی هەیە ئەم بەشە ببینێت.</div>;
-       }
-    } else {
-       if (!hasAccess(currentRoute)) {
-          return <div className="text-center py-20 text-red-500 font-bold text-xl flex h-full items-center justify-center">ببورە، دەسەڵاتت نییە بۆ بینینی ئەم بەشە. تکایە پەیوەندی بە بەڕێوەبەر بکە.</div>;
-       }
+    if (!hasAccess(currentRoute)) {
+        return <div className="text-center py-20 text-red-500 font-bold text-xl flex h-full items-center justify-center">ببورە، دەسەڵاتت نییە بۆ بینینی ئەم بەشە. تکایە پەیوەندی بە بەڕێوەبەر بکە.</div>;
     }
 
     switch (currentRoute) {
       case 'dashboard': return <Dashboard />;
+      case 'menu': return <MenuPage />;
       case 'pos': return <POS />;
       case 'products': return <Products />;
       case 'warehouse': return <Warehouse />;
+      case 'customers': return <Customers />;
       case 'companies': return <Companies />;
       case 'categories': return <Categories />;
       case 'debt': return <DebtBook />;
@@ -99,6 +96,7 @@ export default function App() {
       case 'reports': return <Reports />;
       case 'returns': return <Returns />;
       case 'exchanges': return <Exchanges />;
+      case 'visits': return <VisitsPage />;
       case 'users': return <UsersPage />;
       case 'settings': return <SettingsPage />;
       default: return <Placeholder title={currentRoute} />;

@@ -57,8 +57,12 @@ export default function Reports() {
 
   const { stats, chartData, categoryData } = useMemo(() => {
     let sales = 0;
+    let retailSales = 0;
+    let wholesaleSales = 0;
     let profit = 0;
     let itemsSold = 0;
+    let retailItemsSold = 0;
+    let wholesaleItemsSold = 0;
     let totalExpense = 0;
     
     // For trends
@@ -79,8 +83,18 @@ export default function Reports() {
            const cost = item.unitCost || 0;
            const price = item.unitPrice || 0;
            const qty = item.quantity || 1;
+           const itemTotal = price * qty;
+           
            profit += (price - cost) * qty;
            itemsSold += qty;
+           
+           if (item.isWholesale) {
+              wholesaleItemsSold += qty;
+              wholesaleSales += itemTotal;
+           } else {
+              retailItemsSold += qty;
+              retailSales += itemTotal;
+           }
            
            const cat = item.category || 'گشتی';
            if (!categoryCount[cat]) categoryCount[cat] = 0;
@@ -97,7 +111,7 @@ export default function Reports() {
     const pData = Object.entries(categoryCount).map(([name, value]) => ({ name, value })).sort((a,b) => b.value - a.value).slice(0, 5);
 
     return { 
-       stats: { sales, profit, totalExpense, itemsSold },
+       stats: { sales, retailSales, wholesaleSales, profit, totalExpense, itemsSold, retailItemsSold, wholesaleItemsSold },
        chartData: cData,
        categoryData: pData
     };
@@ -178,6 +192,20 @@ export default function Reports() {
             </div>
             <div className={`absolute -bottom-8 -left-8 w-32 h-32 rounded-full bg-gradient-to-br ${stat.gradient} opacity-5 group-hover:scale-110 transition-transform duration-500`} />
             <div className={`absolute -top-4 -right-4 w-16 h-16 rounded-full bg-gradient-to-br ${stat.gradient} opacity-[0.03] group-hover:scale-125 transition-transform duration-500`} />
+          </div>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+        {[
+          { title: 'فرۆشتنی تاک', value: formatCurrency(stats.retailSales), trend: 'تاک', color: 'blue', gradient: 'from-blue-500 to-cyan-600' },
+          { title: 'فرۆشتنی جوملە', value: formatCurrency(stats.wholesaleSales), trend: 'جوملە', color: 'purple', gradient: 'from-purple-500 to-indigo-600' },
+          { title: 'فرۆشراو بە تاک', value: `${stats.retailItemsSold} دانە`, trend: 'تاک', color: 'cyan', gradient: 'from-cyan-500 to-teal-500' },
+          { title: 'فرۆشراو بە جوملە', value: `${stats.wholesaleItemsSold} دانە`, trend: 'جوملە', color: 'fuchsia', gradient: 'from-fuchsia-500 to-purple-500' },
+        ].map((stat, i) => (
+          <div key={i} className="bg-white p-5 rounded-[20px] border border-slate-100 shadow-sm relative overflow-hidden group hover:shadow-md transition-all duration-300">
+            <h3 className="text-slate-500 text-xs font-bold mb-2">{stat.title}</h3>
+            <p className={`text-2xl font-black tracking-tight font-mono text-transparent bg-clip-text bg-gradient-to-r ${stat.gradient}`}>{stat.value}</p>
           </div>
         ))}
       </div>

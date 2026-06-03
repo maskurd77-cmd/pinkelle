@@ -5,6 +5,8 @@ export interface Product {
   company: string;
   unitCost: number;     // تێچووی دانە
   unitPrice: number;    // نرخی دانە
+  wholesaleCost?: number; // تێچووی جوملە
+  wholesalePrice?: number; // نرخی جوملە
   packSize: number;     // قەبارەی تەک
   stock: number;        // ستۆک
   barcode: string;      // بارکۆد

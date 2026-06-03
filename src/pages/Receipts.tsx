@@ -155,97 +155,106 @@ export default function Receipts() {
   );
 }
 
-function ReceiptPrintLayout({ receipt }: { receipt: any }) {
+export function ReceiptPrintLayout({ receipt }: { receipt: any }) {
   const ts = receipt.timestamp?.toDate ? receipt.timestamp.toDate() : new Date();
   
   return (
-    <div className="w-[210mm] min-h-[297mm] bg-white text-black p-[10mm] mx-auto box-border flex flex-col" dir="rtl" style={{ fontFamily: 'Arial, sans-serif' }}>
+    <div className="w-[210mm] min-h-[297mm] bg-white text-black p-[10mm] mx-auto box-border flex flex-col relative" dir="rtl" style={{ fontFamily: 'Arial, sans-serif' }}>
       
-      {/* Header border frame */}
-      <div className="border-4 border-black rounded-xl p-4 flex flex-col gap-2 relative">
-         <div className="flex justify-between items-start">
-            {/* Logo Left */}
-            <div className="w-40 flex flex-col items-center">
-              <img src="https://skilled-indigo-cux52hz9.edgeone.app/Pink%20Elle%20logo%20new-1_page-0001.jpg" alt="Logo" className="w-32 h-32 object-contain mix-blend-multiply" />
+      {/* Top Header - Compact Row Layout */}
+      <div className="flex justify-between items-center mb-4 border-b-[3px] border-black pb-4 relative">
+         {/* Right Side - Logo */}
+         <div className="flex items-center justify-center shrink-0 w-32 h-32">
+            <img src="https://skilled-indigo-cux52hz9.edgeone.app/Pink%20Elle%20logo%20new-1_page-0001.jpg" alt="Pink Elle Logo" className="w-full h-full object-contain mix-blend-multiply drop-shadow-sm" />
+         </div>
+         
+         {/* Center - Company Info */}
+         <div className="flex-1 text-center px-4">
+            <h1 className="text-4xl font-extrabold text-pink-600 tracking-widest mb-2 leading-none" style={{ fontFamily: 'Impact, sans-serif' }}>گروپی PINK ELLE</h1>
+            <h2 className="text-xl font-extrabold text-slate-800 mb-1">تاکە بریکاری <span className="text-pink-600 font-extrabold tracking-wide" style={{ fontFamily: 'Impact, sans-serif' }}>PINK ELLE</span></h2>
+            <h3 className="text-lg font-bold text-slate-800 mb-1">بۆ دابینکردنی کەلوپەلی پاککەرەوە</h3>
+            <h4 className="text-sm font-bold text-slate-600 mb-2">بۆ بازرگانی گشتی - سنووردار</h4>
+         </div>
+
+         {/* Left Side - Contacts */}
+         <div className="shrink-0 text-right flex flex-col gap-2">
+            <div className="bg-slate-50 border-2 border-black rounded p-2 shadow-sm text-sm font-bold w-60">
+               <div className="text-center text-xs mb-1 border-b border-black/20 pb-1">ﺑرﯾﮑﺎری ﮐۆﻣﭘﺎﻧﯾﺎ</div>
+               <div className="flex justify-around items-center" dir="ltr">
+                  <span>0751 201 8372</span>
+                  <span className="text-pink-600">-</span>
+                  <span>0773 436 7278</span>
+               </div>
             </div>
-            
-            {/* Center Info */}
-            <div className="flex-1 text-center pt-2">
-              <h1 className="text-5xl font-extrabold text-pink-600 mb-4 tracking-wider" style={{ fontFamily: 'Impact, sans-serif' }}>گروپی PINK ELLE</h1>
-              <p className="font-bold text-lg mb-1">تاکە بریکاری <span className="text-pink-600 uppercase font-extrabold">PINK ELLE</span></p>
-              <p className="font-bold text-lg mb-2">بۆ دابین کردنی کەل و پەلی پاکەرەوە</p>
-              <p className="font-bold text-xl">ناونیشان : سۆران</p>
-            </div>
-            
-            {/* QR Right (Mock or empty for now) */}
-            <div className="w-40 flex justify-end">
-               {/* Using placeholder for QR */}
-               <div className="w-32 h-32 border-4 border-black p-1 flex relative items-center justify-center">
-                  <div className="absolute inset-0 flex items-center justify-center opacity-20">
-                     <svg viewBox="0 0 100 100" className="w-full h-full fill-current"><path d="M0 0h30v30H0zM10 10h10v10H10zM70 0h30v30H70zM80 10h10v10H80zM0 70h30v30H0zM10 80h10v10H10zM40 0h20v20H40zM30 40h40v40H30zM40 50h20v20H40z" /></svg>
-                  </div>
+            <div className="bg-slate-50 border-2 border-black rounded p-2 shadow-sm text-sm font-bold w-60">
+               <div className="text-center text-xs mb-1 border-b border-black/20 pb-1">وه‌کیلی سۆران</div>
+               <div className="flex justify-around items-center" dir="ltr">
+                  <span>0750 425 1338</span>
+                  <span className="text-pink-600">-</span>
+                  <span>0751 201 8370</span>
                </div>
             </div>
          </div>
-         
-         {/* Social Links Banner */}
-         <div className="bg-pink-100 font-bold border-2 border-black rounded-lg py-2 px-4 flex justify-between items-center text-sm">
-            <div className="flex items-center gap-1">
-              <span className="bg-gradient-to-tr from-yellow-400 to-pink-600 text-white rounded p-1">@</span> 
-              <span>pink__ellii</span>
-            </div>
-            <div className="flex items-center gap-1 text-blue-600">
-              <span className="bg-blue-600 text-white rounded p-1">f</span> 
-              <span>Pink Elle</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="text-yellow-500">👻</span> 
-              <span>pink-elle</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="bg-black text-white rounded p-1 text-xs px-1.5">ل</span> 
-              <span>pink__elle2</span>
-            </div>
+      </div>
+      
+      {/* Address Bar */}
+      <div className="text-center font-extrabold text-base mb-4 bg-gray-100 py-1.5 border border-black rounded">
+         سۆران - شۆڕش - بەرامبەر مزگەوتی شۆڕش <span className="text-pink-600 text-lg">📍</span>
+      </div>
+
+      {/* Info Boxes Header */}
+      <div className="flex justify-between items-start mb-4 gap-4 text-xs">
+         {/* Left Side Info */}
+         <div className="flex-1 flex flex-col gap-1.5">
+             <div className="flex items-center">
+                <div className="w-24 text-right font-bold ml-2">رقم القائمة (ژمارەی پسووڵە):</div>
+                <div className="border-b border-black flex-1 text-center font-bold font-mono text-sm">{receipt.id?.slice(-8).toUpperCase() || 'N/A'}</div>
+             </div>
+             <div className="flex items-center">
+                <div className="w-24 text-right font-bold ml-2">التاريخ (بەروار):</div>
+                <div className="border-b border-black flex-1 text-center font-bold font-mono text-sm">
+                   {ts.getFullYear()}/{String(ts.getMonth()+1).padStart(2, '0')}/{String(ts.getDate()).padStart(2, '0')}
+                </div>
+             </div>
+             <div className="flex items-center">
+                <div className="w-24 text-right font-bold ml-2">طريقة الدفع (جۆری پێدان):</div>
+                <div className="border-b border-black flex-1 text-center font-bold font-mono text-sm">{receipt.paymentType || 'نەقد'}</div>
+             </div>
          </div>
          
-         {/* Footer Phone Banner */}
-         <div className="text-center font-bold text-sm bg-pink-100 border-2 border-black rounded-lg py-1">
-            بریکاری کۆمپانیا (٠٧٥١٢٠١٨٣٧٢ - ٠٧٧٣٤٣٦٧٢٧٨) - وکیلی سۆران (٠٧٥٠٤٢٥١٣٣٨ - ٠٧٥١٢٠١٨٣٧٠)
+         {/* Center Title */}
+         <div className="w-32 flex items-center justify-center font-black text-xl italic mt-2 border-b-4 border-double border-pink-600 pb-1">
+            پسووڵەی فرۆش
+         </div>
+
+         {/* Right Side Info */}
+         <div className="flex-1 flex flex-col gap-1.5">
+             <div className="flex items-center">
+                <div className="w-24 text-right font-bold ml-2">اسم المشتري (کڕیار):</div>
+                <div className="border-b border-black flex-1 px-2 font-bold text-sm text-center">{receipt.customerName}</div>
+             </div>
+             <div className="flex items-center">
+                <div className="w-24 text-right font-bold ml-2">العنوان (ناونیشان):</div>
+                <div className="border-b border-black flex-1 px-2 font-bold text-sm text-center">{receipt.address || '...'}</div>
+             </div>
+             <div className="flex items-center">
+                <div className="w-24 text-right font-bold ml-2">رقم الموبايل (مۆبایل):</div>
+                <div className="border-b border-black flex-1 px-2 font-bold font-mono text-sm text-center" dir="ltr">{receipt.phone || '...'}</div>
+             </div>
          </div>
       </div>
 
-      {/* Customer Info Section */}
-      <div className="mt-6 flex flex-col gap-4 font-bold text-lg px-2">
-         <div className="flex w-full items-end gap-2">
-            <span className="w-16">بەڕێز :</span>
-            <span className="border-b-2 border-dotted border-black flex-1 pb-1 inline-block text-center">{receipt.customerName}</span>
-            <span className="w-24 border-b-2 border-dotted border-black pb-1">ناونیشان:</span>
-            <span className="border-b-2 border-dotted border-black flex-1 pb-1 text-center">{receipt.address || ''}</span>
-         </div>
-         <div className="flex w-full items-end gap-2">
-            <span className="w-16">ڕێکەوت:</span>
-            <div className="border-b-2 border-dotted border-black px-4 pb-1 flex-1 text-center font-mono">
-               {ts.getFullYear()} / {(ts.getMonth()+1).toString().padStart(2, '0')} / {ts.getDate().toString().padStart(2, '0')}
-            </div>
-            <span className="w-16 text-center border-b-2 border-dotted border-black pb-1">مۆبایل:</span>
-            <span className="border-b-2 border-dotted border-black w-64 pb-1 text-center font-mono" dir="ltr">{receipt.phone || ''}</span>
-         </div>
-      </div>
-
-      {/* Items Table */}
-      <div className="mt-8 flex-1 border-4 border-black rounded-md overflow-hidden relative">
-         {/* Watermark in background */}
-         <div className="absolute inset-0 flex items-center justify-center opacity-[0.03] text-pink-600 font-extrabold text-[150px] pointer-events-none select-none tracking-widest leading-none z-0" style={{ fontFamily: 'Impact' }}>
-            PINK<br/>ELLE
-         </div>
-         
-         <table className="w-full border-collapse relative z-10 text-center font-bold text-sm h-full">
+      {/* Items Table - Strict structure */}
+      <div className="mt-2 text-xs flex-1">
+         <table className="w-full border-collapse border-2 border-black text-center font-bold">
             <thead>
-               <tr className="bg-pink-100 border-b-4 border-black">
-                  <th className="border-l-4 border-black py-4 w-40">بڕی پارە<br/>دینار / دۆلار</th>
-                  <th className="border-l-4 border-black py-4 w-2/4">نـاوەڕۆک/التفــاصیل<br/><span className="text-xs">Contents</span></th>
-                  <th className="border-l-4 border-black py-4 w-24">ژمارە - عدد</th>
-                  <th className="py-4 w-40 text-center font-bold">نـرخ<br/>دینار / دۆلار</th>
+               <tr className="bg-gray-100 border-b-2 border-black">
+                  <th className="border border-black px-1 py-1 w-20">کۆی گشتی<br/><span className="text-[10px] text-gray-600 font-normal">المجموع</span></th>
+                  <th className="border border-black px-1 py-1 w-16">داشکاندن<br/><span className="text-[10px] text-gray-600 font-normal">الخصم</span></th>
+                  <th className="border border-black px-1 py-1 w-20">نرخ<br/><span className="text-[10px] text-gray-600 font-normal">السعر</span></th>
+                  <th className="border border-black px-1 py-1 w-12">بڕ<br/><span className="text-[10px] text-gray-600 font-normal">الكمية</span></th>
+                  <th className="border border-black px-2 py-1 flex-1 min-w-[200px] text-right">ناوی ماددە<br/><span className="text-[10px] text-gray-600 font-normal">اسم المادة</span></th>
+                  <th className="border border-black px-1 py-1 w-8">ت</th>
                </tr>
             </thead>
             <tbody>
@@ -253,54 +262,83 @@ function ReceiptPrintLayout({ receipt }: { receipt: any }) {
                {receipt.items?.map((item: any, i: number) => {
                   const originalTotal = (item.originalUnitPrice || item.unitPrice) * item.quantity;
                   const itemCurrency = item.currency || 'IQD';
+                  // Calculate discount if any
+                  const isDiscounted = item.originalUnitPrice && item.originalUnitPrice > item.unitPrice;
+                  let diff = 0;
+                  if (item.originalUnitPrice && item.originalUnitPrice > 0 && isDiscounted) {
+                      diff = (item.originalUnitPrice - item.unitPrice) * item.quantity;
+                  }
+
                   return (
-                  <tr key={i} className="border-b-2 border-black">
-                     <td className="border-l-4 border-black py-3 font-mono text-sm">{formatCurrency(originalTotal, itemCurrency)}</td>
-                     <td className="border-l-4 border-black py-3 text-right pr-4">{item.name}</td>
-                     <td className="border-l-4 border-black py-3 font-mono text-sm">{item.quantity}</td>
-                     <td className="py-3 font-mono text-sm">{formatCurrency(item.originalUnitPrice || item.unitPrice, itemCurrency)}</td>
+                  <tr key={i} className="border-b border-black">
+                     <td className="border-l border-black p-1.5 font-mono text-sm">{formatCurrency(item.unitPrice * item.quantity, itemCurrency).replace('IQD', '')}</td>
+                     <td className="border-l border-black p-1.5 font-mono text-sm text-red-600">{diff > 0 ? diff.toLocaleString() : '0'}</td>
+                     <td className="border-l border-black p-1.5 font-mono text-sm">{formatCurrency(item.originalUnitPrice || item.unitPrice, itemCurrency).replace('IQD', '')}</td>
+                     <td className="border-l border-black p-1.5 font-mono text-sm">{item.quantity}</td>
+                     <td className="border-l border-black p-1.5 text-right font-bold pr-2">{item.name} {item.isWholesale ? '(جوملە)' : ''}</td>
+                     <td className="p-1.5">{i + 1}</td>
                   </tr>
                   );
                })}
-               {/* Fill empty rows to make it look standard A4 block */}
+               {/* Fill empty rows to make table look complete */}
                {Array.from({ length: Math.max(0, 15 - (receipt.items?.length || 0)) }).map((_, i) => (
-                  <tr key={`empty-${i}`} className="border-b-2 border-black text-transparent opacity-0">
-                     <td className="border-l-4 border-black py-4">.</td>
-                     <td className="border-l-4 border-black py-4">.</td>
-                     <td className="border-l-4 border-black py-4">.</td>
-                     <td className="py-4">.</td>
+                  <tr key={`empty-${i}`} className="border-b border-black text-transparent">
+                     <td className="border-l border-black p-1.5">.</td>
+                     <td className="border-l border-black p-1.5">.</td>
+                     <td className="border-l border-black p-1.5">.</td>
+                     <td className="border-l border-black p-1.5">.</td>
+                     <td className="border-l border-black p-1.5">.</td>
+                     <td className="p-1.5">.</td>
                   </tr>
                ))}
-            </tbody>
-            {/* Total Row */}
-            <tfoot className="border-t-4 border-black bg-pink-100 h-16">
-               <tr>
-                  <td className="border-l-4 border-black font-extrabold text-lg py-4 font-mono">{formatCurrency(receipt.totalAmount || receipt.total || 0, 'IQD')}</td>
-                  <td colSpan={3} className="text-right pr-8 font-extrabold text-xl">
-                     کۆی گشتی:
+               <tr className="border-t-2 border-black">
+                  <td className="border-l border-black p-1.5 font-bold bg-pink-50 text-base font-mono">{formatCurrency(receipt.totalAmount || receipt.total || 0, 'IQD').replace('IQD','')}</td>
+                  <td colSpan={2} className="border-l border-black p-1.5 text-center font-bold bg-gray-100">
+                     مجموع القائمة / د.ع
+                  </td>
+                  <td colSpan={3} className="p-1.5 text-right pr-2 text-xs text-gray-500 font-bold border-r-0 tracking-wide">
+                     هیچ موادێک بەسەرچوو وەرناگیرێتەوە
                   </td>
                </tr>
-            </tfoot>
+            </tbody>
          </table>
-         
-         <div className="absolute right-0 top-1/2 translate-x-full translate-y-[-50%] -rotate-90 origin-left text-[10px] font-mono text-gray-500 hidden whitespace-nowrap">
-            Ala Printing 0750 470 99 88
-         </div>
-      </div>
 
-      {/* Footer Signatures */}
-      <div className="mt-6 flex justify-between font-bold text-sm px-4">
-         <div className="text-center">
-            واژوو
-         </div>
-         <div className="text-center font-mono text-[11px] mt-4">
-            هەبوونی هەڵە لەم پسوولەیەدا بۆ هەردوو لا دەگەڕێتەوە
-         </div>
-         <div className="text-center invisible">
-            واژوو
+         {/* Summary section */}
+         <div className="flex gap-4 mt-4 text-xs font-bold w-full">
+            {/* Notes */}
+            <div className="flex-1 border-2 border-black bg-slate-50 p-3 rounded text-right min-h-[100px]">
+               <div className="border-b border-black/20 pb-1 mb-2">تێبینی پسووڵە (ملاحظات) :</div>
+               <p className="font-bold text-sm text-slate-700">{receipt.notes || '...'}</p>
+            </div>
+            
+            {/* Totals */}
+            <div className="w-[100mm]">
+               <table className="w-full border-collapse border-2 border-black text-center">
+                  <tbody>
+                     <tr>
+                        <td className="border border-black p-2 w-32 font-mono text-sm">{receipt.paymentType === 'نەقد' ? formatCurrency(receipt.totalAmount || receipt.total || 0, 'IQD').replace('IQD','') : '0'}</td>
+                        <td className="border border-black p-2 bg-gray-100">بڕی دراو (الواصل)</td>
+                     </tr>
+                     <tr>
+                        <td className="border border-black p-2 w-32 font-mono text-sm text-red-600">{receipt.paymentType === 'قەرز' ? formatCurrency(receipt.totalAmount || receipt.total || 0, 'IQD').replace('IQD','') : '0'}</td>
+                        <td className="border border-black p-2 bg-gray-100">بڕی ماوە (المتبقي)</td>
+                     </tr>
+                     <tr>
+                        <td className="border border-black p-2 w-32 font-mono text-lg font-black bg-pink-50">{formatCurrency(receipt.totalAmount || receipt.total || 0, 'IQD').replace('IQD','')}</td>
+                        <td className="border border-black p-2 bg-pink-100 text-lg font-black">المجموع (کۆی گشتی)</td>
+                     </tr>
+                  </tbody>
+               </table>
+            </div>
          </div>
       </div>
       
+      {/* Footer Info */}
+      <div className="mt-8 pt-2 border-t border-black text-center flex justify-between text-[10px] text-gray-500 font-bold items-end">
+          <div><span className="font-mono">{new Date().toLocaleString('en-US')}</span> کاتی چاپکردن:</div>
+          <div>سیستەمی حساباتی PINK ELLE</div>
+          <div>کۆی ئایتمەکان: {receipt.totalItems || receipt.items?.reduce((a:any,b:any) => a + b.quantity, 0) || 0}</div>
+      </div>
     </div>
   );
 }

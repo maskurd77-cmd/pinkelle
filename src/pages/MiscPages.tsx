@@ -26,11 +26,46 @@ import {
   deleteDoc,
   query,
   orderBy,
+  where,
+  addDoc,
+  Timestamp,
 } from "firebase/firestore";
 import { db, firebaseConfig } from "../firebase";
 import { initializeApp, getApp } from "firebase/app";
 import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
 import { formatCurrency } from "../data";
+
+const reduceCustomerDebt = async (receipt: any, amountToReduce: number, reason: string) => {
+   if (!receipt || !receipt.customerName || (receipt.paymentType !== 'debt' && receipt.paymentType !== 'قەرز')) return;
+   
+   try {
+     const debtsQ = query(collection(db, "debts"), where("customerName", "==", receipt.customerName));
+     const debtSnap = await getDocs(debtsQ);
+     if (!debtSnap.empty) {
+        const debtDoc = debtSnap.docs[0];
+        const currentData = debtDoc.data();
+        
+        const newAmount = Math.max(0, (currentData.amount || 0) - amountToReduce);
+        const newRemaining = Math.max(0, (currentData.remainingAmount || 0) - amountToReduce);
+        
+        await updateDoc(doc(db, "debts", debtDoc.id), {
+           amount: newAmount,
+           remainingAmount: newRemaining,
+           status: newRemaining <= 0 ? 'paid' : 'active'
+        });
+
+        await addDoc(collection(db, "debt_transactions"), {
+           debtId: debtDoc.id,
+           amount: amountToReduce,
+           type: 'pay',
+           timestamp: Timestamp.now(),
+           notes: `${reason} - وەسڵی ژمارە: ${receipt.id.slice(-6).toUpperCase()}`
+        });
+     }
+   } catch(e) {
+     console.error("Error reducing debt:", e);
+   }
+};
 
 export function Returns() {
   const [receipts, setReceipts] = useState<any[]>([]);
@@ -65,6 +100,8 @@ export function Returns() {
       }
       // 2. delete receipt
       await deleteDoc(doc(db, "receipts", returningReceipt.id));
+      // 3. reduce debt if applicable
+      await reduceCustomerDebt(returningReceipt, returningReceipt.totalAmount || 0, "گەڕانەوەی تەواوی کاڵاکان");
       alert("وەسڵەکە بە سەرکەوتوویی سڕایەوە و کالاکان گەڕێنرانەوە کۆگا.");
       setReturningReceipt(null);
     } catch (e) {
@@ -100,10 +137,13 @@ export function Returns() {
       newItems[index].total =
         newItems[index].unitPrice * newItems[index].quantity;
 
+      const reductionAmount = qty * newItems[index].unitPrice;
+
       const filteredItems = newItems.filter((i) => i.quantity > 0);
 
       if (filteredItems.length === 0) {
         await deleteDoc(doc(db, "receipts", returningReceipt.id));
+        await reduceCustomerDebt(returningReceipt, reductionAmount, "گەڕانەوەی کاڵا");
         alert("وەسڵەکە بە تەواوەتی سڕایەوە چونکە هەموو کالاکانی گەڕێنرانەوە.");
         setReturningReceipt(null);
       } else {
@@ -117,6 +157,7 @@ export function Returns() {
           totalAmount: newTotal,
           totalItems: newTotalItems,
         });
+        await reduceCustomerDebt(returningReceipt, reductionAmount, "گەڕانەوەی کاڵا");
         setReturningReceipt({
           ...returningReceipt,
           items: filteredItems,
@@ -306,6 +347,7 @@ export function Exchanges() {
       }
       // 2. delete receipt
       await deleteDoc(doc(db, "receipts", returningReceipt.id));
+      await reduceCustomerDebt(returningReceipt, returningReceipt.totalAmount || 0, "گۆڕینەوەی کوێربووی تەواوی کاڵاکان");
       alert(
         "وەسڵەکە داخرا و کالاکان گەڕێنرانەوە کۆگا. ئێستا دەتوانی بچیتە بەشی کاشێر بۆ لێدانی وەسڵی نوێ.",
       );
@@ -343,10 +385,13 @@ export function Exchanges() {
       newItems[index].total =
         newItems[index].unitPrice * newItems[index].quantity;
 
+      const reductionAmount = qty * newItems[index].unitPrice;
+
       const filteredItems = newItems.filter((i) => i.quantity > 0);
 
       if (filteredItems.length === 0) {
         await deleteDoc(doc(db, "receipts", returningReceipt.id));
+        await reduceCustomerDebt(returningReceipt, reductionAmount, "گۆڕینەوەی کاڵا");
         alert(
           "وەسڵەکە بە تەواوەتی سڕایەوە. ئێستا دەتوانی لە بەشی کاشێر کالای نوێ بۆ کڕیار لێ بدەی.",
         );
@@ -362,6 +407,7 @@ export function Exchanges() {
           totalAmount: newTotal,
           totalItems: newTotalItems,
         });
+        await reduceCustomerDebt(returningReceipt, reductionAmount, "گۆڕینەوەی کاڵا");
         setReturningReceipt({
           ...returningReceipt,
           items: filteredItems,
@@ -534,15 +580,22 @@ export function UsersPage() {
 
   const permissionsOptions = [
     { id: "dashboard", label: "داشبۆرد (ئامارەکان)" },
+    { id: "menu", label: "مێنیو (بینینی کاڵاکان)" },
     { id: "pos", label: "فرۆشتن (کاشێر)" },
     { id: "products", label: "کالاکان" },
     { id: "warehouse", label: "کۆگا" },
     { id: "categories", label: "کەتەگۆرییەکان" },
+    { id: "customers", label: "کڕیاران" },
+    { id: "visits", label: "سەردانەکان" },
     { id: "companies", label: "شەریکەکان" },
-    { id: "debt", label: "قەرزەکان" },
+    { id: "debt", label: "دەفتەری قەرز و مامەڵەکان" },
     { id: "receipts", label: "وەسڵەکان" },
     { id: "expenses", label: "خەرجییەکان" },
     { id: "reports", label: "ڕاپۆرتەکان" },
+    { id: "returns", label: "گەڕانەوە (مرتجعات)" },
+    { id: "exchanges", label: "گۆڕینەوە (استبدال)" },
+    { id: "users", label: "بەڕێوەبردنی بەکارهێنەران" },
+    { id: "settings", label: "ڕێکخستنی سیستەم" },
   ];
 
   useEffect(() => {
@@ -701,12 +754,12 @@ export function UsersPage() {
             onSubmit={handleUpdateRole}
             className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden flex flex-col"
           >
-            <div className="px-6 py-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
-              <h2 className="font-bold text-slate-800">دەسەڵاتەکانت هەژمار</h2>
+            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-gradient-to-l from-indigo-50 to-white">
+              <h2 className="font-bold text-indigo-900 text-lg flex items-center gap-2">دیاریکردنی دەسەڵاتەکان</h2>
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600"
+                className="text-slate-400 hover:bg-slate-100 p-1.5 rounded-lg transition-colors"
               >
                 <X size={20} />
               </button>

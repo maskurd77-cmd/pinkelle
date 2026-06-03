@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Search, Plus, FileText, UserPlus, FileClock, DollarSign, Printer, MessageCircle, PlusCircle, Edit } from 'lucide-react';
+import { Search, Plus, FileText, UserPlus, FileClock, DollarSign, Printer, MessageCircle, PlusCircle, Edit, X } from 'lucide-react';
 import { collection, onSnapshot, query, orderBy, doc, updateDoc, Timestamp, addDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { formatCurrency } from '../data';
@@ -27,6 +27,7 @@ export default function DebtBook() {
   const [actionType, setActionType] = useState<'pay' | 'add'>('pay');
   const [selectedDebt, setSelectedDebt] = useState<Debt | null>(null);
   const [paymentAmount, setPaymentAmount] = useState('');
+  const [paymentNote, setPaymentNote] = useState('');
 
   const [newDebtModalOpen, setNewDebtModalOpen] = useState(false);
   const [newName, setNewName] = useState('');
@@ -111,26 +112,54 @@ export default function DebtBook() {
       debtId: selectedDebt.id,
       amount: amountInput,
       type: actionType,
-      timestamp: Timestamp.now()
+      timestamp: Timestamp.now(),
+      notes: paymentNote || (actionType === 'pay' ? 'دانەوەی قەرز بە دەست' : 'زیادکردنی قەرز بە دەست')
     });
 
     setPaymentModalOpen(false);
     setSelectedDebt(null);
     setPaymentAmount('');
+    setPaymentNote('');
   };
 
   const handleCreateDebt = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newName || !newAmount) return;
 
-    await addDoc(collection(db, 'debts'), {
-      customerName: newName,
-      phone: newPhone,
-      amount: parseFloat(newAmount),
-      remainingAmount: parseFloat(newAmount),
-      status: 'active',
-      timestamp: Timestamp.now()
-    });
+    const amountVal = parseFloat(newAmount);
+    const existingDebt = debts.find(d => d.customerName === newName);
+
+    if (existingDebt) {
+        await updateDoc(doc(db, 'debts', existingDebt.id), {
+           amount: existingDebt.amount + amountVal,
+           remainingAmount: existingDebt.remainingAmount + amountVal,
+           status: 'active',
+           lastPaymentDate: Timestamp.now()
+        });
+        await addDoc(collection(db, 'debt_transactions'), {
+           debtId: existingDebt.id,
+           amount: amountVal,
+           type: 'add',
+           timestamp: Timestamp.now(),
+           notes: 'زیادکردنی قەرز بە دەست'
+        });
+    } else {
+        const debtRef = await addDoc(collection(db, 'debts'), {
+          customerName: newName,
+          phone: newPhone,
+          amount: amountVal,
+          remainingAmount: amountVal,
+          status: 'active',
+          timestamp: Timestamp.now()
+        });
+        await addDoc(collection(db, 'debt_transactions'), {
+          debtId: debtRef.id,
+          amount: amountVal,
+          type: 'add', // new initial debt
+          timestamp: Timestamp.now(),
+          notes: 'قەرزی نوێ'
+        });
+    }
 
     const existingCus = customers.find(c => c.name === newName);
     if (!existingCus) {
@@ -282,6 +311,7 @@ export default function DebtBook() {
                                setActionType('pay');
                                setSelectedDebt(debt);
                                setPaymentAmount(debt.remainingAmount.toString());
+                               setPaymentNote('');
                                setPaymentModalOpen(true);
                             }}
                             className="text-emerald-700 text-xs font-bold px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors border border-emerald-200 flex items-center gap-1.5 shadow-sm">
@@ -293,6 +323,7 @@ export default function DebtBook() {
                               setActionType('add');
                               setSelectedDebt(debt);
                               setPaymentAmount('');
+                              setPaymentNote('');
                               setPaymentModalOpen(true);
                            }}
                            className="text-red-700 text-xs font-bold px-2.5 py-1.5 bg-red-50 hover:bg-red-100 rounded-lg transition-colors border border-red-200 flex items-center gap-1.5 shadow-sm">
@@ -365,6 +396,10 @@ export default function DebtBook() {
                    </label>
                    <input required type="number" min="0" max={actionType === 'pay' ? selectedDebt.remainingAmount : undefined} value={paymentAmount} onChange={e => setPaymentAmount(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-pink-500 font-mono" />
                 </div>
+                <div>
+                   <label className="block text-sm font-medium text-slate-700 mb-1">تێبینی (ئارەزوومەندانە)</label>
+                   <input type="text" value={paymentNote} onChange={e => setPaymentNote(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-pink-500" placeholder="بۆ نموونە: حەواڵەی بانکی، هتد..." />
+                </div>
              </div>
              <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-2">
                <button type="button" onClick={() => setPaymentModalOpen(false)} className="px-4 py-2 text-slate-600 hover:bg-slate-200 rounded-lg text-sm font-medium transition-colors">
@@ -422,48 +457,61 @@ export default function DebtBook() {
       )}
       {/* History Modal */}
       {historyModalOpen && selectedDebt && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[85vh]">
-             <div className="px-6 py-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
-               <h2 className="text-lg font-bold text-slate-800">
-                  مێژووی مامەڵەکانی ({selectedDebt.customerName})
-               </h2>
-               <button onClick={() => setHistoryModalOpen(false)} className="text-slate-400 hover:text-slate-600">
-                  ×
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[85vh]">
+             <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center relative overflow-hidden">
+               <div className="absolute top-0 right-0 w-32 h-32 bg-pink-50 rounded-bl-full -z-10 opacity-50"></div>
+               <div>
+                  <h2 className="text-xl font-extrabold text-slate-800">
+                     مێژووی مامەڵەکان
+                  </h2>
+                  <p className="text-sm font-medium text-slate-500 mt-1">کڕیار: <span className="font-bold text-slate-700">{selectedDebt.customerName}</span></p>
+               </div>
+               <button onClick={() => setHistoryModalOpen(false)} className="w-10 h-10 rounded-full bg-slate-50 hover:bg-slate-100 text-slate-400 hover:text-slate-600 flex items-center justify-center transition-colors">
+                  <X size={20} />
                </button>
              </div>
              <div className="p-0 overflow-auto flex-1 custom-scrollbar">
                 {debtHistory.length > 0 ? (
-                   <table className="w-full text-right">
-                      <thead className="bg-slate-50 sticky top-0 border-b border-slate-100">
+                   <table className="w-full text-right border-collapse">
+                      <thead className="bg-slate-50/90 backdrop-blur-sm sticky top-0 z-10 border-b border-slate-100">
                          <tr>
-                            <th className="px-4 py-2 text-xs font-semibold text-slate-500">بەروار</th>
-                            <th className="px-4 py-2 text-xs font-semibold text-slate-500">بڕی پارە</th>
-                            <th className="px-4 py-2 text-xs font-semibold text-slate-500">جۆر</th>
+                            <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">بەروار</th>
+                            <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">بڕی پارە</th>
+                            <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">جۆر</th>
+                            <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">تێبینی</th>
                          </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-50">
+                      <tbody className="divide-y divide-slate-100">
                          {debtHistory.map(h => (
-                            <tr key={h.id} className="hover:bg-slate-50">
-                               <td className="px-4 py-3 text-sm text-slate-600 font-mono">{formatDate(h.timestamp)}</td>
-                               <td className="px-4 py-3 text-sm text-slate-900 font-bold font-mono">{formatCurrency(h.amount)}</td>
-                               <td className="px-4 py-3 text-sm font-bold">
+                            <tr key={h.id} className="hover:bg-slate-50/50 transition-colors">
+                               <td className="px-6 py-4 text-sm text-slate-600 font-mono font-medium">{formatDate(h.timestamp)}</td>
+                               <td className="px-6 py-4 text-sm text-slate-900 font-extrabold font-mono">{formatCurrency(h.amount)}</td>
+                               <td className="px-6 py-4 text-sm font-bold">
                                   {h.type === 'pay' ? (
-                                     <span className="text-green-600 bg-green-50 px-2 py-1 rounded">دانەوە (کەمکردن)</span>
+                                     <span className="text-emerald-700 bg-emerald-100 border border-emerald-200 px-2.5 py-1 rounded-lg text-xs">دانەوە (کەمکردن)</span>
                                   ) : (
-                                     <span className="text-red-600 bg-red-50 px-2 py-1 rounded">زیادکردن (قەرزی نوێ)</span>
+                                     <span className="text-red-700 bg-red-100 border border-red-200 px-2.5 py-1 rounded-lg text-xs">زیادکردن (قەرزی نوێ)</span>
                                   )}
+                               </td>
+                               <td className="px-6 py-4 text-xs text-slate-500 max-w-[200px] truncate" title={h.notes || ''}>
+                                  {h.notes || '-'}
                                </td>
                             </tr>
                          ))}
                       </tbody>
                    </table>
                 ) : (
-                   <div className="p-8 text-center text-slate-500 text-sm">هیچ مێژوویەک نەدۆزرایەوە بۆ ئەم قەرزە.</div>
+                   <div className="p-12 flex flex-col items-center justify-center text-center">
+                      <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mb-4 text-slate-300">
+                         <FileClock size={32} />
+                      </div>
+                      <p className="text-slate-500 font-bold">هیچ مێژوویەک نەدۆزرایەوە بۆ ئەم قەرزە.</p>
+                   </div>
                 )}
              </div>
-             <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-2">
-               <button type="button" onClick={() => setHistoryModalOpen(false)} className="px-4 py-2 text-slate-600 hover:bg-slate-200 rounded-lg text-sm font-medium transition-colors">
+             <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end">
+               <button type="button" onClick={() => setHistoryModalOpen(false)} className="px-6 py-2.5 bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 active:bg-slate-200 shadow-sm rounded-xl text-sm font-bold transition-all">
                  داخستن
                </button>
              </div>
