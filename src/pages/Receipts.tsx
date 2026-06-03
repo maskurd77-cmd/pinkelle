@@ -1,13 +1,23 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, ReceiptText, Printer, Eye, X } from 'lucide-react';
-import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
-import { db } from '../firebase';
+import { Search, ReceiptText, Printer, Eye, X, CheckCircle2 } from 'lucide-react';
+import { collection, onSnapshot, query, orderBy, doc, getDoc, updateDoc, writeBatch, Timestamp, getDocs, where } from 'firebase/firestore';
+import { db, auth } from '../firebase';
 import { formatCurrency } from '../data';
 
 export default function Receipts() {
   const [receipts, setReceipts] = useState<any[]>([]);
   const [search, setSearch] = useState('');
   const [selectedReceipt, setSelectedReceipt] = useState<any | null>(null);
+  const [userRole, setUserRole] = useState('');
+  const [isProcessingId, setIsProcessingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (auth.currentUser) {
+      getDoc(doc(db, 'users', auth.currentUser.uid)).then(snap => {
+        if (snap.exists() && snap.data().role) setUserRole(snap.data().role);
+      });
+    }
+  }, []);
 
   useEffect(() => {
     const q = query(collection(db, 'receipts'), orderBy('timestamp', 'desc'));
@@ -17,10 +27,78 @@ export default function Receipts() {
     return () => unsub();
   }, []);
 
+  const handleApprove = async (rec: any) => {
+     if (isProcessingId) return;
+     setIsProcessingId(rec.id);
+     try {
+       const batch = writeBatch(db);
+       
+       // Deduct stocks
+       if (rec.items?.length > 0) {
+          for (const item of rec.items) {
+             const productSnap = await getDoc(doc(db, 'products', item.productId));
+             if (productSnap.exists()) {
+                const currentStock = productSnap.data().stock || 0;
+                batch.update(doc(db, 'products', item.productId), { stock: currentStock - item.quantity });
+             }
+          }
+       }
+
+       // Add debt if paymentType is 'debt'
+       if (rec.paymentType === 'debt' && rec.totalAmount > 0 && rec.customerName) {
+           const debtsSnap = await getDocs(query(collection(db, 'debts'), where('customerName', '==', rec.customerName), where('status', '==', 'active')));
+           if (!debtsSnap.empty) {
+               const existingDebt = debtsSnap.docs[0];
+               const dData = existingDebt.data();
+               batch.update(existingDebt.ref, {
+                 amount: (dData.amount || 0) + rec.totalAmount,
+                 remainingAmount: (dData.remainingAmount || 0) + rec.totalAmount,
+                 updatedAt: Timestamp.now()
+               });
+               batch.set(doc(collection(db, 'debt_transactions')), {
+                 debtId: existingDebt.id,
+                 amount: rec.totalAmount,
+                 type: 'add',
+                 timestamp: Timestamp.now(),
+                 notes: 'زیادبوونی قەرز لە وەسڵی پەسەندکراوی ژمارە: ' + rec.id.slice(-8).toUpperCase()
+               });
+           } else {
+               const newDebtRef = doc(collection(db, 'debts'));
+               batch.set(newDebtRef, {
+                 customerName: rec.customerName,
+                 phone: rec.phone || '',
+                 amount: rec.totalAmount,
+                 remainingAmount: rec.totalAmount,
+                 status: 'active',
+                 notes: 'پاشماوەی وەسڵی پەسەندکراو: ' + rec.id.slice(-8).toUpperCase(),
+                 timestamp: Timestamp.now()
+               });
+               batch.set(doc(collection(db, 'debt_transactions')), {
+                 debtId: newDebtRef.id,
+                 amount: rec.totalAmount,
+                 type: 'add',
+                 timestamp: Timestamp.now(),
+                 notes: 'قەرزی نوێ لە وەسڵی پەسەندکراوی ژمارە: ' + rec.id.slice(-8).toUpperCase()
+               });
+           }
+       }
+       
+       batch.update(doc(db, 'receipts', rec.id), { status: 'completed' });
+       await batch.commit();
+     } catch (e) {
+       console.error(e);
+     } finally {
+       setIsProcessingId(null);
+     }
+  };
+
+  const [activeTab, setActiveTab] = useState<'completed' | 'pending'>('completed');
+
   const filtered = receipts.filter(r => {
     if (!r) return false;
     const matchSearch = (r.customerName || '').includes(search) || r.id.includes(search);
-    return matchSearch;
+    const matchTab = (r.status || 'completed') === activeTab;
+    return matchSearch && matchTab;
   });
 
   const formatDate = (ts: any) => {
@@ -37,17 +115,37 @@ export default function Receipts() {
     <div className="flex flex-col h-full space-y-4">
       {/* Normal View (Hidden when printing) */}
       <div className="print:hidden flex-1 bg-white rounded-[24px] border border-slate-200 shadow-sm flex flex-col overflow-hidden">
-        <div className="px-6 py-5 border-b border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between bg-white gap-4">
+        <div className="px-6 py-5 border-b border-slate-100 flex flex-col xl:flex-row items-start xl:items-center justify-between bg-white gap-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center">
               <ReceiptText size={20} />
             </div>
             <h2 className="text-xl font-extrabold text-slate-800">
-              وەسڵەکان و پسوولەکان
+              وەسڵەکان
             </h2>
+            
+            <div className="flex bg-slate-100 p-1 rounded-xl mr-6">
+               <button
+                  onClick={() => setActiveTab('completed')}
+                  className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${activeTab === 'completed' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+               >
+                  پسوولە پەسەندکراوەکان
+               </button>
+               {(userRole === 'admin' || userRole === 'accountant') && (
+                 <button
+                    onClick={() => setActiveTab('pending')}
+                    className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${activeTab === 'pending' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                 >
+                    چاوەڕێکراوەکان
+                    {receipts.filter(r => r.status === 'pending').length > 0 && (
+                       <span className="bg-orange-500 text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full leading-none">{receipts.filter(r => r.status === 'pending').length}</span>
+                    )}
+                 </button>
+               )}
+            </div>
           </div>
           
-          <div className="flex items-center gap-3 w-full sm:w-auto">
+          <div className="flex items-center gap-3 w-full xl:w-auto">
             <div className="relative flex-1 sm:w-72 sm:flex-none">
               <Search className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
               <input 
@@ -90,9 +188,22 @@ export default function Receipts() {
                     <span className={`inline-flex px-3 py-1 rounded-lg text-xs font-bold shadow-sm ${rec.paymentType === 'نەقد' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
                       {rec.paymentType}
                     </span>
+                    {rec.status === 'pending' && (
+                       <span className="ml-2 inline-flex px-3 py-1 rounded-lg text-xs font-bold shadow-sm bg-orange-100 text-orange-700">
+                          چاوەڕێکراو
+                       </span>
+                    )}
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex justify-center gap-2">
+                       {rec.status === 'pending' && (userRole === 'admin' || userRole === 'accountant') && (
+                          <button 
+                             onClick={() => handleApprove(rec)} 
+                             disabled={isProcessingId === rec.id}
+                             className="text-white bg-green-500 hover:bg-green-600 font-bold px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 shadow-sm text-xs disabled:opacity-50">
+                             <CheckCircle2 size={14} /> پەسەندکردن
+                          </button>
+                       )}
                        <button onClick={() => setSelectedReceipt(rec)} className="text-indigo-600 bg-indigo-50 hover:bg-indigo-100 hover:text-indigo-700 font-bold px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 shadow-sm text-xs">
                           <Eye size={14} /> بینین و چاپ
                        </button>

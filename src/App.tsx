@@ -17,6 +17,7 @@ import Expenses from './pages/Expenses';
 import Reports from './pages/Reports';
 import { Returns, Exchanges, UsersPage, SettingsPage } from './pages/MiscPages';
 import VisitsPage from './pages/Visits';
+import SafesPage from './pages/Safes';
 import Placeholder from './pages/Placeholder';
 import AuthPage from './pages/Auth';
 
@@ -89,6 +90,7 @@ export default function App() {
       case 'warehouse': return <Warehouse />;
       case 'customers': return <Customers />;
       case 'companies': return <Companies />;
+      case 'safes': return <SafesPage />;
       case 'categories': return <Categories />;
       case 'debt': return <DebtBook />;
       case 'receipts': return <Receipts />;

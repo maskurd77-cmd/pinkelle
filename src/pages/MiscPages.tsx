@@ -610,8 +610,12 @@ export function UsersPage() {
   const handleUpdateRole = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingUser) return;
+    
+    const roleEl = document.getElementById('edit-role-select') as HTMLSelectElement;
+    
     await updateDoc(doc(db, "users", editingUser.id), {
       permissions: allowedPages,
+      role: roleEl ? roleEl.value : editingUser.role,
     });
     setIsModalOpen(false);
     setEditingUser(null);
@@ -692,6 +696,11 @@ export function UsersPage() {
                 بەڕێوەبەر
               </span>
             )}
+            {u.role === "accountant" && (
+              <span className="absolute top-2 left-2 text-[10px] font-bold bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded">
+                محاسب
+              </span>
+            )}
             <div className="flex items-center gap-4 mb-4">
               <div className="w-12 h-12 bg-white border border-slate-200 rounded-full flex items-center justify-center text-slate-400 font-bold uppercase shadow-sm">
                 {u.name?.charAt(0) || u.email?.charAt(0)}
@@ -713,6 +722,8 @@ export function UsersPage() {
               <div className="text-[10px] text-slate-500">
                 {u.role === "admin"
                   ? "هەموو دەسەڵاتەکانی هەیە"
+                  : u.role === "accountant" 
+                  ? "دەسەڵاتی کۆکردنەوە و ڕێکخستنی وەسڵەکان"
                   : (u.permissions?.length || 0) + " بەش کراوەیە"}
               </div>
               <div className="flex gap-2">
@@ -768,10 +779,20 @@ export function UsersPage() {
             </div>
             <div className="p-6 space-y-4">
               <p className="text-sm font-bold text-slate-700">
-                دەسەڵاتەکان بۆ:{" "}
+                ڕێکخستنەکان بۆ:{" "}
                 <span className="text-indigo-600">{editingUser.email}</span>
               </p>
-              <div className="grid grid-cols-2 gap-3 mt-4">
+              <div>
+                 <label className="block text-sm font-bold text-slate-700 mb-1">جۆری بەکارهێنەر (ڕۆڵ)</label>
+                 <select id="edit-role-select" defaultValue={editingUser.role} className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-slate-700">
+                    <option value="admin">بەڕێوەبەر (Admin)</option>
+                    <option value="accountant">ژمێریار / محاسب (Accountant)</option>
+                    <option value="user">کارمەند / مەندوب (User)</option>
+                 </select>
+              </div>
+              <div className="pt-2 border-t border-slate-100">
+                <p className="text-sm font-bold text-slate-700 mb-3">دەسەڵاتەکانی بینین (تەنیا بۆ کارمەند)</p>
+                <div className="grid grid-cols-2 gap-3 mt-4">
                 {permissionsOptions.map((opt) => (
                   <label
                     key={opt.id}
@@ -786,6 +807,7 @@ export function UsersPage() {
                     {opt.label}
                   </label>
                 ))}
+              </div>
               </div>
             </div>
             <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-2">
@@ -895,6 +917,7 @@ export function SettingsPage() {
     shopPhone: "0750 000 0000",
     shopAddress: "سۆران",
     receiptFooter: "بەخێربێن بۆ پینک ئێللێ",
+    exchangeRate: 1500,
     pinCode: "",
     telegramBotToken: "",
     telegramChatId: "",
@@ -1102,7 +1125,7 @@ export function SettingsPage() {
               </div>
               <div>
                 <label className="text-sm font-bold text-slate-600 mb-1.5 block">
-                  تێکستی خوارەوەی پسوڵە
+                  تێکستی خوارەوەی وەسڵ
                 </label>
                 <input
                   type="text"
@@ -1110,8 +1133,88 @@ export function SettingsPage() {
                   onChange={(e) =>
                     setSettings({ ...settings, receiptFooter: e.target.value })
                   }
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 focus:ring-2 focus:ring-pink-500 focus:outline-none transition-all text-slate-600"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 focus:ring-2 focus:ring-pink-500 focus:outline-none transition-all font-medium text-slate-800"
                 />
+              </div>
+              <div className="md:col-span-2">
+                <label className="text-sm font-bold text-slate-600 mb-1.5 block">
+                  نرخی گۆڕینەوەی دۆلار بەرامبەر بە دینار ($1 = ؟ دینار)
+                </label>
+                <div className="flex flex-col md:flex-row gap-4">
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    value={settings.exchangeRate || 1500}
+                    onChange={(e) =>
+                      setSettings({ ...settings, exchangeRate: Number(e.target.value) })
+                    }
+                    className="w-full md:w-1/2 bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 focus:ring-2 focus:ring-pink-500 focus:outline-none transition-all font-mono text-left text-lg"
+                    dir="ltr"
+                  />
+                </div>
+                
+                {/* Currency Converter */}
+                <div className="mt-6 bg-slate-50 rounded-xl border border-slate-200 p-5">
+                   <h4 className="font-bold text-slate-700 mb-4 flex items-center gap-2">
+                      حاسیبەی گۆڕینەوەی دراو 
+                   </h4>
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* USD to IQD */}
+                      <div className="space-y-2 relative">
+                         <label className="text-xs font-bold text-slate-500 block">لە دۆلار بۆ دینار</label>
+                         <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-slate-400">$</span>
+                            <input 
+                               type="number" 
+                               placeholder="بڕ بە دۆلار..."
+                               dir="ltr"
+                               onChange={(e) => {
+                                  const val = Number(e.target.value);
+                                  const target = document.getElementById('usd-to-iqd-result') as HTMLInputElement;
+                                  if (target) target.value = (val * (settings.exchangeRate || 1500)).toLocaleString() + ' IQD';
+                               }}
+                               className="w-full bg-white border border-slate-300 rounded-lg py-2 pl-8 pr-3 font-mono text-sm focus:outline-none focus:border-pink-500"
+                            />
+                         </div>
+                         <input 
+                            id="usd-to-iqd-result"
+                            type="text" 
+                            readOnly
+                            placeholder="ئەنجام بە دینار"
+                            dir="ltr"
+                            className="w-full bg-slate-100 border border-transparent rounded-lg py-2 px-3 font-mono text-sm text-slate-700 font-bold"
+                         />
+                      </div>
+                      
+                      {/* IQD to USD */}
+                      <div className="space-y-2 relative">
+                         <label className="text-xs font-bold text-slate-500 block">لە دینار بۆ دۆلار</label>
+                         <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-slate-400 text-xs">IQD</span>
+                            <input 
+                               type="number" 
+                               placeholder="بڕ بە دینار..."
+                               dir="ltr"
+                               onChange={(e) => {
+                                  const val = Number(e.target.value);
+                                  const target = document.getElementById('iqd-to-usd-result') as HTMLInputElement;
+                                  if (target) target.value = '$ ' + (val / (settings.exchangeRate || 1500)).toLocaleString(undefined, {maximumFractionDigits:2});
+                               }}
+                               className="w-full bg-white border border-slate-300 rounded-lg py-2 pl-10 pr-3 font-mono text-sm focus:outline-none focus:border-pink-500"
+                            />
+                         </div>
+                         <input 
+                            id="iqd-to-usd-result"
+                            type="text" 
+                            readOnly
+                            placeholder="ئەنجام بە دۆلار"
+                            dir="ltr"
+                            className="w-full bg-slate-100 border border-transparent rounded-lg py-2 px-3 font-mono text-sm text-slate-700 font-bold"
+                         />
+                      </div>
+                   </div>
+                </div>
               </div>
             </div>
           </section>

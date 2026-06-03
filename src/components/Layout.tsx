@@ -20,6 +20,7 @@ const navItems = [
   { id: 'customers', label: 'کڕیاران', icon: Users },
   { id: 'visits', label: 'سەردانەکان', icon: MapPin },
   { id: 'companies', label: 'شەریکەکان', icon: Users },
+  { id: 'safes', label: 'قاسەکان', icon: Banknote },
   { id: 'debt', label: 'دەفتەری قەرز', icon: FileText },
   { id: 'receipts', label: 'وەسڵەکان', icon: ReceiptText },
   { id: 'expenses', label: 'خەرجییەکان', icon: Banknote },

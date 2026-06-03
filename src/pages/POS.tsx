@@ -56,42 +56,42 @@ export default function POS() {
          }
       });
     }
+  }, []);
 
-    const unsubProds = onSnapshot(collection(db, 'products'), (snap) => {
-      const prods = snap.docs.map(d => ({ id: d.id, ...d.data() } as Product));
-      setProducts(prods);
-      
-      const cats = Array.from(new Set(prods.map(p => p.category).filter(Boolean)));
-      setCategories(cats);
+  const [debts, setDebts] = useState<any[]>([]);
+  const [discountType, setDiscountType] = useState<'amount'|'percentage'>('amount');
+  const [discountValue, setDiscountValue] = useState<number|''>('');
+
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, 'products'), (snap) => {
+      const data = snap.docs.map(t => ({ id: t.id, ...t.data() } as Product));
+      setProducts(data);
+      const uniqueCats = Array.from(new Set(data.map(p => p.category).filter(Boolean))) as string[];
+      setCategories(uniqueCats);
     });
-
     const unsubCus = onSnapshot(collection(db, 'customers'), (snap) => {
-       setCustomers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      setCustomers(snap.docs.map(t => ({ id: t.id, ...t.data() })));
     });
-
-    const unsubSettings = onSnapshot(doc(db, 'system', 'settings'), (docSnap) => {
-      if (docSnap.exists() && docSnap.data().exchangeRate) {
-        setExchangeRate(docSnap.data().exchangeRate);
+    const unsubSettings = onSnapshot(doc(db, 'system', 'settings'), (snap) => {
+      if (snap.exists() && snap.data().exchangeRate) {
+         setExchangeRate(snap.data().exchangeRate);
       }
     });
-
-    return () => {
-       unsubProds();
-       unsubCus();
-       unsubSettings();
-    };
+    const unsubDebts = onSnapshot(collection(db, 'debts'), (snap) => {
+      setDebts(snap.docs.map(t => ({ id: t.id, ...t.data() })));
+    });
+    return () => { unsub(); unsubCus(); unsubSettings(); unsubDebts(); };
   }, []);
 
   const filteredProducts = useMemo(() => {
     return products.filter(p => {
-      const matchSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) || (p.barcode && p.barcode.includes(searchTerm));
-      const matchCategory = selectedCategory === 'all' || p.category === selectedCategory;
-      return matchSearch && matchCategory && p.stock > 0;
+      if (selectedCategory !== 'all' && p.category !== selectedCategory) return false;
+      if (searchTerm) {
+        return p.name.includes(searchTerm) || (p.barcode && p.barcode.includes(searchTerm));
+      }
+      return true;
     });
   }, [searchTerm, selectedCategory, products]);
-
-  const [discountType, setDiscountType] = useState<'amount'|'percentage'>('amount');
-  const [discountValue, setDiscountValue] = useState<number|''>('');
 
   const addToCart = (product: Product) => {
     setCart(prev => {
@@ -147,34 +147,21 @@ export default function POS() {
     
     setIsProcessing(true);
     try {
-      let existingDebt: any = null;
-      if (customerDetails.paymentType === 'debt' && customerDetails.shopName) {
-         const debtsQ = query(collection(db, 'debts'), where('customerName', '==', customerDetails.shopName), limit(1));
-         const debtsSnap = await getDocs(debtsQ);
-         if (!debtsSnap.empty) {
-             existingDebt = { id: debtsSnap.docs[0].id, ...debtsSnap.docs[0].data() };
-         }
-      }
-
       const batch = writeBatch(db);
       
-      // Update stocks
-      cart.forEach(item => {
-        const ref = doc(db, 'products', item.id);
-        batch.update(ref, { stock: item.stock - item.quantity });
-      });
-
-      // Create Receipt
+      const isPending = userRole !== 'admin' && userRole !== 'accountant';
+      
       const receiptRef = doc(collection(db, 'receipts'));
       batch.set(receiptRef, {
-        customerName: customerDetails.shopName,
-        mandubName: mandubName,
-        phone: customerDetails.phone,
-        address: customerDetails.address,
-        notes: customerDetails.notes,
-        paymentType: customerDetails.paymentType === 'cash' ? 'نەقد' : 'قەرز',
+        customerName: customerDetails.shopName || 'کڕیاری گشتی',
+        phone: customerDetails.phone || '',
+        address: customerDetails.address || '',
+        notes: customerDetails.notes || '',
+        paymentType: customerDetails.paymentType,
+        sellerName: mandubName,
         exchangeRate,
         isWholesale,
+        status: isPending ? 'pending' : 'completed',
         items: cart.map(c => {
            let applicablePrice;
            if (c.editedPrice !== undefined) {
@@ -193,10 +180,11 @@ export default function POS() {
              currency: c.currency || 'IQD',
              originalUnitPrice: originalPriceInIQD,
              originalUnitCost: c.unitCost || 0,
-             unitPrice: priceInIQD, // store as IQD equivalent for easy backend processing
+             unitPrice: priceInIQD,
              isWholesale: isWholesale && Boolean(c.wholesalePrice),
              unitCost: costInIQD,
-             category: c.category || 'ගشتی',
+             category: c.category || 'گشتی',
+             stock: c.stock,
              total: priceInIQD * c.quantity
            }
         }),
@@ -207,45 +195,53 @@ export default function POS() {
         timestamp: Timestamp.now()
       });
 
-      // If debt, add to debt book or update existing
-      if (customerDetails.paymentType === 'debt') {
-        if (existingDebt) {
-          const debtRef = doc(db, 'debts', existingDebt.id);
-          batch.update(debtRef, {
-            amount: existingDebt.amount + total,
-            remainingAmount: existingDebt.remainingAmount + total,
-            status: 'active',
-            lastPaymentDate: Timestamp.now()
-          });
-          
-          const debtTxRef = doc(collection(db, 'debt_transactions'));
-          batch.set(debtTxRef, {
-            debtId: existingDebt.id,
-            amount: total,
-            type: 'add',
-            timestamp: Timestamp.now(),
-            notes: 'زیادبوونی قەرز لە وەسڵی ژمارە: ' + receiptRef.id.slice(-8).toUpperCase()
-          });
-        } else {
-          const debtRef = doc(collection(db, 'debts'));
-          batch.set(debtRef, {
-            customerName: customerDetails.shopName,
-            phone: customerDetails.phone,
-            amount: total,
-            remainingAmount: total,
-            status: 'active',
-            notes: 'پاشماوەی وەسڵ: ' + receiptRef.id.slice(-8).toUpperCase(),
-            timestamp: Timestamp.now()
-          });
-          
-          const debtTxRef = doc(collection(db, 'debt_transactions'));
-          batch.set(debtTxRef, {
-            debtId: debtRef.id,
-            amount: total,
-            type: 'add',
-            timestamp: Timestamp.now(),
-            notes: 'قەرزی نوێ لە وەسڵی ژمارە: ' + receiptRef.id.slice(-8).toUpperCase()
-          });
+      if (!isPending) {
+        // Update stocks
+        cart.forEach(item => {
+          const ref = doc(db, 'products', item.id);
+          batch.update(ref, { stock: item.stock - item.quantity });
+        });
+
+        // Handle Debt if paymentType is 'debt' (قەرز)
+        if (customerDetails.paymentType === 'debt' && total > 0 && customerDetails.shopName) {
+             const existingDebt = debts.find(d => d.customerName === customerDetails.shopName && d.status === 'active');
+             if (existingDebt) {
+               const debtRef = doc(db, 'debts', existingDebt.id);
+               batch.update(debtRef, {
+                 amount: (existingDebt.amount || 0) + total,
+                 remainingAmount: (existingDebt.remainingAmount || 0) + total,
+                 updatedAt: Timestamp.now()
+               });
+               
+               const debtTxRef = doc(collection(db, 'debt_transactions'));
+               batch.set(debtTxRef, {
+                 debtId: existingDebt.id,
+                 amount: total,
+                 type: 'add',
+                 timestamp: Timestamp.now(),
+                 notes: 'زیادبوونی قەرز لە وەسڵی ژمارە: ' + receiptRef.id.slice(-8).toUpperCase()
+               });
+             } else {
+               const debtRef = doc(collection(db, 'debts'));
+               batch.set(debtRef, {
+                 customerName: customerDetails.shopName,
+                 phone: customerDetails.phone,
+                 amount: total,
+                 remainingAmount: total,
+                 status: 'active',
+                 notes: 'پاشماوەی وەسڵ: ' + receiptRef.id.slice(-8).toUpperCase(),
+                 timestamp: Timestamp.now()
+               });
+               
+               const debtTxRef = doc(collection(db, 'debt_transactions'));
+               batch.set(debtTxRef, {
+                 debtId: debtRef.id,
+                 amount: total,
+                 type: 'add',
+                 timestamp: Timestamp.now(),
+                 notes: 'قەرزی نوێ لە وەسڵی ژمارە: ' + receiptRef.id.slice(-8).toUpperCase()
+               });
+             }
         }
       }
 
