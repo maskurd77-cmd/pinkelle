@@ -136,7 +136,10 @@ export default function Layout({ children, currentRoute, onNavigate, userData }:
                { id: 'pos', label: 'کاشێر', icon: ShoppingCart },
                { id: 'products', label: 'کالا', icon: Package },
                { id: 'receipts', label: 'وەسڵ', icon: ReceiptText },
-             ].map(item => {
+             ].filter(item => {
+                if (userData?.role === 'admin') return true;
+                return (userData?.permissions || []).includes(item.id);
+             }).map(item => {
                const isActive = currentRoute === item.id;
                const Icon = item.icon;
                return (

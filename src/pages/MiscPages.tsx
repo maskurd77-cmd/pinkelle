@@ -14,6 +14,7 @@ import {
   Download,
   Upload,
   Database,
+  PlusCircle,
 } from "lucide-react";
 import {
   collection,
@@ -35,49 +36,87 @@ import { initializeApp, getApp } from "firebase/app";
 import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
 import { formatCurrency } from "../data";
 
-const reduceCustomerDebt = async (receipt: any, amountToReduce: number, reason: string) => {
-   if (!receipt || !receipt.customerName || (receipt.paymentType !== 'debt' && receipt.paymentType !== 'قەرز')) return;
-   
-   try {
-     const debtsQ = query(collection(db, "debts"), where("customerName", "==", receipt.customerName));
-     const debtSnap = await getDocs(debtsQ);
-     if (!debtSnap.empty) {
-        const debtDoc = debtSnap.docs[0];
-        const currentData = debtDoc.data();
-        
-        const newAmount = Math.max(0, (currentData.amount || 0) - amountToReduce);
-        const newRemaining = Math.max(0, (currentData.remainingAmount || 0) - amountToReduce);
-        
-        await updateDoc(doc(db, "debts", debtDoc.id), {
-           amount: newAmount,
-           remainingAmount: newRemaining,
-           status: newRemaining <= 0 ? 'paid' : 'active'
-        });
+export const reduceCustomerDebt = async (
+  receipt: any,
+  amountToReduce: number,
+  reason: string,
+) => {
+  if (
+    !receipt ||
+    !receipt.customerName ||
+    (receipt.paymentType !== "debt" && receipt.paymentType !== "قەرز")
+  )
+    return;
 
-        await addDoc(collection(db, "debt_transactions"), {
-           debtId: debtDoc.id,
-           amount: amountToReduce,
-           type: 'pay',
-           timestamp: Timestamp.now(),
-           notes: `${reason} - وەسڵی ژمارە: ${receipt.id.slice(-6).toUpperCase()}`
-        });
-     }
-   } catch(e) {
-     console.error("Error reducing debt:", e);
-   }
+  try {
+    let finalAmountToReduce = amountToReduce;
+    if (receipt.invoiceCurrency === "USD") {
+      finalAmountToReduce = amountToReduce * (receipt.exchangeRate || 1500);
+    }
+
+    const debtsQ = query(
+      collection(db, "debts"),
+      where("customerName", "==", receipt.customerName),
+    );
+    const debtSnap = await getDocs(debtsQ);
+    if (!debtSnap.empty) {
+      const debtDoc = debtSnap.docs[0];
+      const currentData = debtDoc.data();
+
+      const newAmount = Math.max(0, (currentData.amount || 0) - finalAmountToReduce);
+      const newRemaining = Math.max(
+        0,
+        (currentData.remainingAmount || 0) - finalAmountToReduce,
+      );
+
+      await updateDoc(doc(db, "debts", debtDoc.id), {
+        amount: newAmount,
+        remainingAmount: newRemaining,
+        status: newRemaining <= 0 ? "paid" : "active",
+      });
+
+      await addDoc(collection(db, "debt_transactions"), {
+        debtId: debtDoc.id,
+        amount: finalAmountToReduce,
+        type: "pay",
+        timestamp: Timestamp.now(),
+        notes: `${reason} - وەسڵی ژمارە: ${receipt.id.slice(-6).toUpperCase()}`,
+      });
+    }
+  } catch (e) {
+    console.error("Error reducing debt:", e);
+  }
 };
 
 export function Returns() {
   const [receipts, setReceipts] = useState<any[]>([]);
   const [returningReceipt, setReturningReceipt] = useState<any>(null);
   const [search, setSearch] = useState("");
+  const [userRole, setUserRole] = useState("");
+  const [userName, setUserName] = useState("");
 
   useEffect(() => {
+    import("../firebase").then(({ auth, db }) => {
+      if (auth.currentUser) {
+        getDoc(doc(db, "users", auth.currentUser.uid)).then((snap) => {
+          if (snap.exists()) {
+            setUserRole(snap.data().role || "user");
+            setUserName(
+              snap.data().name || auth.currentUser?.email || "نەزانراو",
+            );
+          }
+        });
+      }
+    });
+
     const q = query(collection(db, "receipts"), orderBy("timestamp", "desc"));
     const unsub = onSnapshot(q, (snap) => {
       setReceipts(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
     });
-    return () => unsub();
+
+    return () => {
+      unsub();
+    };
   }, []);
 
   const handleReturnWholeReceipt = async () => {
@@ -87,7 +126,27 @@ export function Returns() {
       )
     )
       return;
+
+    const isPending = userRole !== "admin" && userRole !== "accountant";
+
     try {
+      if (isPending) {
+        await addDoc(collection(db, "return_transactions"), {
+          type: "full",
+          receiptId: returningReceipt.id,
+          receiptData: returningReceipt,
+          reductionAmount: returningReceipt.totalAmount || 0,
+          status: "pending",
+          createdBy: userName,
+          timestamp: Timestamp.now(),
+        });
+        alert(
+          "نێردرا بۆ چاوەڕێکراوەکان تا لەلایەن بەڕێوەبەر یان ژمێریارەوە پەسەند دەکرێت.",
+        );
+        setReturningReceipt(null);
+        return;
+      }
+
       // 1. restore stock
       for (const item of returningReceipt.items) {
         const pRef = doc(db, "products", item.productId);
@@ -101,7 +160,11 @@ export function Returns() {
       // 2. delete receipt
       await deleteDoc(doc(db, "receipts", returningReceipt.id));
       // 3. reduce debt if applicable
-      await reduceCustomerDebt(returningReceipt, returningReceipt.totalAmount || 0, "گەڕانەوەی تەواوی کاڵاکان");
+      await reduceCustomerDebt(
+        returningReceipt,
+        returningReceipt.totalAmount || 0,
+        "گەڕانەوەی تەواوی کاڵاکان",
+      );
       alert("وەسڵەکە بە سەرکەوتوویی سڕایەوە و کالاکان گەڕێنرانەوە کۆگا.");
       setReturningReceipt(null);
     } catch (e) {
@@ -123,7 +186,27 @@ export function Returns() {
       return;
     }
 
+    const isPending = userRole !== "admin" && userRole !== "accountant";
+
     try {
+      if (isPending) {
+        await addDoc(collection(db, "return_transactions"), {
+          type: "partial",
+          receiptId: returningReceipt.id,
+          receiptData: returningReceipt,
+          itemIndex: index,
+          returnedQty: qty,
+          reductionAmount: qty * returningReceipt.items[index].unitPrice,
+          status: "pending",
+          createdBy: userName,
+          timestamp: Timestamp.now(),
+        });
+        alert(
+          "نێردرا بۆ چاوەڕێکراوەکان تا لەلایەن بەڕێوەبەر یان ژمێریارەوە پەسەند دەکرێت.",
+        );
+        return;
+      }
+
       // Restore stock
       const pRef = doc(db, "products", item.productId);
       const pSnap = await getDoc(pRef);
@@ -143,7 +226,11 @@ export function Returns() {
 
       if (filteredItems.length === 0) {
         await deleteDoc(doc(db, "receipts", returningReceipt.id));
-        await reduceCustomerDebt(returningReceipt, reductionAmount, "گەڕانەوەی کاڵا");
+        await reduceCustomerDebt(
+          returningReceipt,
+          reductionAmount,
+          "گەڕانەوەی کاڵا",
+        );
         alert("وەسڵەکە بە تەواوەتی سڕایەوە چونکە هەموو کالاکانی گەڕێنرانەوە.");
         setReturningReceipt(null);
       } else {
@@ -157,7 +244,11 @@ export function Returns() {
           totalAmount: newTotal,
           totalItems: newTotalItems,
         });
-        await reduceCustomerDebt(returningReceipt, reductionAmount, "گەڕانەوەی کاڵا");
+        await reduceCustomerDebt(
+          returningReceipt,
+          reductionAmount,
+          "گەڕانەوەی کاڵا",
+        );
         setReturningReceipt({
           ...returningReceipt,
           items: filteredItems,
@@ -180,9 +271,11 @@ export function Returns() {
   return (
     <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm h-full flex flex-col overflow-hidden relative">
       <div className="border-b border-slate-100 pb-4 mb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-          <Undo2 className="text-pink-600" /> گەڕانەوەی کالا (مرتجعات)
-        </h2>
+        <div className="flex items-center gap-4">
+          <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+            <Undo2 className="text-pink-600" /> گەڕانەوەی کالا (مرتجعات)
+          </h2>
+        </div>
         <div className="relative">
           <Search
             size={16}
@@ -347,7 +440,11 @@ export function Exchanges() {
       }
       // 2. delete receipt
       await deleteDoc(doc(db, "receipts", returningReceipt.id));
-      await reduceCustomerDebt(returningReceipt, returningReceipt.totalAmount || 0, "گۆڕینەوەی کوێربووی تەواوی کاڵاکان");
+      await reduceCustomerDebt(
+        returningReceipt,
+        returningReceipt.totalAmount || 0,
+        "گۆڕینەوەی کوێربووی تەواوی کاڵاکان",
+      );
       alert(
         "وەسڵەکە داخرا و کالاکان گەڕێنرانەوە کۆگا. ئێستا دەتوانی بچیتە بەشی کاشێر بۆ لێدانی وەسڵی نوێ.",
       );
@@ -391,7 +488,11 @@ export function Exchanges() {
 
       if (filteredItems.length === 0) {
         await deleteDoc(doc(db, "receipts", returningReceipt.id));
-        await reduceCustomerDebt(returningReceipt, reductionAmount, "گۆڕینەوەی کاڵا");
+        await reduceCustomerDebt(
+          returningReceipt,
+          reductionAmount,
+          "گۆڕینەوەی کاڵا",
+        );
         alert(
           "وەسڵەکە بە تەواوەتی سڕایەوە. ئێستا دەتوانی لە بەشی کاشێر کالای نوێ بۆ کڕیار لێ بدەی.",
         );
@@ -407,7 +508,11 @@ export function Exchanges() {
           totalAmount: newTotal,
           totalItems: newTotalItems,
         });
-        await reduceCustomerDebt(returningReceipt, reductionAmount, "گۆڕینەوەی کاڵا");
+        await reduceCustomerDebt(
+          returningReceipt,
+          reductionAmount,
+          "گۆڕینەوەی کاڵا",
+        );
         setReturningReceipt({
           ...returningReceipt,
           items: filteredItems,
@@ -610,9 +715,11 @@ export function UsersPage() {
   const handleUpdateRole = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingUser) return;
-    
-    const roleEl = document.getElementById('edit-role-select') as HTMLSelectElement;
-    
+
+    const roleEl = document.getElementById(
+      "edit-role-select",
+    ) as HTMLSelectElement;
+
     await updateDoc(doc(db, "users", editingUser.id), {
       permissions: allowedPages,
       role: roleEl ? roleEl.value : editingUser.role,
@@ -685,32 +792,32 @@ export function UsersPage() {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4 overflow-y-auto">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5 mt-6 overflow-y-auto pb-4 px-1 custom-scrollbar">
         {users.map((u) => (
           <div
             key={u.id}
-            className="p-4 border border-slate-200 rounded-xl flex flex-col justify-between hover:border-pink-300 transition-colors bg-slate-50 relative"
+            className="p-5 border border-slate-200 rounded-2xl flex flex-col justify-between hover:border-pink-300 hover:shadow-md transition-all duration-300 bg-gradient-to-br from-white to-slate-50 relative group"
           >
             {u.role === "admin" && (
-              <span className="absolute top-2 left-2 text-[10px] font-bold bg-pink-100 text-pink-700 px-2 py-0.5 rounded">
+              <span className="absolute top-3 left-3 text-[10px] font-black tracking-wider bg-pink-100 text-pink-700 px-2.5 py-1 rounded-lg">
                 بەڕێوەبەر
               </span>
             )}
             {u.role === "accountant" && (
-              <span className="absolute top-2 left-2 text-[10px] font-bold bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded">
+              <span className="absolute top-3 left-3 text-[10px] font-black tracking-wider bg-indigo-100 text-indigo-700 px-2.5 py-1 rounded-lg">
                 محاسب
               </span>
             )}
-            <div className="flex items-center gap-4 mb-4">
-              <div className="w-12 h-12 bg-white border border-slate-200 rounded-full flex items-center justify-center text-slate-400 font-bold uppercase shadow-sm">
+            <div className="flex items-center gap-4 mb-5">
+              <div className="w-14 h-14 bg-white border border-slate-200 rounded-full flex items-center justify-center text-slate-400 font-bold text-xl uppercase shadow-sm group-hover:border-pink-300 group-hover:text-pink-500 transition-colors">
                 {u.name?.charAt(0) || u.email?.charAt(0)}
               </div>
-              <div>
-                <h3 className="font-bold text-slate-800">
+              <div className="flex-1 min-w-0">
+                <h3 className="font-bold text-slate-800 text-lg truncate">
                   {u.name || (u.email && u.email.split("@")[0])}
                 </h3>
                 <p
-                  className="text-[11px] text-slate-500 mt-0.5 font-mono bg-white inline-block px-1 rounded shadow-sm"
+                  className="text-[11px] text-slate-500 mt-1 font-mono bg-white inline-block px-1.5 py-0.5 rounded shadow-sm border border-slate-100"
                   dir="ltr"
                 >
                   {u.email}
@@ -718,15 +825,15 @@ export function UsersPage() {
               </div>
             </div>
 
-            <div className="mt-2 pt-3 border-t border-slate-200 flex justify-between items-center">
-              <div className="text-[10px] text-slate-500">
+            <div className="pt-4 border-t border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+              <div className="text-[11px] font-medium text-slate-500 bg-slate-100 px-2.5 py-1 rounded-lg">
                 {u.role === "admin"
                   ? "هەموو دەسەڵاتەکانی هەیە"
-                  : u.role === "accountant" 
-                  ? "دەسەڵاتی کۆکردنەوە و ڕێکخستنی وەسڵەکان"
-                  : (u.permissions?.length || 0) + " بەش کراوەیە"}
+                  : u.role === "accountant"
+                    ? "دەسەڵاتی کۆکردنەوە و ڕێکخستنی وەسڵەکان"
+                    : (u.permissions?.length || 0) + " بەش کراوەیە"}
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2 w-full sm:w-auto mt-2 sm:mt-0">
                 {u.id !== getAuth().currentUser?.uid && (
                   <button
                     onClick={async () => {
@@ -738,7 +845,7 @@ export function UsersPage() {
                         await deleteDoc(doc(db, "users", u.id));
                       }
                     }}
-                    className="text-xs font-bold text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg transition-colors"
+                    className="flex-1 sm:flex-none text-xs font-bold text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 px-3 py-2 rounded-xl transition-colors text-center"
                   >
                     سڕینەوە
                   </button>
@@ -750,9 +857,9 @@ export function UsersPage() {
                       setAllowedPages(u.permissions || []);
                       setIsModalOpen(true);
                     }}
-                    className="text-xs font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg transition-colors"
+                    className="flex-1 sm:flex-none text-xs font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-3 py-2 rounded-xl transition-colors text-center"
                   >
-                    دیاریکردنی دەسەڵات
+                    دەسەڵاتەکان
                   </button>
                 )}
               </div>
@@ -762,65 +869,92 @@ export function UsersPage() {
       </div>
 
       {isModalOpen && editingUser && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <form
             onSubmit={handleUpdateRole}
-            className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden flex flex-col"
+            className="bg-white rounded-[24px] shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col"
           >
-            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-gradient-to-l from-indigo-50 to-white">
-              <h2 className="font-bold text-indigo-900 text-lg flex items-center gap-2">دیاریکردنی دەسەڵاتەکان</h2>
+            <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-gradient-to-l from-indigo-50/50 to-white">
+              <h2 className="font-bold text-indigo-900 text-lg flex items-center gap-2">
+                دیاریکردنی دەسەڵاتەکان
+              </h2>
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="text-slate-400 hover:bg-slate-100 p-1.5 rounded-lg transition-colors"
+                className="text-slate-400 hover:bg-slate-100 p-2 rounded-xl transition-colors"
               >
                 <X size={20} />
               </button>
             </div>
-            <div className="p-6 space-y-4">
-              <p className="text-sm font-bold text-slate-700">
-                ڕێکخستنەکان بۆ:{" "}
-                <span className="text-indigo-600">{editingUser.email}</span>
-              </p>
-              <div>
-                 <label className="block text-sm font-bold text-slate-700 mb-1">جۆری بەکارهێنەر (ڕۆڵ)</label>
-                 <select id="edit-role-select" defaultValue={editingUser.role} className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-slate-700">
-                    <option value="admin">بەڕێوەبەر (Admin)</option>
-                    <option value="accountant">ژمێریار / محاسب (Accountant)</option>
-                    <option value="user">کارمەند / مەندوب (User)</option>
-                 </select>
-              </div>
-              <div className="pt-2 border-t border-slate-100">
-                <p className="text-sm font-bold text-slate-700 mb-3">دەسەڵاتەکانی بینین (تەنیا بۆ کارمەند)</p>
-                <div className="grid grid-cols-2 gap-3 mt-4">
-                {permissionsOptions.map((opt) => (
-                  <label
-                    key={opt.id}
-                    className={`flex items-center gap-2 p-3 border rounded-xl cursor-pointer transition-all text-sm font-medium select-none ${allowedPages.includes(opt.id) ? "border-indigo-500 bg-indigo-50 text-indigo-700" : "border-slate-200 bg-white text-slate-600"}`}
+            <div className="p-6 space-y-6">
+              <div className="bg-slate-50 border border-slate-100 p-4 rounded-xl flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-bold text-slate-500 mb-1">
+                    بەکارهێنەر
+                  </p>
+                  <p
+                    className="text-sm font-bold text-indigo-600 font-mono"
+                    dir="ltr"
                   >
-                    <input
-                      type="checkbox"
-                      checked={allowedPages.includes(opt.id)}
-                      onChange={() => togglePermission(opt.id)}
-                      className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
-                    />
-                    {opt.label}
-                  </label>
-                ))}
+                    {editingUser.email}
+                  </p>
+                </div>
+                <div className="w-10 h-10 bg-white border border-slate-200 rounded-full flex items-center justify-center text-slate-400 font-bold uppercase shadow-sm">
+                  {editingUser.name?.charAt(0) || editingUser.email?.charAt(0)}
+                </div>
               </div>
+
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2 flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
+                  جۆری بەکارهێنەر (ڕۆڵ)
+                </label>
+                <select
+                  id="edit-role-select"
+                  defaultValue={editingUser.role}
+                  className="w-full bg-white border-2 border-slate-200 rounded-xl p-3 outline-none focus:border-indigo-500 font-bold text-slate-700 transition-colors"
+                >
+                  <option value="admin">بەڕێوەبەر (Admin)</option>
+                  <option value="accountant">
+                    ژمێریار / محاسب (Accountant)
+                  </option>
+                  <option value="user">کارمەند / مەندوب (User)</option>
+                </select>
+              </div>
+              <div className="pt-4 border-t border-slate-100">
+                <label className="block text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
+                  دەسەڵاتەکانی بینین (تەنیا بۆ کارمەند)
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4 max-h-[40vh] overflow-y-auto px-1 pb-2 custom-scrollbar">
+                  {permissionsOptions.map((opt) => (
+                    <label
+                      key={opt.id}
+                      className={`flex items-center gap-3 p-3.5 border-2 rounded-xl cursor-pointer transition-all text-sm font-bold select-none ${allowedPages.includes(opt.id) ? "border-indigo-500 bg-indigo-50 text-indigo-700 shadow-sm" : "border-slate-100 bg-white text-slate-600 hover:border-slate-200"}`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={allowedPages.includes(opt.id)}
+                        onChange={() => togglePermission(opt.id)}
+                        className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 focus:ring-offset-0"
+                      />
+                      {opt.label}
+                    </label>
+                  ))}
+                </div>
               </div>
             </div>
-            <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-2">
+            <div className="px-6 py-5 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="px-4 py-2 text-slate-600 bg-white border border-slate-200 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors"
+                className="px-6 py-2.5 text-slate-600 bg-white border border-slate-200 rounded-xl text-sm font-bold hover:bg-slate-50 transition-colors"
               >
                 پاشگەزبوونەوە
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors"
+                className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 transition-colors shadow-sm shadow-indigo-200"
               >
                 پاشەکەوتکردن
               </button>
@@ -830,26 +964,27 @@ export function UsersPage() {
       )}
 
       {isAddUserModalOpen && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <form
             onSubmit={handleAddUser}
-            className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden flex flex-col"
+            className="bg-white rounded-[24px] shadow-2xl w-full max-w-md overflow-hidden flex flex-col"
           >
-            <div className="px-6 py-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
-              <h2 className="font-bold text-slate-800">
+            <div className="px-6 py-5 border-b border-slate-100 bg-gradient-to-l from-slate-50 to-white flex justify-between items-center">
+              <h2 className="font-bold text-slate-800 text-lg flex items-center gap-2">
+                <PlusCircle className="text-pink-600" size={20} />
                 زیادکردنی بەکارهێنەری نوێ
               </h2>
               <button
                 type="button"
                 onClick={() => setIsAddUserModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600"
+                className="text-slate-400 hover:bg-slate-100 p-2 rounded-xl transition-colors"
               >
                 <X size={20} />
               </button>
             </div>
-            <div className="p-6 space-y-4">
+            <div className="p-6 space-y-5">
               <div>
-                <label className="block text-sm font-bold text-slate-700 mb-1">
+                <label className="block text-sm font-bold text-slate-700 mb-2">
                   ناوی تەواو
                 </label>
                 <input
@@ -857,24 +992,26 @@ export function UsersPage() {
                   type="text"
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-pink-500"
+                  className="w-full bg-white border-2 border-slate-200 rounded-xl p-3 focus:outline-none focus:border-pink-500 transition-colors"
+                  placeholder="ناوی بەکارهێنەر"
                 />
               </div>
               <div>
-                <label className="block text-sm font-bold text-slate-700 mb-1">
-                  ئیمەیڵ
+                <label className="block text-sm font-bold text-slate-700 mb-2">
+                  ئیمەیڵ (بۆ چوونە ژوورەوە)
                 </label>
                 <input
                   required
                   type="email"
                   value={newEmail}
                   onChange={(e) => setNewEmail(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-pink-500 font-mono text-left"
+                  className="w-full bg-white border-2 border-slate-200 rounded-xl p-3 focus:outline-none focus:border-pink-500 transition-colors font-mono text-left"
                   dir="ltr"
+                  placeholder="name@example.com"
                 />
               </div>
               <div>
-                <label className="block text-sm font-bold text-slate-700 mb-1">
+                <label className="block text-sm font-bold text-slate-700 mb-2">
                   تێپەڕوشە (باسۆرد)
                 </label>
                 <input
@@ -883,23 +1020,24 @@ export function UsersPage() {
                   minLength={6}
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-pink-500 font-mono text-left"
+                  className="w-full bg-white border-2 border-slate-200 rounded-xl p-3 focus:outline-none focus:border-pink-500 transition-colors font-mono text-left"
                   dir="ltr"
+                  placeholder="لانی کەم ٦ پیت/ژمارە"
                 />
               </div>
             </div>
-            <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-2">
+            <div className="px-6 py-5 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
               <button
                 type="button"
                 onClick={() => setIsAddUserModalOpen(false)}
-                className="px-4 py-2 text-slate-600 bg-white border border-slate-200 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors"
+                className="px-6 py-2.5 text-slate-600 bg-white border border-slate-200 rounded-xl text-sm font-bold hover:bg-slate-50 transition-colors"
               >
                 پاشگەزبوونەوە
               </button>
               <button
                 disabled={isCreating}
                 type="submit"
-                className="px-4 py-2 bg-pink-600 text-white rounded-lg text-sm font-medium hover:bg-pink-700 transition-colors disabled:opacity-50"
+                className="px-6 py-2.5 bg-pink-600 text-white rounded-xl text-sm font-bold hover:bg-pink-700 disabled:opacity-50 transition-colors shadow-sm shadow-pink-200"
               >
                 {isCreating ? "دروست دەکرێت..." : "دروستکردن"}
               </button>
@@ -961,12 +1099,16 @@ export function SettingsPage() {
             "products",
             "debts",
             "debt_transactions",
+            "return_transactions",
             "expenses",
             "customers",
+            "visits",
             "companies",
           ];
         } else if (colName === "debts") {
           colsToDelete = ["debts", "debt_transactions"];
+        } else if (colName === "customers") {
+          colsToDelete = ["customers", "visits"];
         }
 
         for (const col of colsToDelete) {
@@ -1147,73 +1289,99 @@ export function SettingsPage() {
                     step="any"
                     value={settings.exchangeRate || 1500}
                     onChange={(e) =>
-                      setSettings({ ...settings, exchangeRate: Number(e.target.value) })
+                      setSettings({
+                        ...settings,
+                        exchangeRate: Number(e.target.value),
+                      })
                     }
                     className="w-full md:w-1/2 bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 focus:ring-2 focus:ring-pink-500 focus:outline-none transition-all font-mono text-left text-lg"
                     dir="ltr"
                   />
                 </div>
-                
+
                 {/* Currency Converter */}
                 <div className="mt-6 bg-slate-50 rounded-xl border border-slate-200 p-5">
-                   <h4 className="font-bold text-slate-700 mb-4 flex items-center gap-2">
-                      حاسیبەی گۆڕینەوەی دراو 
-                   </h4>
-                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {/* USD to IQD */}
-                      <div className="space-y-2 relative">
-                         <label className="text-xs font-bold text-slate-500 block">لە دۆلار بۆ دینار</label>
-                         <div className="relative">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-slate-400">$</span>
-                            <input 
-                               type="number" 
-                               placeholder="بڕ بە دۆلار..."
-                               dir="ltr"
-                               onChange={(e) => {
-                                  const val = Number(e.target.value);
-                                  const target = document.getElementById('usd-to-iqd-result') as HTMLInputElement;
-                                  if (target) target.value = (val * (settings.exchangeRate || 1500)).toLocaleString() + ' IQD';
-                               }}
-                               className="w-full bg-white border border-slate-300 rounded-lg py-2 pl-8 pr-3 font-mono text-sm focus:outline-none focus:border-pink-500"
-                            />
-                         </div>
-                         <input 
-                            id="usd-to-iqd-result"
-                            type="text" 
-                            readOnly
-                            placeholder="ئەنجام بە دینار"
-                            dir="ltr"
-                            className="w-full bg-slate-100 border border-transparent rounded-lg py-2 px-3 font-mono text-sm text-slate-700 font-bold"
-                         />
+                  <h4 className="font-bold text-slate-700 mb-4 flex items-center gap-2">
+                    حاسیبەی گۆڕینەوەی دراو
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* USD to IQD */}
+                    <div className="space-y-2 relative">
+                      <label className="text-xs font-bold text-slate-500 block">
+                        لە دۆلار بۆ دینار
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-slate-400">
+                          $
+                        </span>
+                        <input
+                          type="number"
+                          placeholder="بڕ بە دۆلار..."
+                          dir="ltr"
+                          onChange={(e) => {
+                            const val = Number(e.target.value);
+                            const target = document.getElementById(
+                              "usd-to-iqd-result",
+                            ) as HTMLInputElement;
+                            if (target)
+                              target.value =
+                                (
+                                  val * (settings.exchangeRate || 1500)
+                                ).toLocaleString() + " IQD";
+                          }}
+                          className="w-full bg-white border border-slate-300 rounded-lg py-2 pl-8 pr-3 font-mono text-sm focus:outline-none focus:border-pink-500"
+                        />
                       </div>
-                      
-                      {/* IQD to USD */}
-                      <div className="space-y-2 relative">
-                         <label className="text-xs font-bold text-slate-500 block">لە دینار بۆ دۆلار</label>
-                         <div className="relative">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-slate-400 text-xs">IQD</span>
-                            <input 
-                               type="number" 
-                               placeholder="بڕ بە دینار..."
-                               dir="ltr"
-                               onChange={(e) => {
-                                  const val = Number(e.target.value);
-                                  const target = document.getElementById('iqd-to-usd-result') as HTMLInputElement;
-                                  if (target) target.value = '$ ' + (val / (settings.exchangeRate || 1500)).toLocaleString(undefined, {maximumFractionDigits:2});
-                               }}
-                               className="w-full bg-white border border-slate-300 rounded-lg py-2 pl-10 pr-3 font-mono text-sm focus:outline-none focus:border-pink-500"
-                            />
-                         </div>
-                         <input 
-                            id="iqd-to-usd-result"
-                            type="text" 
-                            readOnly
-                            placeholder="ئەنجام بە دۆلار"
-                            dir="ltr"
-                            className="w-full bg-slate-100 border border-transparent rounded-lg py-2 px-3 font-mono text-sm text-slate-700 font-bold"
-                         />
+                      <input
+                        id="usd-to-iqd-result"
+                        type="text"
+                        readOnly
+                        placeholder="ئەنجام بە دینار"
+                        dir="ltr"
+                        className="w-full bg-slate-100 border border-transparent rounded-lg py-2 px-3 font-mono text-sm text-slate-700 font-bold"
+                      />
+                    </div>
+
+                    {/* IQD to USD */}
+                    <div className="space-y-2 relative">
+                      <label className="text-xs font-bold text-slate-500 block">
+                        لە دینار بۆ دۆلار
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-slate-400 text-xs">
+                          IQD
+                        </span>
+                        <input
+                          type="number"
+                          placeholder="بڕ بە دینار..."
+                          dir="ltr"
+                          onChange={(e) => {
+                            const val = Number(e.target.value);
+                            const target = document.getElementById(
+                              "iqd-to-usd-result",
+                            ) as HTMLInputElement;
+                            if (target)
+                              target.value =
+                                "$ " +
+                                (
+                                  val / (settings.exchangeRate || 1500)
+                                ).toLocaleString(undefined, {
+                                  maximumFractionDigits: 2,
+                                });
+                          }}
+                          className="w-full bg-white border border-slate-300 rounded-lg py-2 pl-10 pr-3 font-mono text-sm focus:outline-none focus:border-pink-500"
+                        />
                       </div>
-                   </div>
+                      <input
+                        id="iqd-to-usd-result"
+                        type="text"
+                        readOnly
+                        placeholder="ئەنجام بە دۆلار"
+                        dir="ltr"
+                        className="w-full bg-slate-100 border border-transparent rounded-lg py-2 px-3 font-mono text-sm text-slate-700 font-bold"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1380,25 +1548,49 @@ export function SettingsPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 pt-2">
           <button
             onClick={() => handleClearAlert("receipts", "وەسڵەکان")}
-            className="py-3 px-4 bg-white border border-red-200 text-red-700 hover:bg-red-100 rounded-xl text-sm font-bold transition-colors shadow-sm flex flex-col items-center gap-2"
+            className="py-3 px-4 bg-white border border-red-200 text-red-700 hover:bg-red-100 rounded-xl text-sm font-bold transition-colors shadow-sm flex flex-col items-center justify-center text-center gap-2"
           >
             <Trash2 size={20} /> سڕینەوەی وەسڵەکان
           </button>
           <button
+            onClick={() => handleClearAlert("return_transactions", "چاوەڕێکراوی گەڕانەوەکان")}
+            className="py-3 px-4 bg-white border border-red-200 text-red-700 hover:bg-red-100 rounded-xl text-sm font-bold transition-colors shadow-sm flex flex-col items-center justify-center text-center gap-2"
+          >
+            <Trash2 size={20} /> سڕینەوەی چاوەڕێکراوی گەڕانەوە
+          </button>
+          <button
+            onClick={() => handleClearAlert("expenses", "خەرجییەکان")}
+            className="py-3 px-4 bg-white border border-red-200 text-red-700 hover:bg-red-100 rounded-xl text-sm font-bold transition-colors shadow-sm flex flex-col items-center justify-center text-center gap-2"
+          >
+            <Trash2 size={20} /> سڕینەوەی خەرجییەکان
+          </button>
+          <button
             onClick={() => handleClearAlert("products", "کالاکان")}
-            className="py-3 px-4 bg-white border border-red-200 text-red-700 hover:bg-red-100 rounded-xl text-sm font-bold transition-colors shadow-sm flex flex-col items-center gap-2"
+            className="py-3 px-4 bg-white border border-red-200 text-red-700 hover:bg-red-100 rounded-xl text-sm font-bold transition-colors shadow-sm flex flex-col items-center justify-center text-center gap-2"
           >
             <Trash2 size={20} /> سڕینەوەی کالاکان
           </button>
           <button
             onClick={() => handleClearAlert("debts", "قەرزەکان")}
-            className="py-3 px-4 bg-white border border-red-200 text-red-700 hover:bg-red-100 rounded-xl text-sm font-bold transition-colors shadow-sm flex flex-col items-center gap-2"
+            className="py-3 px-4 bg-white border border-red-200 text-red-700 hover:bg-red-100 rounded-xl text-sm font-bold transition-colors shadow-sm flex flex-col items-center justify-center text-center gap-2"
           >
             <Trash2 size={20} /> سڕینەوەی قەرزەکان
           </button>
           <button
+            onClick={() => handleClearAlert("customers", "کڕیارەکان و سەردانەکان")}
+            className="py-3 px-4 bg-white border border-red-200 text-red-700 hover:bg-red-100 rounded-xl text-sm font-bold transition-colors shadow-sm flex flex-col items-center justify-center text-center gap-2"
+          >
+            <Trash2 size={20} /> سڕینەوەی کڕیار و سەردان
+          </button>
+          <button
+            onClick={() => handleClearAlert("companies", "کۆمپانیا و مەندوبەکان")}
+            className="py-3 px-4 bg-white border border-red-200 text-red-700 hover:bg-red-100 rounded-xl text-sm font-bold transition-colors shadow-sm flex flex-col items-center justify-center text-center gap-2"
+          >
+            <Trash2 size={20} /> سڕینەوەی مەندوبەکان
+          </button>
+          <button
             onClick={() => handleClearAlert("ALL", "هەموو داتاکان بە یەکجاری")}
-            className="py-3 px-4 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-bold transition-colors shadow-md shadow-red-200/50 flex flex-col items-center gap-2"
+            className="py-3 px-4 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-bold transition-colors shadow-md shadow-red-200/50 flex flex-col items-center justify-center text-center gap-2 sm:col-span-1 md:col-span-1"
           >
             <AlertTriangle size={20} /> سڕینەوەی گشتی
           </button>

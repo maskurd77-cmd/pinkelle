@@ -56,27 +56,35 @@ export default function Reports() {
   }, [receipts, expenses, filterType, selectedMonth, selectedDay]);
 
   const { stats, chartData, categoryData } = useMemo(() => {
-    let sales = 0;
-    let retailSales = 0;
-    let wholesaleSales = 0;
-    let profit = 0;
+    let salesIQD = 0;
+    let salesUSD = 0;
+    let retailSalesIQD = 0;
+    let retailSalesUSD = 0;
+    let wholesaleSalesIQD = 0;
+    let wholesaleSalesUSD = 0;
+    let profitIQD = 0;
+    let profitUSD = 0;
     let itemsSold = 0;
     let retailItemsSold = 0;
     let wholesaleItemsSold = 0;
-    let totalExpense = 0;
+    let totalExpenseIQD = 0;
     
-    // For trends
+    // For trends (Simplifying by using default IQD for trends)
     const salesByDate: Record<string, number> = {};
     const categoryCount: Record<string, number> = {};
 
     filteredData.filteredReceipts.forEach(r => {
-      sales += (r.totalAmount || 0);
+      const currency = r.invoiceCurrency || 'IQD';
+      const cAmount = r.totalAmount || 0;
+      if (currency === 'IQD') salesIQD += cAmount;
+      else salesUSD += cAmount;
       
       const ts = r.timestamp?.toDate ? r.timestamp.toDate() : new Date(r.timestamp);
       const dateKey = filterType === 'day' ? `${ts.getHours()}:00` : ts.toLocaleDateString('ku');
       
       if (!salesByDate[dateKey]) salesByDate[dateKey] = 0;
-      salesByDate[dateKey] += (r.totalAmount || 0);
+      // Normalizing for chart (approx mapping if mixed)
+      salesByDate[dateKey] += currency === 'IQD' ? cAmount : cAmount * 1500;
 
       if (r.items && Array.isArray(r.items)) {
         r.items.forEach((item: any) => {
@@ -85,15 +93,19 @@ export default function Reports() {
            const qty = item.quantity || 1;
            const itemTotal = price * qty;
            
-           profit += (price - cost) * qty;
+           if (currency === 'IQD') profitIQD += (price - cost) * qty;
+           else profitUSD += (price - cost) * qty;
+           
            itemsSold += qty;
            
            if (item.isWholesale) {
               wholesaleItemsSold += qty;
-              wholesaleSales += itemTotal;
+              if (currency === 'IQD') wholesaleSalesIQD += itemTotal;
+              else wholesaleSalesUSD += itemTotal;
            } else {
               retailItemsSold += qty;
-              retailSales += itemTotal;
+              if (currency === 'IQD') retailSalesIQD += itemTotal;
+              else retailSalesUSD += itemTotal;
            }
            
            const cat = item.category || 'گشتی';
@@ -104,14 +116,14 @@ export default function Reports() {
     });
 
     filteredData.filteredExpenses.forEach(e => {
-       totalExpense += (e.amount || 0);
+       totalExpenseIQD += (e.amount || 0); // Assuming expenses are primarily tracked in IQD for now
     });
 
     const cData = Object.entries(salesByDate).map(([name, sales]) => ({ name, sales }));
     const pData = Object.entries(categoryCount).map(([name, value]) => ({ name, value })).sort((a,b) => b.value - a.value).slice(0, 5);
 
     return { 
-       stats: { sales, retailSales, wholesaleSales, profit, totalExpense, itemsSold, retailItemsSold, wholesaleItemsSold },
+       stats: { salesIQD, salesUSD, retailSalesIQD, retailSalesUSD, wholesaleSalesIQD, wholesaleSalesUSD, profitIQD, profitUSD, totalExpenseIQD, itemsSold, retailItemsSold, wholesaleItemsSold },
        chartData: cData,
        categoryData: pData
     };
@@ -178,14 +190,14 @@ export default function Reports() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {[
-          { title: 'کۆی فرۆشتن', value: formatCurrency(stats.sales), trend: 'فرۆشتنی گشتی', color: 'pink', gradient: 'from-pink-500 to-rose-600', shadow: 'shadow-pink-500/20' },
-          { title: 'قازانجی سافی', value: formatCurrency(stats.profit - stats.totalExpense), trend: 'دوای دەرکردنی خەرجی', color: 'emerald', gradient: 'from-emerald-500 to-teal-600', shadow: 'shadow-emerald-500/20' },
-          { title: 'کۆی خەرجی', value: formatCurrency(stats.totalExpense), trend: 'دەستبەکار / بێجگە لە کاڵا', color: 'orange', gradient: 'from-orange-500 to-amber-600', shadow: 'shadow-orange-500/20' },
-          { title: 'کالای فرۆشراو', value: `${stats.itemsSold} دانە`, trend: 'بڕی تێپەڕیو', color: 'indigo', gradient: 'from-indigo-500 to-blue-600', shadow: 'shadow-indigo-500/20' },
+          { title: 'کۆی فرۆشتن', value: <div className="flex flex-col"><span className="text-xl">{formatCurrency(stats.salesIQD, 'IQD')}</span><span className="text-xl text-green-600">{formatCurrency(stats.salesUSD, 'USD')}</span></div>, trend: 'فرۆشتنی گشتی', color: 'pink', gradient: 'from-pink-500 to-rose-600', shadow: 'shadow-pink-500/20' },
+          { title: 'قازانجی سافی', value: <div className="flex flex-col"><span className="text-xl">{formatCurrency(stats.profitIQD - stats.totalExpenseIQD, 'IQD')}</span><span className="text-xl text-green-600">{formatCurrency(stats.profitUSD, 'USD')}</span></div>, trend: 'دوای دەرکردنی خەرجی', color: 'emerald', gradient: 'from-emerald-500 to-teal-600', shadow: 'shadow-emerald-500/20' },
+          { title: 'کۆی خەرجی', value: <div className="flex flex-col"><span className="text-xl">{formatCurrency(stats.totalExpenseIQD, 'IQD')}</span></div>, trend: 'دەستبەکار / بێجگە لە کاڵا', color: 'orange', gradient: 'from-orange-500 to-amber-600', shadow: 'shadow-orange-500/20' },
+          { title: 'کالای فرۆشراو', value: <div className="flex flex-col"><span className="text-3xl">{stats.itemsSold} <span className="text-lg">دانە</span></span></div>, trend: 'بڕی تێپەڕیو', color: 'indigo', gradient: 'from-indigo-500 to-blue-600', shadow: 'shadow-indigo-500/20' },
         ].map((stat, i) => (
           <div key={i} className="bg-white p-6 rounded-[24px] border border-slate-200 shadow-sm relative overflow-hidden group hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
             <h3 className="text-slate-500 text-sm font-bold mb-3">{stat.title}</h3>
-            <p className={`text-3xl font-black tracking-tight font-mono text-transparent bg-clip-text bg-gradient-to-r ${stat.gradient} drop-shadow-sm`}>{stat.value}</p>
+            <div className={`font-black tracking-tight font-mono text-transparent bg-clip-text bg-gradient-to-r ${stat.gradient} drop-shadow-sm`}>{stat.value}</div>
             <div className={`mt-4 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-${stat.color}-50 text-${stat.color}-700 text-xs font-bold border border-${stat.color}-100`}>
               <TrendingUp size={14} />
               {stat.trend}
@@ -198,14 +210,14 @@ export default function Reports() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
         {[
-          { title: 'فرۆشتنی تاک', value: formatCurrency(stats.retailSales), trend: 'تاک', color: 'blue', gradient: 'from-blue-500 to-cyan-600' },
-          { title: 'فرۆشتنی جوملە', value: formatCurrency(stats.wholesaleSales), trend: 'جوملە', color: 'purple', gradient: 'from-purple-500 to-indigo-600' },
-          { title: 'فرۆشراو بە تاک', value: `${stats.retailItemsSold} دانە`, trend: 'تاک', color: 'cyan', gradient: 'from-cyan-500 to-teal-500' },
-          { title: 'فرۆشراو بە جوملە', value: `${stats.wholesaleItemsSold} دانە`, trend: 'جوملە', color: 'fuchsia', gradient: 'from-fuchsia-500 to-purple-500' },
+          { title: 'فرۆشتنی تاک', value: <div className="flex flex-col"><span className="text-xl">{formatCurrency(stats.retailSalesIQD, 'IQD')}</span><span className="text-xl text-cyan-600">{formatCurrency(stats.retailSalesUSD, 'USD')}</span></div>, trend: 'تاک', color: 'blue', gradient: 'from-blue-500 to-cyan-600' },
+          { title: 'فرۆشتنی جوملە', value: <div className="flex flex-col"><span className="text-xl">{formatCurrency(stats.wholesaleSalesIQD, 'IQD')}</span><span className="text-xl text-indigo-600">{formatCurrency(stats.wholesaleSalesUSD, 'USD')}</span></div>, trend: 'جوملە', color: 'purple', gradient: 'from-purple-500 to-indigo-600' },
+          { title: 'فرۆشراو بە تاک', value: <div className="flex flex-col"><span className="text-2xl">{stats.retailItemsSold} <span className="text-sm">دانە</span></span></div>, trend: 'تاک', color: 'cyan', gradient: 'from-cyan-500 to-teal-500' },
+          { title: 'فرۆشراو بە جوملە', value: <div className="flex flex-col"><span className="text-2xl">{stats.wholesaleItemsSold} <span className="text-sm">دانە</span></span></div>, trend: 'جوملە', color: 'fuchsia', gradient: 'from-fuchsia-500 to-purple-500' },
         ].map((stat, i) => (
           <div key={i} className="bg-white p-5 rounded-[20px] border border-slate-100 shadow-sm relative overflow-hidden group hover:shadow-md transition-all duration-300">
             <h3 className="text-slate-500 text-xs font-bold mb-2">{stat.title}</h3>
-            <p className={`text-2xl font-black tracking-tight font-mono text-transparent bg-clip-text bg-gradient-to-r ${stat.gradient}`}>{stat.value}</p>
+            <div className={`font-black tracking-tight font-mono text-transparent bg-clip-text bg-gradient-to-r ${stat.gradient}`}>{stat.value}</div>
           </div>
         ))}
       </div>
