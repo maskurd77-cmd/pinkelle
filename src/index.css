@@ -1,13 +1,15 @@
-@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=Noto+Sans+Arabic:wght@400;500;600;700;800&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=Noto+Sans+Arabic:wght@400;500;600;700;800&display=swap");
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "Rudaw", "Rabar", "Peshang", "Noto Sans Arabic", "Cairo", ui-sans-serif, system-ui, sans-serif;
+  --font-sans:
+    "Rudaw", "Rabar", "Peshang", "Noto Sans Arabic", "Cairo", ui-sans-serif,
+    system-ui, sans-serif;
 }
 
 body {
   font-family: var(--font-sans);
-  background-color: #F8FAFC;
+  background-color: #f8fafc;
 }
 
 @media print {
@@ -15,7 +17,8 @@ body {
     size: A4 portrait;
     margin: 0;
   }
-  body, html {
+  body,
+  html {
     background-color: white !important;
     width: 210mm;
     height: 297mm;
@@ -49,4 +52,10 @@ body {
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
+}
+
+/* Hide navigation bars and floating buttons on mobile when keyboard is open (input is focused) */
+body:has(input:focus) .mobile-bottom-tabs,
+body:has(input:focus) .mobile-floating-cart {
+  display: none !important;
 }

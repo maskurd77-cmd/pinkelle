@@ -31,6 +31,7 @@ import { db, auth } from "../firebase";
 import { formatCurrency } from "../data";
 import { reduceCustomerDebt } from "./MiscPages";
 import { DebtReceiptModal } from "../components/DebtReceiptModal";
+import AccountStatementModal from "../components/AccountStatementModal";
 
 interface Debt {
   id: string;
@@ -53,6 +54,7 @@ export default function DebtBook() {
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
   const [debtHistory, setDebtHistory] = useState<any[]>([]);
   const [printTx, setPrintTx] = useState<any>(null);
+  const [statementCustomer, setStatementCustomer] = useState<any>(null);
   const [actionType, setActionType] = useState<"pay" | "add">("pay");
   const [selectedDebt, setSelectedDebt] = useState<Debt | null>(null);
   const [paymentAmount, setPaymentAmount] = useState("");
@@ -72,8 +74,8 @@ export default function DebtBook() {
   >("debts");
   const [exchangeRate, setExchangeRate] = useState<number>(1500);
 
-  const [paymentCurrency, setPaymentCurrency] = useState<"IQD" | "USD">("IQD");
-  const [newCurrency, setNewCurrency] = useState<"IQD" | "USD">("IQD");
+  const [paymentCurrency, setPaymentCurrency] = useState<"IQD" | "USD">("USD");
+  const [newCurrency, setNewCurrency] = useState<"IQD" | "USD">("USD");
 
   useEffect(() => {
     if (auth.currentUser) {
@@ -343,10 +345,7 @@ export default function DebtBook() {
     const amountInputRaw = parseFloat(paymentAmount);
     if (amountInputRaw <= 0) return;
 
-    const amountInputIQD =
-      paymentCurrency === "USD"
-        ? amountInputRaw * exchangeRate
-        : amountInputRaw;
+    const amountInputIQD = amountInputRaw;
 
     let newRemaining = selectedDebt.remainingAmount;
     let newTotalAmount = selectedDebt.amount;
@@ -400,8 +399,7 @@ export default function DebtBook() {
     if (!newName || !newAmount) return;
 
     const amountValRaw = parseFloat(newAmount);
-    const amountValIQD =
-      newCurrency === "USD" ? amountValRaw * exchangeRate : amountValRaw;
+    const amountValIQD = amountValRaw;
 
     const existingDebt = debts.find((d) => d.customerName === newName);
     const isPending = userRole !== "admin" && userRole !== "accountant";
@@ -547,8 +545,10 @@ export default function DebtBook() {
             <p className="text-red-600 text-sm font-bold mb-2">
               کۆی گشتی قەرزەکان (نەدراوە)
             </p>
-            <h3 className="text-2xl font-black font-mono text-red-700 tracking-tight">
-              {formatCurrency(totalRemaining)}
+            <h3 className="text-2xl font-black font-mono text-red-700 tracking-tight flex flex-col gap-1">
+              <span>
+                {formatCurrency(totalRemaining / (exchangeRate || 1500), "USD")}
+              </span>
             </h3>
           </div>
           <div className="w-14 h-14 bg-white/60 backdrop-blur-sm rounded-2xl flex items-center justify-center text-red-600 shadow-sm relative z-10">
@@ -808,8 +808,11 @@ export default function DebtBook() {
                             .reduce((acc, curr) => acc + curr.amount, 0);
                           return (
                             <div className="flex flex-col gap-1.5 w-fit">
-                              <span className="inline-flex px-3 py-1 rounded-lg bg-red-100 text-red-700 font-bold font-mono whitespace-nowrap shadow-sm">
-                                {formatCurrency(debt.remainingAmount)}
+                              <span className="inline-flex px-3 py-1 rounded-lg bg-orange-50 text-orange-700 font-bold font-mono whitespace-nowrap shadow-sm border border-orange-200">
+                                {formatCurrency(
+                                  debt.remainingAmount / (exchangeRate || 1500),
+                                  "USD",
+                                )}
                               </span>
                               {pendingPay > 0 && (
                                 <span
@@ -873,6 +876,32 @@ export default function DebtBook() {
                         <button
                           onClick={() => {
                             setSelectedDebt(debt);
+                            setPrintTx({
+                              id: "Generic",
+                              timestamp: new Date(),
+                              amount: debt.remainingAmount || 0,
+                              isGeneric: true,
+                              originalAmount: debt.remainingAmount || 0,
+                              originalCurrency: debt.customerCurrency || "IQD",
+                            });
+                          }}
+                          className="text-pink-700 text-xs font-bold px-2.5 py-1.5 bg-pink-50 hover:bg-pink-100 rounded-lg transition-colors border border-pink-200 flex items-center gap-1.5 shadow-sm"
+                          title="چاپکردنی قەبزی قەرز"
+                        >
+                          <Printer size={14} /> قەبز
+                        </button>
+                        <button
+                          onClick={() =>
+                            setStatementCustomer({ name: debt.customerName })
+                          }
+                          className="text-emerald-700 text-xs font-bold px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors border border-emerald-200 flex items-center gap-1.5 shadow-sm"
+                          title="ڕاپۆرتی کەشفی حیساب"
+                        >
+                          <FileText size={14} /> کەشف حساب
+                        </button>
+                        <button
+                          onClick={() => {
+                            setSelectedDebt(debt);
                             setEditName(debt.customerName || "");
                             setEditPhone(debt.phone || "");
                             setEditDebtModalOpen(true);
@@ -886,7 +915,7 @@ export default function DebtBook() {
                           <button
                             onClick={() => {
                               const msg = encodeURIComponent(
-                                `سڵاو بەڕێز ${debt.customerName}،\nقەرزی ماوەتان لای (پینک ئێللێ) بریتییە لە: ${formatCurrency(debt.remainingAmount)}.\nتکایە لە کاتی گونجاودا سەردانمان بکەنەوە.`,
+                                `سڵاو بەڕێز ${debt.customerName}،\nقەرزی ماوەتان لای (پینک ئێللێ) بریتییە لە: ${formatCurrency(debt.remainingAmount / (exchangeRate || 1500), "USD")}.\nتکایە لە کاتی گونجاودا سەردانمان بکەنەوە.`,
                               );
                               window.open(
                                 `https://wa.me/${debt.phone.replace(/[^0-9]/g, "")}?text=${msg}`,
@@ -1000,16 +1029,11 @@ export default function DebtBook() {
                     placeholder="0"
                     dir="ltr"
                   />
-                  <select
-                    value={paymentCurrency}
-                    onChange={(e) =>
-                      setPaymentCurrency(e.target.value as "IQD" | "USD")
-                    }
-                    className={`w-24 bg-white border-2 rounded-xl focus:outline-none transition-colors font-bold text-center ${actionType === "pay" ? "border-emerald-200 focus:border-emerald-500 text-emerald-700" : "border-red-200 focus:border-red-500 text-red-700"}`}
+                  <div
+                    className={`w-24 border-2 rounded-xl flex items-center justify-center font-bold text-lg font-mono ${actionType === "pay" ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-red-200 bg-red-50 text-red-700"}`}
                   >
-                    <option value="IQD">دینار</option>
-                    <option value="USD">دۆلار</option>
-                  </select>
+                    USD
+                  </div>
                 </div>
               </div>
               <div>
@@ -1142,16 +1166,9 @@ export default function DebtBook() {
                     placeholder="0"
                     dir="ltr"
                   />
-                  <select
-                    value={newCurrency}
-                    onChange={(e) =>
-                      setNewCurrency(e.target.value as "IQD" | "USD")
-                    }
-                    className="w-24 bg-pink-50/50 border-2 border-pink-200 rounded-xl focus:outline-none focus:border-pink-500 font-bold text-center text-pink-700 transition-colors"
-                  >
-                    <option value="IQD">دینار</option>
-                    <option value="USD">دۆلار</option>
-                  </select>
+                  <div className="w-24 border-2 border-pink-200 bg-pink-50 rounded-xl flex items-center justify-center font-bold text-lg font-mono text-pink-700">
+                    USD
+                  </div>
                 </div>
               </div>
             </div>
@@ -1229,8 +1246,18 @@ export default function DebtBook() {
                         <td className="px-6 py-4 text-sm text-slate-600 font-mono font-medium">
                           {formatDate(h.timestamp)}
                         </td>
-                        <td className="px-6 py-4 text-sm text-slate-900 font-extrabold font-mono">
-                          {formatCurrency(h.amount)}
+                        <td className="px-6 py-4 flex flex-col gap-1 text-sm text-slate-900 font-extrabold font-mono">
+                          <span>
+                            {formatCurrency(
+                              h.originalCurrency === "USD"
+                                ? h.originalAmount ||
+                                    h.amount /
+                                      (h.exchangeRate || exchangeRate || 1500)
+                                : h.amount /
+                                    (h.exchangeRate || exchangeRate || 1500),
+                              "USD",
+                            )}
+                          </span>
                         </td>
                         <td className="px-6 py-4 text-sm font-bold flex flex-wrap gap-2 items-center">
                           {h.type === "pay" ? (
@@ -1378,6 +1405,15 @@ export default function DebtBook() {
           transaction={printTx}
           debt={selectedDebt}
           onClose={() => setPrintTx(null)}
+        />
+      )}
+
+      {/* Account Statement */}
+      {statementCustomer && (
+        <AccountStatementModal
+          customer={statementCustomer}
+          debts={debts}
+          onClose={() => setStatementCustomer(null)}
         />
       )}
     </div>

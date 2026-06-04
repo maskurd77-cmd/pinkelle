@@ -17,6 +17,11 @@ import {
   Banknote,
   History,
   DollarSign,
+  Calculator,
+  Trash2,
+  ArrowDown,
+  ArrowRightLeft,
+  ArrowUpDown,
 } from "lucide-react";
 import { formatCurrency } from "../data";
 import { Product } from "../types";
@@ -92,7 +97,35 @@ export default function POS() {
     "amount",
   );
   const [discountValue, setDiscountValue] = useState<number | "">("");
-  const [invoiceCurrency, setInvoiceCurrency] = useState<"IQD" | "USD">("IQD");
+  const [invoiceCurrency, setInvoiceCurrency] = useState<"IQD" | "USD">("USD");
+
+  // Currency Converter States
+  const [calcModalOpen, setCalcModalOpen] = useState(false);
+  const [convUSD, setConvUSD] = useState("");
+  const [convIQD, setConvIQD] = useState("");
+
+  const handleConvUSDChange = (val: string) => {
+    setConvUSD(val);
+    const num = parseFloat(val);
+    if (!isNaN(num)) {
+      setConvIQD((num * exchangeRate).toString());
+    } else {
+      setConvIQD("");
+    }
+  };
+
+  const handleConvIQDChange = (val: string) => {
+    setConvIQD(val);
+    const num = parseFloat(val);
+    if (!isNaN(num)) {
+      const usdVal = num / exchangeRate;
+      setConvUSD(
+        Number.isInteger(usdVal) ? usdVal.toString() : usdVal.toFixed(2),
+      );
+    } else {
+      setConvUSD("");
+    }
+  };
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, "products"), (snap) => {
@@ -193,12 +226,13 @@ export default function POS() {
         ? item.wholesalePrice || item.unitPrice
         : item.unitPrice;
     }
+    const itemCurrency = item.currency || "IQD";
     const priceInCurrency =
       invoiceCurrency === "IQD"
-        ? item.currency === "USD"
+        ? itemCurrency === "USD"
           ? applicablePrice * exchangeRate
           : applicablePrice
-        : item.currency === "IQD"
+        : itemCurrency === "IQD"
           ? applicablePrice / exchangeRate
           : applicablePrice;
     return sum + priceInCurrency * item.quantity;
@@ -241,12 +275,13 @@ export default function POS() {
               ? c.wholesalePrice || c.unitPrice
               : c.unitPrice;
           }
+          const itemCurrency = c.currency || "IQD";
           const priceInFinal =
             invoiceCurrency === "IQD"
-              ? c.currency === "USD"
+              ? itemCurrency === "USD"
                 ? applicablePrice * exchangeRate
                 : applicablePrice
-              : c.currency === "IQD"
+              : itemCurrency === "IQD"
                 ? applicablePrice / exchangeRate
                 : applicablePrice;
 
@@ -256,19 +291,19 @@ export default function POS() {
             : c.unitPrice;
           const originalPriceInFinal =
             invoiceCurrency === "IQD"
-              ? c.currency === "USD"
+              ? itemCurrency === "USD"
                 ? originalBasePrice * exchangeRate
                 : originalBasePrice
-              : c.currency === "IQD"
+              : itemCurrency === "IQD"
                 ? originalBasePrice / exchangeRate
                 : originalBasePrice;
 
           const costInFinal =
             invoiceCurrency === "IQD"
-              ? c.currency === "USD"
+              ? itemCurrency === "USD"
                 ? (c.unitCost || 0) * exchangeRate
                 : c.unitCost || 0
-              : c.currency === "IQD"
+              : itemCurrency === "IQD"
                 ? (c.unitCost || 0) / exchangeRate
                 : c.unitCost || 0;
 
@@ -276,7 +311,7 @@ export default function POS() {
             productId: c.id,
             name: c.name,
             quantity: c.quantity,
-            currency: c.currency || "IQD",
+            currency: itemCurrency,
             originalUnitPrice: originalPriceInFinal,
             originalUnitCost: c.unitCost || 0,
             unitPrice: priceInFinal,
@@ -308,8 +343,8 @@ export default function POS() {
           total > 0 &&
           customerDetails.shopName
         ) {
-          const debtAmountIQD = invoiceCurrency === "USD" ? total * exchangeRate : total;
-          
+          const debtAmountIQD = total;
+
           const existingDebt = debts.find(
             (d) =>
               d.customerName === customerDetails.shopName &&
@@ -319,7 +354,8 @@ export default function POS() {
             const debtRef = doc(db, "debts", existingDebt.id);
             batch.update(debtRef, {
               amount: (existingDebt.amount || 0) + debtAmountIQD,
-              remainingAmount: (existingDebt.remainingAmount || 0) + debtAmountIQD,
+              remainingAmount:
+                (existingDebt.remainingAmount || 0) + debtAmountIQD,
               updatedAt: Timestamp.now(),
             });
 
@@ -422,18 +458,27 @@ export default function POS() {
       <div className="flex-1 flex flex-col bg-slate-50/50 lg:bg-white lg:rounded-[24px] lg:border border-slate-200 shadow-sm overflow-hidden h-full -mx-3 sm:mx-0">
         <div className="p-3 lg:p-5 border-b border-slate-200/60 bg-white flex flex-col gap-3 shrink-0 shadow-sm z-10 sticky top-0">
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full">
-            <div className="relative flex-1">
-              <Search
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400"
-                size={18}
-              />
-              <input
-                type="text"
-                placeholder="گەڕان بۆ کالا یان بارکۆد..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 pr-11 pl-4 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 transition-all font-medium text-slate-800"
-              />
+            <div className="flex gap-2 w-full">
+              <div className="relative flex-1">
+                <Search
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400"
+                  size={18}
+                />
+                <input
+                  type="text"
+                  placeholder="گەڕان بۆ کالا یان بارکۆد..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 pr-11 pl-4 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 transition-all font-medium text-slate-800 h-full"
+                />
+              </div>
+              <button
+                onClick={() => setCalcModalOpen(true)}
+                className="w-11 h-11 shrink-0 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-200 rounded-xl flex items-center justify-center transition-colors shadow-sm"
+                title="گۆڕینەوەی دراو"
+              >
+                <ArrowRightLeft size={20} />
+              </button>
             </div>
             {/* Mobile Wholesale Toggle */}
             <div className="lg:hidden flex items-center bg-slate-100 p-1.5 rounded-xl border border-slate-200/60 shadow-inner h-[46px]">
@@ -557,28 +602,28 @@ export default function POS() {
       </div>
 
       {/* MOBILE CART BUTTON (Floating) */}
-      <div className="lg:hidden fixed bottom-[90px] left-4 right-4 z-40 print:hidden">
+      <div className="mobile-floating-cart lg:hidden fixed bottom-[calc(max(env(safe-area-inset-bottom),0.5rem)+4.5rem)] left-4 right-4 z-40 print:hidden transition-all">
         <button
           onClick={() => setMobileCartOpen(true)}
-          className="w-full bg-slate-900 text-white py-4 rounded-2xl font-bold text-[15px] flex items-center justify-between px-6 shadow-xl shadow-slate-900/20 active:scale-[0.98] transition-transform backdrop-blur-md bg-opacity-95"
+          className="w-full bg-slate-900 text-white py-4 rounded-2xl font-bold text-[15px] flex items-center justify-between px-6 shadow-xl shadow-slate-900/20 active:scale-[0.98] transition-all backdrop-blur-md bg-slate-900/95 border border-slate-700/50"
         >
           <div className="flex items-center gap-3">
             <div className="relative">
-              <ShoppingCart size={22} />
-              <div className="absolute -top-2 -right-2 w-5 h-5 bg-pink-600 rounded-full flex items-center justify-center text-[10px] font-bold">
+              <ShoppingCart size={22} className="text-pink-400" />
+              <div className="absolute -top-2 -right-2 w-5 h-5 bg-pink-500 rounded-full flex items-center justify-center text-[10px] font-bold shadow-sm shadow-pink-500/50">
                 {cartItemCount}
               </div>
             </div>
             <span>بینینی پسوولە</span>
           </div>
           <div className="flex flex-col items-end">
-            <span className="font-mono text-lg tracking-tight">
+            <span className="font-mono text-lg tracking-tight text-white">
               {formatCurrency(total, invoiceCurrency)}
             </span>
             <span
               className={`text-[10px] font-bold tracking-widest ${isWholesale ? "text-indigo-400" : "text-pink-400"}`}
             >
-              {isWholesale ? "جوملە (WHOLESALE)" : "تاک (RETAIL)"}
+              {isWholesale ? "جوملە" : "تاک"}
             </span>
           </div>
         </button>
@@ -586,42 +631,46 @@ export default function POS() {
 
       {/* RIGHT AREA: Cart Sidebar (Desktop & Mobile Slider) */}
       <div
-        className={`fixed inset-y-0 right-0 z-[60] w-full max-w-[400px] bg-slate-50/50 shadow-2xl transition-transform duration-300 transform ${mobileCartOpen ? "translate-x-0" : "translate-x-full"} lg:relative lg:translate-x-0 lg:w-96 lg:shadow-sm lg:rounded-[24px] lg:border lg:border-slate-200 flex flex-col overflow-hidden lg:h-full lg:max-w-none`}
+        className={`fixed inset-y-0 right-0 z-[60] w-[calc(100vw-3rem)] max-w-[400px] bg-slate-50/50 shadow-2xl transition-transform duration-300 transform ${mobileCartOpen ? "translate-x-0" : "translate-x-full"} lg:relative lg:translate-x-0 lg:w-96 lg:shadow-sm lg:rounded-[24px] lg:border lg:border-slate-200 flex flex-col overflow-hidden lg:h-full lg:max-w-none`}
       >
-        <div className="p-4 lg:p-5 border-b border-slate-200/60 bg-white flex items-center justify-between shrink-0 shadow-sm z-10">
+        <div className="p-4 border-b border-slate-200/60 bg-white flex flex-col gap-3 shrink-0 shadow-sm z-10 w-full pt-[max(env(safe-area-inset-top),1rem)]">
           <div className="flex items-center justify-between w-full text-slate-900 font-bold text-lg">
-            <div className="hidden lg:flex items-center gap-2 text-pink-600 bg-pink-50 px-2.5 py-1 rounded-lg">
-              <ShoppingCart size={18} />
-              <span className="text-sm">کاشێر</span>
-            </div>
-            <div className="lg:hidden flex items-center gap-2 text-pink-600 bg-pink-50 px-3 py-1.5 rounded-xl font-bold">
+            <div className="flex items-center gap-2 text-pink-600 bg-pink-50 px-3 py-1.5 rounded-xl font-bold">
               <ShoppingCart size={20} />
               <span className="text-base">کاشێر</span>
             </div>
-
-            <div className="flex items-center gap-1 bg-slate-100 p-1.5 rounded-xl border border-slate-200/60 shadow-inner">
+            <div className="flex items-center gap-2">
               <button
-                onClick={() => setIsWholesale(false)}
-                className={`px-4 py-1.5 text-xs sm:text-sm font-extrabold rounded-lg transition-all duration-200 flex-1 text-center min-w-[70px] ${!isWholesale ? "bg-white shadow-sm text-slate-800 scale-100 ring-1 ring-slate-200/50" : "text-slate-500 hover:text-slate-700 scale-95 hover:bg-slate-200/50"}`}
+                onClick={() => setMobileCartOpen(false)}
+                className="w-10 h-10 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl flex transition-all active:scale-95 lg:hidden justify-center items-center"
               >
-                تاک
+                <X size={20} className="stroke-[2.5px]" />
               </button>
-              <button
-                onClick={() => setIsWholesale(true)}
-                className={`px-4 py-1.5 text-xs sm:text-sm font-extrabold rounded-lg transition-all duration-200 flex-1 text-center min-w-[70px] ${isWholesale ? "bg-indigo-600 text-white shadow-md shadow-indigo-500/20 scale-100" : "text-slate-500 hover:text-slate-700 scale-95 hover:bg-slate-200/50"}`}
-              >
-                جوملە
-              </button>
+              {cart.length > 0 && (
+                <button
+                  onClick={clearCart}
+                  className="text-red-500 hover:bg-red-50 p-2 rounded-xl transition-colors shrink-0 flex items-center justify-center border border-transparent hover:border-red-100"
+                  title="سڕینەوەی سەلە"
+                >
+                  <Trash2 size={20} />
+                </button>
+              )}
             </div>
           </div>
-          {cart.length > 0 && (
+          <div className="flex items-center p-1.5 bg-slate-100 rounded-xl border border-slate-200/60 shadow-inner w-full">
             <button
-              onClick={clearCart}
-              className="text-xs text-red-500 hover:bg-red-50 px-2 py-1 rounded transition-colors font-semibold"
+              onClick={() => setIsWholesale(false)}
+              className={`py-2 text-xs font-extrabold rounded-lg transition-all duration-200 flex-1 text-center ${!isWholesale ? "bg-white shadow-sm text-slate-800 ring-1 ring-slate-200/50 scale-100" : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50 scale-95"}`}
             >
-              بەتاڵکردن
+              کڕیاری تاک
             </button>
-          )}
+            <button
+              onClick={() => setIsWholesale(true)}
+              className={`py-2 text-xs font-extrabold rounded-lg transition-all duration-200 flex-1 text-center ${isWholesale ? "bg-indigo-600 text-white shadow-md shadow-indigo-500/20 scale-100" : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50 scale-95"}`}
+            >
+              کڕیاری جوملە
+            </button>
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto p-3 lg:p-4 custom-scrollbar bg-slate-50/50">
@@ -789,23 +838,15 @@ export default function POS() {
             </div>
           </div>
 
-          <div className="flex gap-3">
-             <button
-               onClick={() => setMobileCartOpen(false)}
-               className="w-14 items-center justify-center bg-slate-100 hover:bg-slate-200 border-2 border-slate-200 text-slate-600 rounded-2xl flex transition-all shrink-0 active:scale-95 lg:hidden shadow-sm"
-               title="داخستنی کاشێر"
-               aria-label="Close cart"
-             >
-               <X size={24} className="stroke-[2.5px]" />
-             </button>
-             <button
-               disabled={cart.length === 0}
-               onClick={() => setCheckoutModalOpen(true)}
-               className="flex-1 bg-slate-900 focus-visible:ring-4 focus-visible:ring-pink-500/30 hover:bg-slate-800 disabled:bg-slate-100 disabled:text-slate-400 disabled:shadow-none text-white py-4 rounded-2xl font-bold text-[15px] transition-all flex items-center justify-center gap-2.5 shadow-xl shadow-slate-900/10 active:scale-[0.98]"
-             >
-               <CreditCard size={20} />
-               تەواوکردنی فرۆشتن
-             </button>
+          <div className="flex gap-3 pb-[max(calc(env(safe-area-inset-bottom)+1rem),1.5rem)] lg:pb-0">
+            <button
+              disabled={cart.length === 0}
+              onClick={() => setCheckoutModalOpen(true)}
+              className="flex-1 bg-slate-900 focus-visible:ring-4 focus-visible:ring-pink-500/30 hover:bg-slate-800 disabled:bg-slate-100 disabled:text-slate-400 disabled:shadow-none text-white py-4 rounded-2xl font-bold text-[15px] transition-all flex items-center justify-center gap-2.5 shadow-xl shadow-slate-900/10 active:scale-[0.98]"
+            >
+              <CreditCard size={20} />
+              تەواوکردنی فرۆشتن
+            </button>
           </div>
         </div>
       </div>
@@ -820,8 +861,8 @@ export default function POS() {
 
       {/* CHECKOUT MODAL */}
       {checkoutModalOpen && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 sm:p-6 backdrop-blur-md bg-slate-900/40 transition-opacity">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-xl overflow-hidden flex flex-col max-h-full">
+        <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center p-0 sm:p-6 backdrop-blur-md bg-slate-900/40 transition-opacity">
+          <div className="bg-white rounded-t-[32px] sm:rounded-3xl shadow-2xl w-full max-w-xl overflow-hidden flex flex-col max-h-[92dvh] sm:max-h-full animate-in slide-in-from-bottom-10 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-200">
             {saleCompleted ? (
               <div className="p-10 flex flex-col items-center justify-center text-center overflow-y-auto">
                 <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center text-green-600 mb-6 relative shrink-0">
@@ -905,28 +946,6 @@ export default function POS() {
                         <History size={24} />
                         <span className="font-bold text-sm">قەرز (ماوە)</span>
                       </label>
-                    </div>
-
-                    <div className="mb-4">
-                      <label className="block text-sm font-bold text-slate-700 mb-2">
-                        دراوی وەسڵ (پارەدان)
-                      </label>
-                      <div className="grid grid-cols-2 gap-3">
-                        <button
-                          type="button"
-                          onClick={() => setInvoiceCurrency("IQD")}
-                          className={`py-3 rounded-xl border-2 font-bold text-sm transition-all flex items-center justify-center gap-2 ${invoiceCurrency === "IQD" ? "border-indigo-500 bg-indigo-50 text-indigo-700" : "border-slate-200 bg-white text-slate-500"}`}
-                        >
-                          <Banknote size={18} /> دینار (IQD)
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setInvoiceCurrency("USD")}
-                          className={`py-3 rounded-xl border-2 font-bold text-sm transition-all flex items-center justify-center gap-2 ${invoiceCurrency === "USD" ? "border-green-500 bg-green-50 text-green-700" : "border-slate-200 bg-white text-slate-500"}`}
-                        >
-                          <DollarSign size={18} /> دۆلار ($)
-                        </button>
-                      </div>
                     </div>
 
                     <div className="space-y-2">
@@ -1146,12 +1165,12 @@ export default function POS() {
                   </div>
                 </div>
 
-                <div className="p-6 border-t border-slate-100 bg-white shrink-0">
+                <div className="p-4 sm:p-6 border-t border-slate-100 bg-white shrink-0 pb-[max(calc(env(safe-area-inset-bottom)+1rem),1rem)] sm:pb-6">
                   <button
                     disabled={isProcessing}
                     type="submit"
                     form="checkout-form"
-                    className="w-full disabled:opacity-50 bg-pink-600 hover:bg-pink-700 text-white py-3.5 rounded-xl font-bold text-lg transition-all flex items-center justify-center gap-2 shadow-lg shadow-pink-200"
+                    className="w-full disabled:opacity-50 bg-pink-600 hover:bg-pink-700 text-white py-3.5 rounded-xl font-bold text-[15px] sm:text-lg transition-all flex items-center justify-center gap-2 shadow-lg shadow-pink-200 active:scale-95"
                   >
                     <CheckCircle2 size={20} />
                     {isProcessing
@@ -1177,6 +1196,80 @@ export default function POS() {
           });
         }}
       />
+
+      {/* CURRENCY CONVERTER MODAL */}
+      {calcModalOpen && (
+        <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center p-0 sm:p-4 backdrop-blur-sm bg-slate-900/40 animate-in fade-in duration-200">
+          <div className="bg-white rounded-t-[32px] sm:rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col transform transition-all animate-in slide-in-from-bottom-10 sm:slide-in-from-bottom-0 sm:zoom-in-95 pb-[max(calc(env(safe-area-inset-bottom)+1rem),1rem)] sm:pb-0">
+            <div className="bg-slate-900 p-5 flex justify-between items-center text-white">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center">
+                  <ArrowRightLeft size={20} />
+                </div>
+                <h2 className="text-xl font-bold">گۆڕینەوەی دراو</h2>
+              </div>
+              <button
+                onClick={() => setCalcModalOpen(false)}
+                className="w-8 h-8 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors"
+                title="داخستن"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="p-6 flex flex-col gap-6">
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-full bg-green-100 text-green-700 flex items-center justify-center text-xs font-bold">
+                    $
+                  </div>
+                  دۆلاری ئەمریکی (USD)
+                </label>
+                <input
+                  type="number"
+                  value={convUSD}
+                  onChange={(e) => handleConvUSDChange(e.target.value)}
+                  placeholder="0.00"
+                  className="w-full bg-slate-50 border-2 border-slate-200 rounded-2xl py-4 px-5 outline-none text-2xl font-mono font-bold text-slate-800 focus:border-green-500 focus:ring-4 focus:ring-green-500/10 transition-all text-left"
+                  dir="ltr"
+                />
+              </div>
+
+              <div className="relative flex justify-center -my-3 z-10">
+                <div className="bg-white p-2 rounded-full border border-slate-200 shadow-sm text-slate-400">
+                  <ArrowUpDown size={20} />
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-full bg-sky-100 text-sky-700 flex items-center justify-center text-xs font-bold">
+                    د.ع
+                  </div>
+                  دیناری عێراقی (IQD)
+                </label>
+                <input
+                  type="number"
+                  value={convIQD}
+                  onChange={(e) => handleConvIQDChange(e.target.value)}
+                  placeholder="0"
+                  className="w-full bg-slate-50 border-2 border-slate-200 rounded-2xl py-4 px-5 outline-none text-2xl font-mono font-bold text-slate-800 focus:border-sky-500 focus:ring-4 focus:ring-sky-500/10 transition-all text-left"
+                  dir="ltr"
+                />
+              </div>
+
+              <div className="bg-slate-50 p-4 rounded-xl text-center border border-slate-200 mt-2">
+                <span className="text-sm font-medium text-slate-500">
+                  نرخی ئاڵوگۆڕی ئێستا:{" "}
+                </span>
+                <span className="font-bold text-slate-800">
+                  100$ = {exchangeRate * 100} IQD
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -90,7 +90,9 @@ export default function SafesPage({ settings }: any) {
     const unsubTrans = onSnapshot(qTrans, (snap) => {
       const allTrans = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
       setTransactions(allTrans.filter((t: any) => t.status !== "pending"));
-      setPendingTransactions(allTrans.filter((t: any) => t.status === "pending"));
+      setPendingTransactions(
+        allTrans.filter((t: any) => t.status === "pending"),
+      );
     });
 
     return () => {
@@ -439,16 +441,6 @@ export default function SafesPage({ settings }: any) {
               </h3>
             </div>
             <div className="space-y-3">
-              <div className="flex justify-between items-end">
-                <span className="text-sm font-bold text-slate-500">
-                  بالانسی دینار
-                </span>
-                <span
-                  className={`font-mono font-bold text-lg ${safe.balanceIQD < 0 ? "text-red-600" : "text-emerald-700"}`}
-                >
-                  {formatCurrency(safe.balanceIQD || 0, "IQD")}
-                </span>
-              </div>
               <div className="flex justify-between items-end">
                 <span className="text-sm font-bold text-slate-500">
                   بالانسی دۆلار
@@ -855,17 +847,7 @@ export default function SafesPage({ settings }: any) {
                     <option value="">خاوەن پارە...</option>
                     {safes.map((s) => (
                       <option key={s.id} value={s.id}>
-                        {s.name} (دینار:{" "}
-                        {formatCurrency(s.balanceIQD || 0, "IQD").replace(
-                          "IQD",
-                          "",
-                        )}{" "}
-                        | دۆلار:{" "}
-                        {formatCurrency(s.balanceUSD || 0, "USD").replace(
-                          "USD",
-                          "",
-                        )}
-                        )
+                        {s.name} ({formatCurrency(s.balanceUSD || 0)})
                       </option>
                     ))}
                   </select>
@@ -920,17 +902,7 @@ export default function SafesPage({ settings }: any) {
                     <option value="">وەرگر...</option>
                     {safes.map((s) => (
                       <option key={s.id} value={s.id}>
-                        {s.name} (دینار:{" "}
-                        {formatCurrency(s.balanceIQD || 0, "IQD").replace(
-                          "IQD",
-                          "",
-                        )}{" "}
-                        | دۆلار:{" "}
-                        {formatCurrency(s.balanceUSD || 0, "USD").replace(
-                          "USD",
-                          "",
-                        )}
-                        )
+                        {s.name} ({formatCurrency(s.balanceUSD || 0)})
                       </option>
                     ))}
                   </select>
@@ -1065,17 +1037,7 @@ export default function SafesPage({ settings }: any) {
                   <option value="">هەڵبژاردنی قاسە...</option>
                   {safes.map((s) => (
                     <option key={s.id} value={s.id}>
-                      {s.name} (دینار:{" "}
-                      {formatCurrency(s.balanceIQD || 0, "IQD").replace(
-                        "IQD",
-                        "",
-                      )}{" "}
-                      | دۆلار:{" "}
-                      {formatCurrency(s.balanceUSD || 0, "USD").replace(
-                        "USD",
-                        "",
-                      )}
-                      )
+                      {s.name} ({formatCurrency(s.balanceUSD || 0)})
                     </option>
                   ))}
                 </select>

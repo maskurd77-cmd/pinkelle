@@ -81,24 +81,39 @@ export function DebtReceiptModal({
             {/* Header */}
             <div className="flex justify-between items-start mb-6 border-b border-slate-300 pb-4 relative z-10 px-4 pt-4">
               {/* Right side - Logo/Title */}
-              <div className="text-right">
-                <h1
-                  className="text-3xl font-black text-rose-700 tracking-tight mb-1"
-                  style={{ fontFamily: "Impact, sans-serif" }}
-                >
-                  گروپی PINK ELLE
-                </h1>
-                <h2 className="text-lg font-bold text-slate-800">
-                  تاکە بریکاری PINK ELLE
-                </h2>
-                <div className="text-[11px] font-bold text-slate-600 mt-1 whitespace-pre-wrap">
-                  ژمارەی کۆمپانیا: 0751 201 8372 - 0750 425 1338
+              <div className="text-right flex items-start gap-4">
+                <div className="shrink-0 w-16 h-16 bg-pink-50 border-2 border-pink-200 rounded-full flex items-center justify-center text-pink-700 shadow-md">
+                  <div className="flex flex-col items-center leading-none">
+                    <span className="text-xl font-black font-mono tracking-tighter">
+                      PE
+                    </span>
+                  </div>
+                </div>
+                <div>
+                  <h1
+                    className="text-3xl font-black text-rose-700 tracking-tight mb-1"
+                    style={{ fontFamily: "Impact, sans-serif" }}
+                  >
+                    گروپی PINK ELLE
+                  </h1>
+                  <h2 className="text-lg font-bold text-slate-800">
+                    تاکە بریکاری PINK ELLE
+                  </h2>
+                  <div
+                    className="text-[11px] font-bold text-slate-600 mt-1 flex items-center justify-end gap-1"
+                    dir="rtl"
+                  >
+                    <span>ژمارەی کۆمپانیا:</span>
+                    <span dir="ltr">0751 201 8372</span>
+                    <span>-</span>
+                    <span dir="ltr">0750 425 1338</span>
+                  </div>
                 </div>
               </div>
 
               {/* Title Center */}
               <div className="flex flex-col items-center justify-center pt-2">
-                <div className="border-[3px] border-rose-700 px-6 py-2 rounded-full transform -rotate-2">
+                <div className="border-[3px] border-rose-700 px-6 py-2 rounded-full transform -rotate-2 bg-rose-50/20">
                   <h2 className="text-2xl font-black text-rose-700 tracking-wider">
                     وەسڵـــی قەبـــز
                   </h2>
@@ -110,17 +125,31 @@ export function DebtReceiptModal({
 
               {/* Left side - Meta */}
               <div className="text-left font-mono font-bold text-sm space-y-2 pt-2 text-rose-900 bg-rose-50/50 p-2 border border-rose-100 rounded-lg">
-                <div dir="ltr">
-                  <span className="text-xs text-slate-500 font-sans mr-2 border-r border-slate-300 pr-2">
+                <div dir="ltr" className="flex items-center gap-2">
+                  <span className="text-xs text-slate-500 font-sans border-r border-slate-300 pr-2">
                     No:
                   </span>{" "}
-                  {transaction.id?.slice(0, 8).toUpperCase() || "N/A"}
+                  <span>
+                    {transaction.id?.slice(0, 8).toUpperCase() || "N/A"}
+                  </span>
                 </div>
-                <div dir="ltr">
-                  <span className="text-xs text-slate-500 font-sans mr-2 border-r border-slate-300 pr-2">
+                <div dir="ltr" className="flex items-center gap-2">
+                  <span className="text-xs text-slate-500 font-sans border-r border-slate-300 pr-2">
                     Date:
                   </span>{" "}
-                  {formatDate(transaction.timestamp)}
+                  <span>{formatDate(transaction.timestamp)}</span>
+                </div>
+                <div dir="ltr" className="flex items-center gap-2">
+                  <span className="text-xs text-slate-500 font-sans border-r border-slate-300 pr-2">
+                    Time:
+                  </span>{" "}
+                  <span className="text-[10px]">
+                    {new Date().toLocaleString("en-US", {
+                      hour12: true,
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </span>
                 </div>
               </div>
             </div>
@@ -136,61 +165,30 @@ export function DebtReceiptModal({
                 </span>
               </div>
 
-              <div className="flex items-end gap-2 text-lg font-bold">
-                <span className="shrink-0 text-rose-900 w-32 border-b-2 border-rose-800 pb-1 align-bottom flex justify-between pr-2">
-                  بڕی پارە <span>:</span>
-                </span>
-                <span className="border-b-[1.5px] border-dashed border-slate-400 flex-1 pb-1 px-4 font-mono text-xl text-emerald-700 tracking-wider flex justify-between items-center">
-                  {transaction.originalCurrency === "USD" ? (
-                    <>
+              {!transaction.isGeneric && (
+                <>
+                  <div className="flex items-end gap-2 text-lg font-bold">
+                    <span className="shrink-0 text-rose-900 w-32 border-b-2 border-rose-800 pb-1 align-bottom flex justify-between pr-2">
+                      بڕی پارە <span>:</span>
+                    </span>
+                    <span className="border-b-[1.5px] border-dashed border-slate-400 flex-1 pb-1 px-4 font-mono text-xl text-emerald-700 tracking-wider flex justify-between items-center">
                       <span>
                         {formatCurrency(
-                          transaction.originalAmount || transaction.amount,
+                          transaction.originalCurrency === "USD"
+                            ? transaction.originalAmount || transaction.amount
+                            : (transaction.originalAmount ||
+                                transaction.amount) /
+                                (transaction.exchangeRate || 1500),
                           "USD",
                         ).replace("USD", "")}
                       </span>
                       <span className="text-xs text-emerald-500 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100 ml-2">
                         دۆلار / USD
                       </span>
-                    </>
-                  ) : (
-                    <>
-                      <span>
-                        {formatCurrency(
-                          transaction.originalAmount || transaction.amount,
-                          "IQD",
-                        ).replace("IQD", "")}
-                      </span>
-                      <span className="text-xs text-emerald-500 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100 ml-2">
-                        دینار / IQD
-                      </span>
-                    </>
-                  )}
-                </span>
-              </div>
-
-              <div className="flex items-end gap-2 text-lg font-bold">
-                <span className="shrink-0 text-rose-900 w-32 border-b-2 border-rose-800 pb-1 align-bottom flex justify-between pr-2">
-                  دینار / دۆلار <span>:</span>
-                </span>
-                <span className="border-b-[1.5px] border-dashed border-slate-400 flex-1 pb-1 px-4 font-mono text-xl tracking-wider text-slate-400/50 flex justify-between items-center">
-                  {transaction.originalCurrency === "USD" ? (
-                    <>
-                      <span className="text-sm text-slate-500 font-sans tracking-normal">
-                        (بەرامبەر بە دینار:{" "}
-                        {formatCurrency(
-                          (transaction.originalAmount || transaction.amount) *
-                            (transaction.exchangeRate || 1500),
-                          "IQD",
-                        )}
-                        )
-                      </span>
-                    </>
-                  ) : (
-                    <span className="text-sm">...</span>
-                  )}
-                </span>
-              </div>
+                    </span>
+                  </div>
+                </>
+              )}
 
               <div className="flex items-end gap-2 text-lg font-bold mt-12">
                 <span className="shrink-0 text-rose-900 w-32 border-b-2 border-rose-800 pb-1 align-bottom flex justify-between pr-2">
@@ -198,13 +196,14 @@ export function DebtReceiptModal({
                 </span>
                 <span className="border-b-[1.5px] border-dashed border-slate-400 w-64 pb-1 px-4 font-mono text-xl text-red-600 tracking-wider flex justify-between items-center">
                   <span>
-                    {formatCurrency(debt.remainingAmount || 0, "IQD").replace(
-                      "IQD",
-                      "",
-                    )}
+                    {formatCurrency(
+                      (debt.remainingAmount || 0) /
+                        (transaction.exchangeRate || 1500),
+                      "USD",
+                    ).replace("USD", "")}
                   </span>
                   <span className="text-[10px] text-red-500 bg-red-50 px-1.5 py-0.5 rounded border border-red-100 ml-1 leading-none">
-                    دینار / IQD
+                    دۆلار / USD
                   </span>
                 </span>
               </div>

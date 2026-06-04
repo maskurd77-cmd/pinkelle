@@ -262,7 +262,7 @@ export default function Receipts() {
                   <td className="px-6 py-4 font-extrabold text-slate-900 font-mono whitespace-nowrap">
                     {formatCurrency(
                       rec.totalAmount,
-                      rec.invoiceCurrency || "IQD",
+                      rec.invoiceCurrency || "USD",
                     )}
                   </td>
                   <td className="px-6 py-4">
@@ -323,15 +323,15 @@ export default function Receipts() {
 
       {/* Modal View for Print Preview */}
       {selectedReceipt && (
-        <div className="print:hidden fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-[24px] shadow-2xl max-w-4xl w-full max-h-full overflow-hidden flex flex-col">
-            <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-white">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center">
-                  <Printer size={20} />
+        <div className="print:hidden fixed inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div className="bg-white rounded-t-[32px] sm:rounded-[24px] shadow-2xl max-w-4xl w-full max-h-[95dvh] sm:max-h-full overflow-hidden flex flex-col animate-in slide-in-from-bottom-10 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-200">
+            <div className="p-4 sm:p-5 border-b border-slate-100 flex justify-between items-center bg-white shrink-0">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center shrink-0">
+                  <Printer size={18} className="sm:w-5 sm:h-5" />
                 </div>
-                <h2 className="font-extrabold text-slate-800 text-lg">
-                  پێشبینینی چاپ (Print Preview)
+                <h2 className="font-extrabold text-slate-800 text-base sm:text-lg">
+                  پێشبینینی چاپ
                 </h2>
               </div>
               <div className="flex gap-2">
@@ -349,7 +349,7 @@ export default function Receipts() {
                 </button>
               </div>
             </div>
-            <div className="flex-1 overflow-auto bg-slate-100/50 p-4 sm:p-8 flex items-start justify-center custom-scrollbar">
+            <div className="flex-1 overflow-auto bg-slate-100/50 p-4 sm:p-8 flex items-start justify-center custom-scrollbar pb-[max(calc(env(safe-area-inset-bottom)+1rem),1rem)] sm:pb-8">
               {/* A4 Paper Scaled Down slightly for preview */}
               <div className="bg-white shadow-lg w-[210mm] min-h-[297mm] p-0 relative">
                 <ReceiptPrintLayout receipt={selectedReceipt} />

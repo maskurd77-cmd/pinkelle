@@ -46,7 +46,7 @@ export default function Products() {
   const [wholesalePrice, setWholesalePrice] = useState("");
   const [cartonSize, setCartonSize] = useState("");
   const [stock, setStock] = useState("");
-  const [currency, setCurrency] = useState<"IQD" | "USD">("IQD");
+  const [currency, setCurrency] = useState<"IQD" | "USD">("USD");
   const [imageUrl, setImageUrl] = useState("");
   const [inputType, setInputType] = useState<"url" | "file">("url");
 
@@ -105,7 +105,7 @@ export default function Products() {
     setWholesalePrice("");
     setCartonSize("1");
     setStock("");
-    setCurrency("IQD");
+    setCurrency("USD");
     setImageUrl("");
     setInputType("url");
     setIsModalOpen(true);

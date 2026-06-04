@@ -76,16 +76,17 @@ export default function Warehouse() {
     let totalCost = 0;
     let totalPrice = 0;
     filteredProducts.forEach((p) => {
-      const costInIQD =
-        p.currency === "USD"
-          ? (p.unitCost || 0) * exchangeRate
+      const pCurrency = p.currency || "IQD";
+      const costInUSD =
+        pCurrency === "IQD"
+          ? (p.unitCost || 0) / exchangeRate
           : p.unitCost || 0;
-      const priceInIQD =
-        p.currency === "USD"
-          ? (p.unitPrice || 0) * exchangeRate
+      const priceInUSD =
+        pCurrency === "IQD"
+          ? (p.unitPrice || 0) / exchangeRate
           : p.unitPrice || 0;
-      totalCost += costInIQD * (p.stock || 0);
-      totalPrice += priceInIQD * (p.stock || 0);
+      totalCost += costInUSD * (p.stock || 0);
+      totalPrice += priceInUSD * (p.stock || 0);
     });
     const expectedProfit = totalPrice - totalCost;
     return { totalCost, totalPrice, expectedProfit };
@@ -174,7 +175,7 @@ export default function Warehouse() {
             تێچووی گشتی کۆگا
           </p>
           <h3 className="text-xl font-bold font-mono text-slate-900">
-            {formatCurrency(metrics.totalCost)}
+            {formatCurrency(metrics.totalCost, "USD")}
           </h3>
         </div>
 
@@ -183,7 +184,7 @@ export default function Warehouse() {
             کۆی نرخی فرۆشتن
           </p>
           <h3 className="text-xl font-bold font-mono text-pink-600">
-            {formatCurrency(metrics.totalPrice)}
+            {formatCurrency(metrics.totalPrice, "USD")}
           </h3>
         </div>
 
@@ -192,7 +193,7 @@ export default function Warehouse() {
             قازانجی پێشبینیکراو
           </p>
           <h3 className="text-xl font-bold font-mono text-green-700">
-            {formatCurrency(metrics.expectedProfit)}
+            {formatCurrency(metrics.expectedProfit, "USD")}
           </h3>
         </div>
 
