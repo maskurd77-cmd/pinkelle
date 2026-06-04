@@ -589,19 +589,17 @@ export default function POS() {
         className={`fixed inset-y-0 right-0 z-[60] w-full max-w-[400px] bg-slate-50/50 shadow-2xl transition-transform duration-300 transform ${mobileCartOpen ? "translate-x-0" : "translate-x-full"} lg:relative lg:translate-x-0 lg:w-96 lg:shadow-sm lg:rounded-[24px] lg:border lg:border-slate-200 flex flex-col overflow-hidden lg:h-full lg:max-w-none`}
       >
         <div className="p-4 lg:p-5 border-b border-slate-200/60 bg-white flex items-center justify-between shrink-0 shadow-sm z-10">
-          <div className="flex items-center gap-2 text-slate-900 font-bold text-lg">
-            <button
-              onClick={() => setMobileCartOpen(false)}
-              className="lg:hidden p-1 mr-[-8px] text-slate-500 hover:bg-slate-200 rounded-lg"
-            >
-              <X size={24} />
-            </button>
+          <div className="flex items-center justify-between w-full text-slate-900 font-bold text-lg">
             <div className="hidden lg:flex items-center gap-2 text-pink-600 bg-pink-50 px-2.5 py-1 rounded-lg">
               <ShoppingCart size={18} />
               <span className="text-sm">کاشێر</span>
             </div>
+            <div className="lg:hidden flex items-center gap-2 text-pink-600 bg-pink-50 px-3 py-1.5 rounded-xl font-bold">
+              <ShoppingCart size={20} />
+              <span className="text-base">کاشێر</span>
+            </div>
 
-            <div className="flex items-center gap-1 mr-2 bg-slate-100 p-1.5 rounded-xl border border-slate-200/60 shadow-inner">
+            <div className="flex items-center gap-1 bg-slate-100 p-1.5 rounded-xl border border-slate-200/60 shadow-inner">
               <button
                 onClick={() => setIsWholesale(false)}
                 className={`px-4 py-1.5 text-xs sm:text-sm font-extrabold rounded-lg transition-all duration-200 flex-1 text-center min-w-[70px] ${!isWholesale ? "bg-white shadow-sm text-slate-800 scale-100 ring-1 ring-slate-200/50" : "text-slate-500 hover:text-slate-700 scale-95 hover:bg-slate-200/50"}`}
@@ -791,14 +789,24 @@ export default function POS() {
             </div>
           </div>
 
-          <button
-            disabled={cart.length === 0}
-            onClick={() => setCheckoutModalOpen(true)}
-            className="w-full bg-slate-900 focus-visible:ring-4 focus-visible:ring-pink-500/30 hover:bg-slate-800 disabled:bg-slate-100 disabled:text-slate-400 disabled:shadow-none text-white py-4 rounded-2xl font-bold text-[15px] transition-all flex items-center justify-center gap-2.5 shadow-xl shadow-slate-900/10 active:scale-[0.98]"
-          >
-            <CreditCard size={20} />
-            تەواوکردنی فرۆشتن
-          </button>
+          <div className="flex gap-3">
+             <button
+               onClick={() => setMobileCartOpen(false)}
+               className="w-14 items-center justify-center bg-slate-100 hover:bg-slate-200 border-2 border-slate-200 text-slate-600 rounded-2xl flex transition-all shrink-0 active:scale-95 lg:hidden shadow-sm"
+               title="داخستنی کاشێر"
+               aria-label="Close cart"
+             >
+               <X size={24} className="stroke-[2.5px]" />
+             </button>
+             <button
+               disabled={cart.length === 0}
+               onClick={() => setCheckoutModalOpen(true)}
+               className="flex-1 bg-slate-900 focus-visible:ring-4 focus-visible:ring-pink-500/30 hover:bg-slate-800 disabled:bg-slate-100 disabled:text-slate-400 disabled:shadow-none text-white py-4 rounded-2xl font-bold text-[15px] transition-all flex items-center justify-center gap-2.5 shadow-xl shadow-slate-900/10 active:scale-[0.98]"
+             >
+               <CreditCard size={20} />
+               تەواوکردنی فرۆشتن
+             </button>
+          </div>
         </div>
       </div>
 

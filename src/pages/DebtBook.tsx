@@ -30,6 +30,7 @@ import {
 import { db, auth } from "../firebase";
 import { formatCurrency } from "../data";
 import { reduceCustomerDebt } from "./MiscPages";
+import { DebtReceiptModal } from "../components/DebtReceiptModal";
 
 interface Debt {
   id: string;
@@ -51,6 +52,7 @@ export default function DebtBook() {
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
   const [debtHistory, setDebtHistory] = useState<any[]>([]);
+  const [printTx, setPrintTx] = useState<any>(null);
   const [actionType, setActionType] = useState<"pay" | "add">("pay");
   const [selectedDebt, setSelectedDebt] = useState<Debt | null>(null);
   const [paymentAmount, setPaymentAmount] = useState("");
@@ -65,7 +67,13 @@ export default function DebtBook() {
   const [userName, setUserName] = useState("");
   const [pendingTransactions, setPendingTransactions] = useState<any[]>([]);
   const [pendingReturns, setPendingReturns] = useState<any[]>([]);
-  const [activeTab, setActiveTab] = useState<"debts" | "pending_tx" | "pending_returns">("debts");
+  const [activeTab, setActiveTab] = useState<
+    "debts" | "pending_tx" | "pending_returns"
+  >("debts");
+  const [exchangeRate, setExchangeRate] = useState<number>(1500);
+
+  const [paymentCurrency, setPaymentCurrency] = useState<"IQD" | "USD">("IQD");
+  const [newCurrency, setNewCurrency] = useState<"IQD" | "USD">("IQD");
 
   useEffect(() => {
     if (auth.currentUser) {
@@ -87,7 +95,10 @@ export default function DebtBook() {
     });
 
     const unsubPending = onSnapshot(
-      query(collection(db, "debt_transactions"), where("status", "==", "pending")),
+      query(
+        collection(db, "debt_transactions"),
+        where("status", "==", "pending"),
+      ),
       (snap) => {
         const txs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
         setPendingTransactions(txs);
@@ -95,17 +106,31 @@ export default function DebtBook() {
     );
 
     const unsubReturns = onSnapshot(
-      query(collection(db, "return_transactions"), where("status", "==", "pending")),
+      query(
+        collection(db, "return_transactions"),
+        where("status", "==", "pending"),
+      ),
       (snap) => {
-        setPendingReturns(snap.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a: any, b: any) => b.timestamp - a.timestamp));
+        setPendingReturns(
+          snap.docs
+            .map((d) => ({ id: d.id, ...d.data() }))
+            .sort((a: any, b: any) => b.timestamp - a.timestamp),
+        );
       },
     );
+
+    const unsubSettings = onSnapshot(doc(db, "settings", "globals"), (snap) => {
+      if (snap.exists() && snap.data().exchangeRate) {
+        setExchangeRate(snap.data().exchangeRate);
+      }
+    });
 
     return () => {
       unsub();
       unsubCus();
       unsubPending();
       unsubReturns();
+      unsubSettings();
     };
   }, []);
 
@@ -143,7 +168,9 @@ export default function DebtBook() {
 
   const handleDeleteDebtAccount = async () => {
     if (!selectedDebt) return;
-    const confirm = window.prompt(`بۆ سڕینەوەی ئەم دەفتەر قەرزەیە تکایە وشەی "سڕینەوە" بنووسە:`);
+    const confirm = window.prompt(
+      `بۆ سڕینەوەی ئەم دەفتەر قەرزەیە تکایە وشەی "سڕینەوە" بنووسە:`,
+    );
     if (confirm === "سڕینەوە") {
       try {
         await deleteDoc(doc(db, "debts", selectedDebt.id));
@@ -232,7 +259,10 @@ export default function DebtBook() {
         if (filteredItems.length === 0) {
           await deleteDoc(doc(db, "receipts", tx.receiptId));
         } else {
-          const newTotal = filteredItems.reduce((acc: number, i: any) => acc + i.total, 0);
+          const newTotal = filteredItems.reduce(
+            (acc: number, i: any) => acc + i.total,
+            0,
+          );
           const newTotalItems = filteredItems.reduce(
             (acc: number, i: any) => acc + i.quantity,
             0,
@@ -310,8 +340,13 @@ export default function DebtBook() {
     e.preventDefault();
     if (!selectedDebt || !paymentAmount) return;
 
-    const amountInput = parseFloat(paymentAmount);
-    if (amountInput <= 0) return;
+    const amountInputRaw = parseFloat(paymentAmount);
+    if (amountInputRaw <= 0) return;
+
+    const amountInputIQD =
+      paymentCurrency === "USD"
+        ? amountInputRaw * exchangeRate
+        : amountInputRaw;
 
     let newRemaining = selectedDebt.remainingAmount;
     let newTotalAmount = selectedDebt.amount;
@@ -320,10 +355,10 @@ export default function DebtBook() {
 
     if (!isPending) {
       if (actionType === "pay") {
-        newRemaining -= amountInput;
+        newRemaining -= amountInputIQD;
       } else {
-        newRemaining += amountInput;
-        newTotalAmount += amountInput;
+        newRemaining += amountInputIQD;
+        newTotalAmount += amountInputIQD;
       }
       const finalRemaining = newRemaining < 0 ? 0 : newRemaining;
       const newStatus = finalRemaining === 0 ? "paid" : "active";
@@ -337,7 +372,10 @@ export default function DebtBook() {
 
     await addDoc(collection(db, "debt_transactions"), {
       debtId: selectedDebt.id,
-      amount: amountInput,
+      amount: amountInputIQD,
+      originalAmount: amountInputRaw,
+      originalCurrency: paymentCurrency,
+      exchangeRate: paymentCurrency === "USD" ? exchangeRate : 1,
       type: actionType,
       status: isPending ? "pending" : "completed",
       customerName: selectedDebt.customerName, // Added for UI
@@ -346,62 +384,72 @@ export default function DebtBook() {
       notes:
         paymentNote ||
         (actionType === "pay"
-          ? "دانەوەی قەرز بە دەست"
-          : "زیادکردنی قەرز بە دەست"),
+          ? `دانەوەی قەرز بە دەست (${paymentCurrency})`
+          : `زیادکردنی قەرز بە دەست (${paymentCurrency})`),
     });
 
     setPaymentModalOpen(false);
     setSelectedDebt(null);
     setPaymentAmount("");
     setPaymentNote("");
+    setPaymentCurrency("IQD");
   };
 
   const handleCreateDebt = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newName || !newAmount) return;
 
-    const amountVal = parseFloat(newAmount);
+    const amountValRaw = parseFloat(newAmount);
+    const amountValIQD =
+      newCurrency === "USD" ? amountValRaw * exchangeRate : amountValRaw;
+
     const existingDebt = debts.find((d) => d.customerName === newName);
     const isPending = userRole !== "admin" && userRole !== "accountant";
 
     if (existingDebt) {
       if (!isPending) {
         await updateDoc(doc(db, "debts", existingDebt.id), {
-          amount: existingDebt.amount + amountVal,
-          remainingAmount: existingDebt.remainingAmount + amountVal,
+          amount: existingDebt.amount + amountValIQD,
+          remainingAmount: existingDebt.remainingAmount + amountValIQD,
           status: "active",
           lastPaymentDate: Timestamp.now(),
         });
       }
       await addDoc(collection(db, "debt_transactions"), {
         debtId: existingDebt.id,
-        amount: amountVal,
+        amount: amountValIQD,
+        originalAmount: amountValRaw,
+        originalCurrency: newCurrency,
+        exchangeRate: newCurrency === "USD" ? exchangeRate : 1,
         type: "add",
         status: isPending ? "pending" : "completed",
         customerName: existingDebt.customerName,
         createdBy: userName || "نەزانراو",
         timestamp: Timestamp.now(),
-        notes: "زیادکردنی قەرز بە دەست",
+        notes: `زیادکردنی قەرز بە دەست (${newCurrency})`,
       });
     } else {
       if (!isPending) {
         const debtRef = await addDoc(collection(db, "debts"), {
           customerName: newName,
           phone: newPhone,
-          amount: amountVal,
-          remainingAmount: amountVal,
+          amount: amountValIQD,
+          remainingAmount: amountValIQD,
           status: "active",
           timestamp: Timestamp.now(),
         });
         await addDoc(collection(db, "debt_transactions"), {
           debtId: debtRef.id,
-          amount: amountVal,
+          amount: amountValIQD,
+          originalAmount: amountValRaw,
+          originalCurrency: newCurrency,
+          exchangeRate: newCurrency === "USD" ? exchangeRate : 1,
           type: "add", // new initial debt
           status: "completed",
           customerName: newName,
           createdBy: userName || "نەزانراو",
           timestamp: Timestamp.now(),
-          notes: "قەرزی نوێ",
+          notes: `قەرزی نوێ (${newCurrency})`,
         });
       } else {
         // Create a placeholder debt with 0 amount, and a pending transaction to add the amount
@@ -415,13 +463,16 @@ export default function DebtBook() {
         });
         await addDoc(collection(db, "debt_transactions"), {
           debtId: debtRef.id,
-          amount: amountVal,
+          amount: amountValIQD,
+          originalAmount: amountValRaw,
+          originalCurrency: newCurrency,
+          exchangeRate: newCurrency === "USD" ? exchangeRate : 1,
           type: "add",
           status: "pending",
           customerName: newName,
           createdBy: userName || "نەزانراو",
           timestamp: Timestamp.now(),
-          notes: "قەرزی نوێ (چاوەڕێی پەسەندکردن)",
+          notes: `قەرزی نوێ (چاوەڕێی پەسەندکردن) (${newCurrency})`,
         });
       }
     }
@@ -515,38 +566,38 @@ export default function DebtBook() {
               <FileText className="text-pink-600" /> دەفتەری قەرز
             </h2>
             <div className="flex bg-slate-100 p-1 rounded-xl mr-4">
-               <button
-                 onClick={() => setActiveTab("debts")}
-                 className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${activeTab === "debts" ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
-               >
-                 دەفتەر قەرز
-               </button>
-               {(userRole === "admin" || userRole === "accountant") && (
-                 <>
-                 <button
-                   onClick={() => setActiveTab("pending_tx")}
-                   className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${activeTab === "pending_tx" ? "bg-white text-orange-600 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
-                 >
-                   چاوەڕێکراوی پارە
-                   {pendingTransactions.length > 0 && (
-                     <span className="bg-orange-500 text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full leading-none">
-                       {pendingTransactions.length}
-                     </span>
-                   )}
-                 </button>
-                 <button
-                   onClick={() => setActiveTab("pending_returns")}
-                   className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${activeTab === "pending_returns" ? "bg-white text-red-600 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
-                 >
-                   چاوەڕێکراوی گەڕانەوە
-                   {pendingReturns.length > 0 && (
-                     <span className="bg-red-500 text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full leading-none">
-                       {pendingReturns.length}
-                     </span>
-                   )}
-                 </button>
-                 </>
-               )}
+              <button
+                onClick={() => setActiveTab("debts")}
+                className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${activeTab === "debts" ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+              >
+                دەفتەر قەرز
+              </button>
+              {(userRole === "admin" || userRole === "accountant") && (
+                <>
+                  <button
+                    onClick={() => setActiveTab("pending_tx")}
+                    className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${activeTab === "pending_tx" ? "bg-white text-orange-600 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+                  >
+                    چاوەڕێکراوی پارە
+                    {pendingTransactions.length > 0 && (
+                      <span className="bg-orange-500 text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full leading-none">
+                        {pendingTransactions.length}
+                      </span>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => setActiveTab("pending_returns")}
+                    className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${activeTab === "pending_returns" ? "bg-white text-red-600 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+                  >
+                    چاوەڕێکراوی گەڕانەوە
+                    {pendingReturns.length > 0 && (
+                      <span className="bg-red-500 text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full leading-none">
+                        {pendingReturns.length}
+                      </span>
+                    )}
+                  </button>
+                </>
+              )}
             </div>
           </div>
 
@@ -587,281 +638,293 @@ export default function DebtBook() {
         {/* Table Content */}
         <div className="flex-1 overflow-auto custom-scrollbar">
           {activeTab === "pending_tx" ? (
-             <div className="p-6 space-y-3 bg-slate-50 h-full">
-               {pendingTransactions.length === 0 ? (
-                 <div className="h-full flex items-center justify-center text-slate-400 flex-col gap-4 py-20">
-                   <FileClock size={48} strokeWidth={1} />
-                   <p>هیچ مامەڵەیەکی چاوەڕێکراو نییە.</p>
-                 </div>
-               ) : (
-                 pendingTransactions.map((tx) => (
-                   <div
-                     key={tx.id}
-                     className="bg-white p-4 rounded-xl border border-orange-100 flex items-center justify-between"
-                   >
-                     <div>
-                       <div className="font-bold text-slate-800">
-                         {tx.customerName}
-                       </div>
-                       <div className="text-xs text-slate-500 mt-1">
-                         {formatDate(tx.timestamp)} - {tx.notes}{" "}
-                         {tx.createdBy ? `(لایەن: ${tx.createdBy})` : ""}
-                       </div>
-                     </div>
-                     <div className="flex items-center gap-2 flex-wrap">
-                       <div className="font-mono font-bold text-orange-600 ml-2">
-                         {formatCurrency(tx.amount)}
-                       </div>
-                       <button
-                         onClick={() => handleApproveTransaction(tx)}
-                         className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold rounded-lg transition-colors"
-                       >
-                         پەسەندکردنی {tx.type === "pay" ? "گرتنەوەی قەرز" : "زیادکردنی قەرز"}
-                       </button>
-                       <button
-                         onClick={() => handleRejectTransaction(tx)}
-                         className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-xs font-bold rounded-lg transition-colors"
-                       >
-                         ڕەتکردنەوە
-                       </button>
-                     </div>
-                   </div>
-                 ))
-               )}
-             </div>
-          ) : activeTab === "pending_returns" ? (
-             <div className="p-6 space-y-3 bg-slate-50 h-full">
-               {pendingReturns.length === 0 ? (
-                 <div className="h-full flex items-center justify-center text-slate-400 flex-col gap-4 py-20">
-                   <FileClock size={48} strokeWidth={1} />
-                   <p>هیچ پسوولەیەکی گەڕانەوە نییە بۆ چاوەڕێکردن.</p>
-                 </div>
-               ) : (
-                 pendingReturns.map((tx) => (
-                   <div
-                     key={tx.id}
-                     className="bg-white p-4 rounded-xl border border-orange-100 flex items-center justify-between"
-                   >
-                     <div>
-                       <div className="font-bold text-slate-800">
-                         وەسڵی ژمارە: {tx.receiptData?.id?.slice(-8).toUpperCase()} -{" "}
-                         {tx.receiptData?.customerName || "کڕیارێکی نەناسراو"}
-                       </div>
-                       <div className="text-xs text-slate-500 mt-1">
-                         مامەڵەی: {tx.type === "full" ? "گەڕانەوەی تەواوی کۆتایی" : "گەڕانەوەی بەشێک"} - لایەن: {tx.createdBy || "نەناسراو"}
-                       </div>
-                       <div className="text-xs text-orange-600 mt-1">
-                         بڕی کەمکردنەوەی قەرز: {formatCurrency(tx.reductionAmount || 0, tx.receiptData?.invoiceCurrency || "IQD")}
-                       </div>
-                     </div>
-                     <div className="flex items-center gap-2 flex-wrap">
-                       <button
-                         onClick={() => handleApproveReturn(tx)}
-                         className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold rounded-lg transition-colors"
-                       >
-                         پەسەندکردن
-                       </button>
-                       <button
-                         onClick={() => handleRejectReturn(tx)}
-                         className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-xs font-bold rounded-lg transition-colors"
-                       >
-                         ڕەتکردنەوە
-                       </button>
-                     </div>
-                   </div>
-                 ))
-               )}
-             </div>
-          ) : (
-          <table className="w-full text-right border-collapse min-w-[1000px]">
-            <thead className="bg-slate-50/80 backdrop-blur-sm text-slate-500 text-[11px] uppercase tracking-wider sticky top-0 z-10">
-              <tr>
-                <th className="px-6 py-4 font-bold border-b border-slate-200">
-                  ناوی کڕیار / دوکان
-                </th>
-                <th className="px-6 py-4 font-bold border-b border-slate-200">
-                  مۆبایل
-                </th>
-                <th className="px-6 py-4 font-bold border-b border-slate-200">
-                  بەرواری قەرز
-                </th>
-                <th className="px-6 py-4 font-bold border-b border-slate-200">
-                  کۆی قەرز
-                </th>
-                <th className="px-6 py-4 font-bold border-b border-slate-200 text-red-600">
-                  ماوە بۆ دانەوە
-                </th>
-                <th className="px-6 py-4 font-bold border-b border-slate-200">
-                  دواین دانەوە
-                </th>
-                <th className="px-6 py-4 font-bold border-b border-slate-200 print:hidden text-center">
-                  کردارەکان
-                </th>
-              </tr>
-            </thead>
-            <tbody className="text-sm divide-y divide-slate-100">
-              {filtered.map((debt) => (
-                <tr
-                  key={debt.id}
-                  className={`hover:bg-slate-50/50 transition-colors ${debt.status === "paid" ? "bg-slate-50/50 opacity-60" : ""}`}
-                >
-                  <td className="px-6 py-4 font-bold text-slate-800">
-                    {debt.customerName}
-                  </td>
-                  <td className="px-6 py-4">
-                    {debt.phone ? (
-                      <span
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600 font-mono text-xs"
-                        dir="ltr"
+            <div className="p-6 space-y-3 bg-slate-50 h-full">
+              {pendingTransactions.length === 0 ? (
+                <div className="h-full flex items-center justify-center text-slate-400 flex-col gap-4 py-20">
+                  <FileClock size={48} strokeWidth={1} />
+                  <p>هیچ مامەڵەیەکی چاوەڕێکراو نییە.</p>
+                </div>
+              ) : (
+                pendingTransactions.map((tx) => (
+                  <div
+                    key={tx.id}
+                    className="bg-white p-4 rounded-xl border border-orange-100 flex items-center justify-between"
+                  >
+                    <div>
+                      <div className="font-bold text-slate-800">
+                        {tx.customerName}
+                      </div>
+                      <div className="text-xs text-slate-500 mt-1">
+                        {formatDate(tx.timestamp)} - {tx.notes}{" "}
+                        {tx.createdBy ? `(لایەن: ${tx.createdBy})` : ""}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <div className="font-mono font-bold text-orange-600 ml-2">
+                        {formatCurrency(tx.amount)}
+                      </div>
+                      <button
+                        onClick={() => handleApproveTransaction(tx)}
+                        className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold rounded-lg transition-colors"
                       >
-                        {debt.phone}
-                      </span>
-                    ) : (
-                      <span className="text-slate-400 text-xs">-</span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 text-slate-500 text-xs font-medium whitespace-nowrap">
-                    {formatDate(debt.timestamp)}
-                  </td>
-                  <td className="px-6 py-4 text-slate-700 font-bold font-mono whitespace-nowrap">
-                    {formatCurrency(debt.amount)}
-                  </td>
-                  <td className="px-6 py-4">
-                    {debt.status === "paid" ? (
-                      <span className="inline-flex px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-700 font-bold text-xs">
-                        قەرزی نەماوە
-                      </span>
-                    ) : (
-                      (() => {
-                        const pendingPay = pendingTransactions
-                          .filter(
-                            (pt) => pt.debtId === debt.id && pt.type === "pay",
-                          )
-                          .reduce((acc, curr) => acc + curr.amount, 0);
-                        const pendingAdd = pendingTransactions
-                          .filter(
-                            (pt) => pt.debtId === debt.id && pt.type === "add",
-                          )
-                          .reduce((acc, curr) => acc + curr.amount, 0);
-                        return (
-                          <div className="flex flex-col gap-1.5 w-fit">
-                            <span className="inline-flex px-3 py-1 rounded-lg bg-red-100 text-red-700 font-bold font-mono whitespace-nowrap shadow-sm">
-                              {formatCurrency(debt.remainingAmount)}
-                            </span>
-                            {pendingPay > 0 && (
-                              <span
-                                className="inline-flex px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-700 font-bold font-mono text-[11px] border border-emerald-200"
-                                title="لە چاوەڕوانی پەسەندکردنی وەرگرتنی قەرز"
-                              >
-                                - {formatCurrency(pendingPay)} (چاوەڕێی سەحب)
+                        پەسەندکردنی{" "}
+                        {tx.type === "pay" ? "گرتنەوەی قەرز" : "زیادکردنی قەرز"}
+                      </button>
+                      <button
+                        onClick={() => handleRejectTransaction(tx)}
+                        className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-xs font-bold rounded-lg transition-colors"
+                      >
+                        ڕەتکردنەوە
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          ) : activeTab === "pending_returns" ? (
+            <div className="p-6 space-y-3 bg-slate-50 h-full">
+              {pendingReturns.length === 0 ? (
+                <div className="h-full flex items-center justify-center text-slate-400 flex-col gap-4 py-20">
+                  <FileClock size={48} strokeWidth={1} />
+                  <p>هیچ پسوولەیەکی گەڕانەوە نییە بۆ چاوەڕێکردن.</p>
+                </div>
+              ) : (
+                pendingReturns.map((tx) => (
+                  <div
+                    key={tx.id}
+                    className="bg-white p-4 rounded-xl border border-orange-100 flex items-center justify-between"
+                  >
+                    <div>
+                      <div className="font-bold text-slate-800">
+                        وەسڵی ژمارە:{" "}
+                        {tx.receiptData?.id?.slice(-8).toUpperCase()} -{" "}
+                        {tx.receiptData?.customerName || "کڕیارێکی نەناسراو"}
+                      </div>
+                      <div className="text-xs text-slate-500 mt-1">
+                        مامەڵەی:{" "}
+                        {tx.type === "full"
+                          ? "گەڕانەوەی تەواوی کۆتایی"
+                          : "گەڕانەوەی بەشێک"}{" "}
+                        - لایەن: {tx.createdBy || "نەناسراو"}
+                      </div>
+                      <div className="text-xs text-orange-600 mt-1">
+                        بڕی کەمکردنەوەی قەرز:{" "}
+                        {formatCurrency(
+                          tx.reductionAmount || 0,
+                          tx.receiptData?.invoiceCurrency || "IQD",
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <button
+                        onClick={() => handleApproveReturn(tx)}
+                        className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold rounded-lg transition-colors"
+                      >
+                        پەسەندکردن
+                      </button>
+                      <button
+                        onClick={() => handleRejectReturn(tx)}
+                        className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-xs font-bold rounded-lg transition-colors"
+                      >
+                        ڕەتکردنەوە
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          ) : (
+            <table className="w-full text-right border-collapse min-w-[1000px]">
+              <thead className="bg-slate-50/80 backdrop-blur-sm text-slate-500 text-[11px] uppercase tracking-wider sticky top-0 z-10">
+                <tr>
+                  <th className="px-6 py-4 font-bold border-b border-slate-200">
+                    ناوی کڕیار / دوکان
+                  </th>
+                  <th className="px-6 py-4 font-bold border-b border-slate-200">
+                    مۆبایل
+                  </th>
+                  <th className="px-6 py-4 font-bold border-b border-slate-200">
+                    بەرواری قەرز
+                  </th>
+                  <th className="px-6 py-4 font-bold border-b border-slate-200">
+                    کۆی قەرز
+                  </th>
+                  <th className="px-6 py-4 font-bold border-b border-slate-200 text-red-600">
+                    ماوە بۆ دانەوە
+                  </th>
+                  <th className="px-6 py-4 font-bold border-b border-slate-200">
+                    دواین دانەوە
+                  </th>
+                  <th className="px-6 py-4 font-bold border-b border-slate-200 print:hidden text-center">
+                    کردارەکان
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="text-sm divide-y divide-slate-100">
+                {filtered.map((debt) => (
+                  <tr
+                    key={debt.id}
+                    className={`hover:bg-slate-50/50 transition-colors ${debt.status === "paid" ? "bg-slate-50/50 opacity-60" : ""}`}
+                  >
+                    <td className="px-6 py-4 font-bold text-slate-800">
+                      {debt.customerName}
+                    </td>
+                    <td className="px-6 py-4">
+                      {debt.phone ? (
+                        <span
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600 font-mono text-xs"
+                          dir="ltr"
+                        >
+                          {debt.phone}
+                        </span>
+                      ) : (
+                        <span className="text-slate-400 text-xs">-</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 text-slate-500 text-xs font-medium whitespace-nowrap">
+                      {formatDate(debt.timestamp)}
+                    </td>
+                    <td className="px-6 py-4 text-slate-700 font-bold font-mono whitespace-nowrap">
+                      {formatCurrency(debt.amount)}
+                    </td>
+                    <td className="px-6 py-4">
+                      {debt.status === "paid" ? (
+                        <span className="inline-flex px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-700 font-bold text-xs">
+                          قەرزی نەماوە
+                        </span>
+                      ) : (
+                        (() => {
+                          const pendingPay = pendingTransactions
+                            .filter(
+                              (pt) =>
+                                pt.debtId === debt.id && pt.type === "pay",
+                            )
+                            .reduce((acc, curr) => acc + curr.amount, 0);
+                          const pendingAdd = pendingTransactions
+                            .filter(
+                              (pt) =>
+                                pt.debtId === debt.id && pt.type === "add",
+                            )
+                            .reduce((acc, curr) => acc + curr.amount, 0);
+                          return (
+                            <div className="flex flex-col gap-1.5 w-fit">
+                              <span className="inline-flex px-3 py-1 rounded-lg bg-red-100 text-red-700 font-bold font-mono whitespace-nowrap shadow-sm">
+                                {formatCurrency(debt.remainingAmount)}
                               </span>
-                            )}
-                            {pendingAdd > 0 && (
-                              <span
-                                className="inline-flex px-2 py-0.5 rounded-md bg-orange-100 text-orange-700 font-bold font-mono text-[11px] border border-orange-200"
-                                title="لە چاوەڕوانی پەسەندکردنی زیادکردنی قەرز"
-                              >
-                                + {formatCurrency(pendingAdd)} (چاوەڕێی
-                                زیادکردن)
-                              </span>
-                            )}
-                          </div>
-                        );
-                      })()
-                    )}
-                  </td>
-                  <td className="px-6 py-4 text-slate-500 text-xs font-medium whitespace-nowrap">
-                    {formatDate(debt.lastPaymentDate)}
-                  </td>
-                  <td className="px-6 py-4 print:hidden">
-                    <div className="flex items-center justify-center gap-2 flex-wrap min-w-[280px]">
-                      {debt.status !== "paid" && (
+                              {pendingPay > 0 && (
+                                <span
+                                  className="inline-flex px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-700 font-bold font-mono text-[11px] border border-emerald-200"
+                                  title="لە چاوەڕوانی پەسەندکردنی وەرگرتنی قەرز"
+                                >
+                                  - {formatCurrency(pendingPay)} (چاوەڕێی سەحب)
+                                </span>
+                              )}
+                              {pendingAdd > 0 && (
+                                <span
+                                  className="inline-flex px-2 py-0.5 rounded-md bg-orange-100 text-orange-700 font-bold font-mono text-[11px] border border-orange-200"
+                                  title="لە چاوەڕوانی پەسەندکردنی زیادکردنی قەرز"
+                                >
+                                  + {formatCurrency(pendingAdd)} (چاوەڕێی
+                                  زیادکردن)
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })()
+                      )}
+                    </td>
+                    <td className="px-6 py-4 text-slate-500 text-xs font-medium whitespace-nowrap">
+                      {formatDate(debt.lastPaymentDate)}
+                    </td>
+                    <td className="px-6 py-4 print:hidden">
+                      <div className="flex items-center justify-center gap-2 flex-wrap min-w-[280px]">
+                        {debt.status !== "paid" && (
+                          <button
+                            onClick={() => {
+                              setActionType("pay");
+                              setSelectedDebt(debt);
+                              setPaymentAmount(debt.remainingAmount.toString());
+                              setPaymentNote("");
+                              setPaymentModalOpen(true);
+                            }}
+                            className="text-emerald-700 text-xs font-bold px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors border border-emerald-200 flex items-center gap-1.5 shadow-sm"
+                          >
+                            <DollarSign size={14} /> پارە وەرگرتن
+                          </button>
+                        )}
                         <button
                           onClick={() => {
-                            setActionType("pay");
+                            setActionType("add");
                             setSelectedDebt(debt);
-                            setPaymentAmount(debt.remainingAmount.toString());
+                            setPaymentAmount("");
                             setPaymentNote("");
                             setPaymentModalOpen(true);
                           }}
-                          className="text-emerald-700 text-xs font-bold px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors border border-emerald-200 flex items-center gap-1.5 shadow-sm"
+                          className="text-red-700 text-xs font-bold px-2.5 py-1.5 bg-red-50 hover:bg-red-100 rounded-lg transition-colors border border-red-200 flex items-center gap-1.5 shadow-sm"
                         >
-                          <DollarSign size={14} /> پارە وەرگرتن
+                          <PlusCircle size={14} /> قەرزی نوێ
                         </button>
-                      )}
-                      <button
-                        onClick={() => {
-                          setActionType("add");
-                          setSelectedDebt(debt);
-                          setPaymentAmount("");
-                          setPaymentNote("");
-                          setPaymentModalOpen(true);
-                        }}
-                        className="text-red-700 text-xs font-bold px-2.5 py-1.5 bg-red-50 hover:bg-red-100 rounded-lg transition-colors border border-red-200 flex items-center gap-1.5 shadow-sm"
-                      >
-                        <PlusCircle size={14} /> قەرزی نوێ
-                      </button>
-                      <button
-                        onClick={() => handleViewHistory(debt)}
-                        className="text-indigo-700 text-xs font-bold px-2.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors border border-indigo-200 flex items-center gap-1.5 shadow-sm"
-                      >
-                        <FileClock size={14} /> مێژوو
-                      </button>
-                      <button
-                        onClick={() => {
-                          setSelectedDebt(debt);
-                          setEditName(debt.customerName || "");
-                          setEditPhone(debt.phone || "");
-                          setEditDebtModalOpen(true);
-                        }}
-                        className="text-orange-700 text-xs font-bold px-2.5 py-1.5 bg-orange-50 hover:bg-orange-100 rounded-lg transition-colors border border-orange-200 shadow-sm"
-                        title="دەستکاری ناوی قەرزار"
-                      >
-                        <Edit size={14} />
-                      </button>
-                      {debt.phone && (
+                        <button
+                          onClick={() => handleViewHistory(debt)}
+                          className="text-indigo-700 text-xs font-bold px-2.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors border border-indigo-200 flex items-center gap-1.5 shadow-sm"
+                        >
+                          <FileClock size={14} /> مێژوو
+                        </button>
                         <button
                           onClick={() => {
-                            const msg = encodeURIComponent(
-                              `سڵاو بەڕێز ${debt.customerName}،\nقەرزی ماوەتان لای (پینک ئێللێ) بریتییە لە: ${formatCurrency(debt.remainingAmount)}.\nتکایە لە کاتی گونجاودا سەردانمان بکەنەوە.`,
-                            );
-                            window.open(
-                              `https://wa.me/${debt.phone.replace(/[^0-9]/g, "")}?text=${msg}`,
-                              "_blank",
-                            );
+                            setSelectedDebt(debt);
+                            setEditName(debt.customerName || "");
+                            setEditPhone(debt.phone || "");
+                            setEditDebtModalOpen(true);
                           }}
-                          className="text-emerald-600 text-xs font-bold px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors border border-emerald-200 shadow-sm"
-                          title="ناردنی نامەی واتسئاپ"
+                          className="text-orange-700 text-xs font-bold px-2.5 py-1.5 bg-orange-50 hover:bg-orange-100 rounded-lg transition-colors border border-orange-200 shadow-sm"
+                          title="دەستکاری ناوی قەرزار"
                         >
-                          <MessageCircle size={14} />
+                          <Edit size={14} />
                         </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {filtered.length === 0 && (
-                <tr>
-                  <td
-                    colSpan={7}
-                    className="px-6 py-16 text-center text-slate-500"
-                  >
-                    <div className="flex flex-col items-center justify-center">
-                      <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-4">
-                        <FileText size={40} className="text-slate-300" />
+                        {debt.phone && (
+                          <button
+                            onClick={() => {
+                              const msg = encodeURIComponent(
+                                `سڵاو بەڕێز ${debt.customerName}،\nقەرزی ماوەتان لای (پینک ئێللێ) بریتییە لە: ${formatCurrency(debt.remainingAmount)}.\nتکایە لە کاتی گونجاودا سەردانمان بکەنەوە.`,
+                              );
+                              window.open(
+                                `https://wa.me/${debt.phone.replace(/[^0-9]/g, "")}?text=${msg}`,
+                                "_blank",
+                              );
+                            }}
+                            className="text-emerald-600 text-xs font-bold px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors border border-emerald-200 shadow-sm"
+                            title="ناردنی نامەی واتسئاپ"
+                          >
+                            <MessageCircle size={14} />
+                          </button>
+                        )}
                       </div>
-                      <p className="text-base font-bold text-slate-600">
-                        هیچ قەرزێک بوونی نییە
-                      </p>
-                      <p className="text-sm font-medium text-slate-400 mt-1">
-                        ئێستا هیچ کڕیارێک قەرزدار نییە
-                      </p>
-                    </div>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                    </td>
+                  </tr>
+                ))}
+                {filtered.length === 0 && (
+                  <tr>
+                    <td
+                      colSpan={7}
+                      className="px-6 py-16 text-center text-slate-500"
+                    >
+                      <div className="flex flex-col items-center justify-center">
+                        <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-4">
+                          <FileText size={40} className="text-slate-300" />
+                        </div>
+                        <p className="text-base font-bold text-slate-600">
+                          هیچ قەرزێک بوونی نییە
+                        </p>
+                        <p className="text-sm font-medium text-slate-400 mt-1">
+                          ئێستا هیچ کڕیارێک قەرزدار نییە
+                        </p>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           )}
         </div>
       </div>
@@ -918,21 +981,36 @@ export default function DebtBook() {
                   ></span>
                   {actionType === "pay" ? "بڕی وەرگیراو" : "بڕی زیادکراو"}
                 </label>
-                <input
-                  required
-                  type="number"
-                  min="0"
-                  max={
-                    actionType === "pay"
-                      ? selectedDebt.remainingAmount
-                      : undefined
-                  }
-                  value={paymentAmount}
-                  onChange={(e) => setPaymentAmount(e.target.value)}
-                  className={`w-full bg-white border-2 rounded-xl p-3 focus:outline-none transition-colors font-mono text-xl text-center font-bold ${actionType === "pay" ? "border-emerald-200 focus:border-emerald-500 text-emerald-700" : "border-red-200 focus:border-red-500 text-red-700"}`}
-                  placeholder="0"
-                  dir="ltr"
-                />
+                <div className="flex gap-2">
+                  <input
+                    required
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    max={
+                      actionType === "pay" && paymentCurrency === "IQD"
+                        ? selectedDebt.remainingAmount
+                        : actionType === "pay" && paymentCurrency === "USD"
+                          ? selectedDebt.remainingAmount / exchangeRate
+                          : undefined
+                    }
+                    value={paymentAmount}
+                    onChange={(e) => setPaymentAmount(e.target.value)}
+                    className={`w-full bg-white border-2 rounded-xl p-3 focus:outline-none transition-colors font-mono text-xl text-center font-bold ${actionType === "pay" ? "border-emerald-200 focus:border-emerald-500 text-emerald-700" : "border-red-200 focus:border-red-500 text-red-700"}`}
+                    placeholder="0"
+                    dir="ltr"
+                  />
+                  <select
+                    value={paymentCurrency}
+                    onChange={(e) =>
+                      setPaymentCurrency(e.target.value as "IQD" | "USD")
+                    }
+                    className={`w-24 bg-white border-2 rounded-xl focus:outline-none transition-colors font-bold text-center ${actionType === "pay" ? "border-emerald-200 focus:border-emerald-500 text-emerald-700" : "border-red-200 focus:border-red-500 text-red-700"}`}
+                  >
+                    <option value="IQD">دینار</option>
+                    <option value="USD">دۆلار</option>
+                  </select>
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-bold text-slate-700 mb-2">
@@ -989,31 +1067,51 @@ export default function DebtBook() {
               </button>
             </div>
             <div className="p-6 space-y-5">
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">
-                  ناوی کڕیار
-                </label>
-                <input
-                  required
-                  type="text"
-                  list="debt-customers-list"
-                  value={newName}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setNewName(val);
-                    const found = customers.find((c) => c.name === val);
-                    if (found && !newPhone) {
-                      setNewPhone(found.phone || "");
-                    }
-                  }}
-                  className="w-full bg-white border-2 border-slate-200 rounded-xl p-3 focus:outline-none focus:border-pink-500 transition-colors"
-                  placeholder="ناوی سیانی بنووسە"
-                />
-                <datalist id="debt-customers-list">
-                  {customers.map((c) => (
-                    <option key={c.id} value={c.name} />
-                  ))}
-                </datalist>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-2">
+                    ناوی کڕیار (هەڵبژاردن یان نووسین)
+                  </label>
+                  <div className="flex gap-2">
+                    <select
+                      className="bg-white border-2 border-slate-200 rounded-xl p-3 focus:outline-none focus:border-pink-500 transition-colors w-1/2"
+                      value={
+                        customers.find((c) => c.name === newName) ? newName : ""
+                      }
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val) {
+                          setNewName(val);
+                          const found = customers.find((c) => c.name === val);
+                          if (found && !newPhone)
+                            setNewPhone(found.phone || "");
+                        }
+                      }}
+                    >
+                      <option value="">-- کڕیارەکان --</option>
+                      {customers.map((c) => (
+                        <option key={c.id} value={c.name}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      required
+                      type="text"
+                      value={newName}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setNewName(val);
+                        const found = customers.find((c) => c.name === val);
+                        if (found && !newPhone) {
+                          setNewPhone(found.phone || "");
+                        }
+                      }}
+                      className="w-1/2 bg-white border-2 border-slate-200 rounded-xl p-3 focus:outline-none focus:border-pink-500 transition-colors"
+                      placeholder="ناوی نوێ بنووسە..."
+                    />
+                  </div>
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-bold text-slate-700 mb-2">
@@ -1030,18 +1128,31 @@ export default function DebtBook() {
               </div>
               <div>
                 <label className="block text-sm font-bold text-slate-700 mb-2">
-                  بڕی قەرز (دینار)
+                  بڕی قەرز
                 </label>
-                <input
-                  required
-                  type="number"
-                  min="0"
-                  value={newAmount}
-                  onChange={(e) => setNewAmount(e.target.value)}
-                  className="w-full bg-pink-50/50 border-2 border-pink-200 rounded-xl p-3 focus:outline-none focus:border-pink-500 font-mono text-xl text-center font-bold text-pink-700 transition-colors"
-                  placeholder="0"
-                  dir="ltr"
-                />
+                <div className="flex gap-2">
+                  <input
+                    required
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={newAmount}
+                    onChange={(e) => setNewAmount(e.target.value)}
+                    className="w-full bg-pink-50/50 border-2 border-pink-200 rounded-xl p-3 focus:outline-none focus:border-pink-500 font-mono text-xl text-center font-bold text-pink-700 transition-colors"
+                    placeholder="0"
+                    dir="ltr"
+                  />
+                  <select
+                    value={newCurrency}
+                    onChange={(e) =>
+                      setNewCurrency(e.target.value as "IQD" | "USD")
+                    }
+                    className="w-24 bg-pink-50/50 border-2 border-pink-200 rounded-xl focus:outline-none focus:border-pink-500 font-bold text-center text-pink-700 transition-colors"
+                  >
+                    <option value="IQD">دینار</option>
+                    <option value="USD">دۆلار</option>
+                  </select>
+                </div>
               </div>
             </div>
             <div className="px-6 py-5 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
@@ -1104,6 +1215,9 @@ export default function DebtBook() {
                       <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">
                         تێبینی
                       </th>
+                      <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500 text-center">
+                        کردارەکان
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -1141,6 +1255,17 @@ export default function DebtBook() {
                         >
                           {h.notes || "-"}{" "}
                           {h.createdBy ? `(لایەن: ${h.createdBy})` : ""}
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          {h.type === "pay" && h.status !== "pending" && (
+                            <button
+                              onClick={() => setPrintTx(h)}
+                              className="text-pink-600 hover:bg-pink-50 p-2 rounded-lg transition-colors border border-transparent hover:border-pink-200"
+                              title="چاپکردنی وەسڵی قەبز"
+                            >
+                              <Printer size={16} />
+                            </button>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -1245,6 +1370,15 @@ export default function DebtBook() {
             </div>
           </form>
         </div>
+      )}
+
+      {/* Print Modal */}
+      {printTx && selectedDebt && (
+        <DebtReceiptModal
+          transaction={printTx}
+          debt={selectedDebt}
+          onClose={() => setPrintTx(null)}
+        />
       )}
     </div>
   );
