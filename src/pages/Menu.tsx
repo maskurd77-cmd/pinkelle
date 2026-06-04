@@ -211,16 +211,13 @@ export default function MenuPage() {
                <p className="text-base font-bold text-slate-500">بۆ بازرگانی گشتی - سنووردار</p>
             </div>
 
-            <div className="pt-6 border-t border-slate-100 flex flex-col md:flex-row items-center justify-center gap-8 md:gap-16">
+            <div className="pt-6 border-t border-slate-100 flex flex-col items-center justify-center">
                <div className="text-center">
-                  <p className="text-sm font-bold text-slate-400 mb-2">بریکاری کۆمپانیا</p>
-                  <p className="font-mono font-bold text-lg text-slate-800" dir="ltr">0751 201 8372</p>
-                  <p className="font-mono font-bold text-lg text-slate-800" dir="ltr">0773 436 7278</p>
-               </div>
-               <div className="text-center">
-                  <p className="text-sm font-bold text-slate-400 mb-2">وەکیلی سۆران</p>
-                  <p className="font-mono font-bold text-lg text-slate-800" dir="ltr">0750 425 1338</p>
-                  <p className="font-mono font-bold text-lg text-slate-800" dir="ltr">0751 201 8370</p>
+                  <p className="text-sm font-bold text-slate-400 mb-2">ژمارەی کۆمپانیا</p>
+                  <div className="flex flex-col sm:flex-row gap-4 sm:gap-8 justify-center">
+                     <p className="font-mono font-bold text-lg text-slate-800" dir="ltr">0751 201 8372</p>
+                     <p className="font-mono font-bold text-lg text-slate-800" dir="ltr">0750 425 1338</p>
+                  </div>
                </div>
             </div>
          </div>

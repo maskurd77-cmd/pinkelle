@@ -674,6 +674,12 @@ export function UsersPage() {
   const [users, setUsers] = useState<any[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
+  
+  const [isEditUserModalOpen, setIsEditUserModalOpen] = useState(false);
+  const [editUserObj, setEditUserObj] = useState<any>(null);
+  const [editUserName, setEditUserName] = useState("");
+  const [editUserPassword, setEditUserPassword] = useState("");
+  const [editUserAvatar, setEditUserAvatar] = useState("");
 
   const [editingUser, setEditingUser] = useState<any>(null);
   const [allowedPages, setAllowedPages] = useState<string[]>([]);
@@ -773,6 +779,31 @@ export function UsersPage() {
     setIsCreating(false);
   };
 
+  const handleEditUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editUserObj) return;
+
+    if (editUserPassword) {
+      alert(
+        "تێبینی: گۆڕینی وشەی تێپەڕ لەم بەشەدا کارناکات، تەنیا ناوی بەکارهێنەر و وێنەی دەگۆڕێت (بەهۆی ڕێکارەکانی ئاسایشی کۆگای داتا). دەتوانیت بەکارهێنەر بسڕیتەوە و سەرلەنوێ دروستی بکەیتەوە ئەگەر پێویست بوو.",
+      );
+    }
+
+    try {
+      await updateDoc(doc(db, "users", editUserObj.id), {
+        name: editUserName,
+        avatar: editUserAvatar,
+      });
+
+      setIsEditUserModalOpen(false);
+      setEditUserObj(null);
+      setEditUserPassword("");
+      alert("زانیارییەکانی بەکارهێنەر گۆڕدرا بە سەرکەوتوویی!");
+    } catch (err: any) {
+      alert("هەڵە ڕوویدا: " + err.message);
+    }
+  };
+
   return (
     <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm h-full flex flex-col">
       <div className="border-b border-slate-100 pb-4 mb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -809,8 +840,12 @@ export function UsersPage() {
               </span>
             )}
             <div className="flex items-center gap-4 mb-5">
-              <div className="w-14 h-14 bg-white border border-slate-200 rounded-full flex items-center justify-center text-slate-400 font-bold text-xl uppercase shadow-sm group-hover:border-pink-300 group-hover:text-pink-500 transition-colors">
-                {u.name?.charAt(0) || u.email?.charAt(0)}
+              <div className="w-14 h-14 bg-white border border-slate-200 rounded-full flex items-center justify-center text-slate-400 font-bold text-xl uppercase shadow-sm overflow-hidden shrink-0 group-hover:border-pink-300 transition-colors">
+                {u.avatar ? (
+                  <img src={u.avatar} alt="Avatar" className="w-full h-full object-cover" />
+                ) : (
+                  <span className="group-hover:text-pink-500 transition-colors">{u.name?.charAt(0) || u.email?.charAt(0)}</span>
+                )}
               </div>
               <div className="flex-1 min-w-0">
                 <h3 className="font-bold text-slate-800 text-lg truncate">
@@ -850,6 +885,18 @@ export function UsersPage() {
                     سڕینەوە
                   </button>
                 )}
+                <button
+                  onClick={() => {
+                    setEditUserObj(u);
+                    setEditUserName(u.name || "");
+                    setEditUserAvatar(u.avatar || "");
+                    setEditUserPassword("");
+                    setIsEditUserModalOpen(true);
+                  }}
+                  className="flex-1 sm:flex-none text-xs font-bold text-emerald-600 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-3 py-2 rounded-xl transition-colors text-center"
+                >
+                  گۆڕین
+                </button>
                 {u.role !== "admin" && (
                   <button
                     onClick={() => {
@@ -1040,6 +1087,87 @@ export function UsersPage() {
                 className="px-6 py-2.5 bg-pink-600 text-white rounded-xl text-sm font-bold hover:bg-pink-700 disabled:opacity-50 transition-colors shadow-sm shadow-pink-200"
               >
                 {isCreating ? "دروست دەکرێت..." : "دروستکردن"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {isEditUserModalOpen && editUserObj && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <form
+            onSubmit={handleEditUser}
+            className="bg-white rounded-[24px] shadow-2xl w-full max-w-xl overflow-hidden flex flex-col"
+          >
+            <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-gradient-to-l from-emerald-50/50 to-white">
+              <h2 className="font-bold text-emerald-900 text-lg flex items-center gap-2">
+                گۆڕینی زانیارییەکانی بەکارهێنەر
+              </h2>
+              <button
+                type="button"
+                onClick={() => setIsEditUserModalOpen(false)}
+                className="text-slate-400 hover:bg-slate-100 p-2 rounded-xl transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-6 space-y-5">
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">
+                  ناوی تەواو
+                </label>
+                <input
+                  required
+                  type="text"
+                  value={editUserName}
+                  onChange={(e) => setEditUserName(e.target.value)}
+                  className="w-full bg-white border-2 border-slate-200 rounded-xl p-3 focus:outline-none focus:border-emerald-500 transition-colors"
+                  placeholder="ناوی بەکارهێنەر"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">
+                  بەستەری وێنە (ئارەزوومەندانە)
+                </label>
+                <input
+                  type="url"
+                  value={editUserAvatar}
+                  onChange={(e) => setEditUserAvatar(e.target.value)}
+                  className="w-full bg-white border-2 border-slate-200 rounded-xl p-3 focus:outline-none focus:border-emerald-500 transition-colors"
+                  placeholder="https://example.com/avatar.png"
+                  dir="ltr"
+                />
+              </div>
+              <div className="relative">
+                <label className="block text-sm font-bold text-slate-700 mb-2">
+                  وشەی تێپەڕی نوێ
+                </label>
+                <input
+                  type="password"
+                  value={editUserPassword}
+                  onChange={(e) => setEditUserPassword(e.target.value)}
+                  className="w-full bg-white border-2 border-slate-200 rounded-xl p-3 focus:outline-none focus:border-emerald-500 transition-colors opacity-70 cursor-not-allowed"
+                  placeholder="گۆڕینی وشەی تێپەڕ لێرەدا کارناکات"
+                  disabled
+                />
+                <p className="text-xs text-orange-600 mt-2 font-medium">
+                  • تێبینی: بۆ گۆڕینی وشەی نهێنی پێویستە بەکارهێنەر خۆی هەژمارەکەی بەکاربهێنێت یان دەتوانیت بیسڕیتەوە و هەژمارێکی نوێ دروست بکەیت.
+                </p>
+              </div>
+            </div>
+            <div className="px-6 py-5 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setIsEditUserModalOpen(false)}
+                className="px-6 py-2.5 text-slate-600 bg-white border border-slate-200 rounded-xl text-sm font-bold hover:bg-slate-50 transition-colors"
+              >
+                پاشگەزبوونەوە
+              </button>
+              <button
+                type="submit"
+                className="px-6 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700 transition-colors shadow-sm shadow-emerald-200"
+              >
+                گۆڕین
               </button>
             </div>
           </form>

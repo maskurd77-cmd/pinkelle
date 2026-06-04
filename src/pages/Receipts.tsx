@@ -418,7 +418,7 @@ export function ReceiptPrintLayout({ receipt }: { receipt: any }) {
         <div className="shrink-0 text-right flex flex-col gap-2">
           <div className="bg-slate-50 border-2 border-black rounded p-2 shadow-sm text-sm font-bold w-60">
             <div className="text-center text-xs mb-1 border-b border-black/20 pb-1">
-              ﺑرﯾﮑﺎری ﮐۆﻣﭘﺎﻧﯾﺎ
+              ژمارەی کۆمپانیا
             </div>
             <div className="flex justify-around items-center" dir="ltr">
               <span>0751 201 8372</span>
@@ -457,11 +457,10 @@ export function ReceiptPrintLayout({ receipt }: { receipt: any }) {
             </div>
           </div>
           <div className="flex items-center">
-            <div className="w-24 text-right font-bold ml-2">
+            <div className="whitespace-nowrap text-right font-bold ml-2">
               طريقة الدفع (جۆری پێدان):
             </div>
-            <div className="border-b border-black flex-1 text-center font-bold font-mono text-sm">
-              {receipt.paymentType || "نەقد"}
+            <div className="border-b-2 border-dashed border-black flex-1 text-center font-bold font-mono text-sm min-h-[20px] mx-2">
             </div>
           </div>
           <div className="flex items-center mt-1">
@@ -516,42 +515,42 @@ export function ReceiptPrintLayout({ receipt }: { receipt: any }) {
         <table className="w-full border-collapse border-2 border-black text-center font-bold">
           <thead>
             <tr className="bg-gray-100 border-b-2 border-black">
-              <th className="border border-black px-1 py-1 w-20">
-                کۆی گشتی
-                <br />
-                <span className="text-[10px] text-gray-600 font-normal">
-                  المجموع
-                </span>
-              </th>
-              <th className="border border-black px-1 py-1 w-16">
-                داشکاندن
-                <br />
-                <span className="text-[10px] text-gray-600 font-normal">
-                  الخصم
-                </span>
-              </th>
-              <th className="border border-black px-1 py-1 w-20">
-                نرخ
-                <br />
-                <span className="text-[10px] text-gray-600 font-normal">
-                  السعر
-                </span>
-              </th>
-              <th className="border border-black px-1 py-1 w-12">
-                بڕ
-                <br />
-                <span className="text-[10px] text-gray-600 font-normal">
-                  الكمية
-                </span>
-              </th>
-              <th className="border border-black px-2 py-1 flex-1 min-w-[200px] text-right">
+              <th className="border-l border-black px-1 py-1 w-8">ت</th>
+              <th className="border-l border-black px-2 py-1 flex-1 min-w-[200px] text-right">
                 ناوی ماددە
                 <br />
                 <span className="text-[10px] text-gray-600 font-normal">
                   اسم المادة
                 </span>
               </th>
-              <th className="border border-black px-1 py-1 w-8">ت</th>
+              <th className="border-l border-black px-1 py-1 w-12">
+                بڕ
+                <br />
+                <span className="text-[10px] text-gray-600 font-normal">
+                  الكمية
+                </span>
+              </th>
+              <th className="border-l border-black px-1 py-1 w-20">
+                نرخ
+                <br />
+                <span className="text-[10px] text-gray-600 font-normal">
+                  السعر
+                </span>
+              </th>
+              <th className="border-l border-black px-1 py-1 w-16">
+                داشکاندن
+                <br />
+                <span className="text-[10px] text-gray-600 font-normal">
+                  الخصم
+                </span>
+              </th>
+              <th className="px-1 py-1 w-24">
+                کۆی گشتی
+                <br />
+                <span className="text-[10px] text-gray-600 font-normal">
+                  المجموع
+                </span>
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -574,14 +573,12 @@ export function ReceiptPrintLayout({ receipt }: { receipt: any }) {
 
               return (
                 <tr key={i} className="border-b border-black">
-                  <td className="border-l border-black p-1.5 font-mono text-sm">
-                    {formatCurrency(
-                      item.unitPrice * item.quantity,
-                      itemCurrency,
-                    ).replace(itemCurrency, "")}
+                  <td className="border-l border-black p-1.5">{i + 1}</td>
+                  <td className="border-l border-black p-1.5 text-right font-bold pr-2">
+                    {item.name} {item.isWholesale ? "(جوملە)" : ""}
                   </td>
-                  <td className="border-l border-black p-1.5 font-mono text-sm text-red-600">
-                    {diff > 0 ? diff.toLocaleString() : "0"}
+                  <td className="border-l border-black p-1.5 font-mono text-sm">
+                    {item.quantity}
                   </td>
                   <td className="border-l border-black p-1.5 font-mono text-sm">
                     {formatCurrency(
@@ -589,13 +586,15 @@ export function ReceiptPrintLayout({ receipt }: { receipt: any }) {
                       itemCurrency,
                     ).replace(itemCurrency, "")}
                   </td>
-                  <td className="border-l border-black p-1.5 font-mono text-sm">
-                    {item.quantity}
+                  <td className="border-l border-black p-1.5 font-mono text-sm text-red-600">
+                    {diff > 0 ? diff.toLocaleString() : "0"}
                   </td>
-                  <td className="border-l border-black p-1.5 text-right font-bold pr-2">
-                    {item.name} {item.isWholesale ? "(جوملە)" : ""}
+                  <td className="p-1.5 font-mono text-sm">
+                    {formatCurrency(
+                      item.unitPrice * item.quantity,
+                      itemCurrency,
+                    ).replace(itemCurrency, "")}
                   </td>
-                  <td className="p-1.5">{i + 1}</td>
                 </tr>
               );
             })}
@@ -616,11 +615,11 @@ export function ReceiptPrintLayout({ receipt }: { receipt: any }) {
               </tr>
             ))}
             <tr className="border-t-2 border-black">
-              <td className="border-l border-black p-1.5 font-bold bg-pink-50 text-base font-mono">
-                {formatCurrency(
-                  receipt.totalAmount || receipt.total || 0,
-                  receipt.invoiceCurrency || "IQD",
-                ).replace(receipt.invoiceCurrency || "IQD", "")}
+              <td
+                colSpan={3}
+                className="border-l border-black p-1.5 text-right pr-2 text-xs text-gray-500 font-bold tracking-wide"
+              >
+                هیچ موادێک بەسەرچوو وەرناگیرێتەوە
               </td>
               <td
                 colSpan={2}
@@ -629,11 +628,11 @@ export function ReceiptPrintLayout({ receipt }: { receipt: any }) {
                 مجموع القائمة /{" "}
                 {receipt.invoiceCurrency === "USD" ? "دۆلار $" : "د.ع"}
               </td>
-              <td
-                colSpan={3}
-                className="p-1.5 text-right pr-2 text-xs text-gray-500 font-bold border-r-0 tracking-wide"
-              >
-                هیچ موادێک بەسەرچوو وەرناگیرێتەوە
+              <td className="p-1.5 font-bold bg-pink-50 text-base font-mono">
+                {formatCurrency(
+                  receipt.totalAmount || receipt.total || 0,
+                  receipt.invoiceCurrency || "IQD",
+                ).replace(receipt.invoiceCurrency || "IQD", "")}
               </td>
             </tr>
           </tbody>
@@ -712,12 +711,24 @@ export function ReceiptPrintLayout({ receipt }: { receipt: any }) {
                     {formatCurrency(
                       receipt.totalAmount || receipt.total || 0,
                       receipt.invoiceCurrency || "IQD",
-                    ).replace(receipt.invoiceCurrency || "IQD", "")}
+                    )}
                   </td>
                   <td className="border border-black p-2 bg-pink-100 text-lg font-black">
                     المجموع (کۆی گشتی)
                   </td>
                 </tr>
+                {receipt.exchangeRate && receipt.exchangeRate > 0 && (
+                <tr>
+                  <td className="border border-black p-2 w-32 font-mono text-sm font-black bg-slate-50 text-slate-600">
+                    {receipt.invoiceCurrency === "USD"
+                      ? formatCurrency((receipt.totalAmount || receipt.total || 0) * receipt.exchangeRate, "IQD")
+                      : formatCurrency((receipt.totalAmount || receipt.total || 0) / receipt.exchangeRate, "USD")}
+                  </td>
+                  <td className="border border-black p-2 bg-slate-100 text-sm font-bold text-slate-700">
+                    بەرامبەر بە (المقابل)
+                  </td>
+                </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -726,11 +737,11 @@ export function ReceiptPrintLayout({ receipt }: { receipt: any }) {
 
       {/* Footer Info */}
       <div className="mt-8 pt-2 border-t border-black text-center flex justify-between text-[10px] text-gray-500 font-bold items-end">
-        <div>
-          <span className="font-mono">
-            {new Date().toLocaleString("en-US")}
-          </span>{" "}
-          کاتی چاپکردن:
+        <div className="flex items-center gap-1.5 direction-rtl" dir="rtl">
+          <span>کاتی چاپکردن:</span>
+          <span className="font-mono pt-[1px]" dir="ltr">
+            {new Date().toLocaleString("en-US", { hour12: true })}
+          </span>
         </div>
         <div>
           سیستەمی حساباتی PINK ELLE <br />{" "}
