@@ -131,15 +131,18 @@ export default function Layout({ children, currentRoute, onNavigate, userData }:
         {/* Mobile Bottom Tab Bar (Flex item, not floating, prevents overlap) */}
         <div className="lg:hidden shrink-0 bg-white border-t border-slate-200 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] z-20 print:hidden relative">
            <div className="flex items-center justify-between pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-1 px-1">
-             {[
-               { id: 'dashboard', label: 'داشبۆرد', icon: LayoutDashboard },
-               { id: 'pos', label: 'کاشێر', icon: ShoppingCart },
-               { id: 'products', label: 'کالا', icon: Package },
-               { id: 'receipts', label: 'وەسڵ', icon: ReceiptText },
-             ].filter(item => {
-                if (userData?.role === 'admin') return true;
-                return (userData?.permissions || []).includes(item.id);
-             }).map(item => {
+             {(() => {
+                const adminDefaultTabs = [
+                  { id: 'dashboard', label: 'داشبۆرد', icon: LayoutDashboard },
+                  { id: 'pos', label: 'کاشێر', icon: ShoppingCart },
+                  { id: 'products', label: 'کالا', icon: Package },
+                  { id: 'receipts', label: 'وەسڵ', icon: ReceiptText },
+                ];
+                if (userData?.role === 'admin') return adminDefaultTabs;
+                
+                const allowed = navItems.filter(item => (userData?.permissions || []).includes(item.id));
+                return allowed.slice(0, 4);
+             })().map(item => {
                const isActive = currentRoute === item.id;
                const Icon = item.icon;
                return (

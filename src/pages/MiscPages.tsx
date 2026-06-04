@@ -298,7 +298,7 @@ export function Returns() {
               <tr>
                 <th className="px-4 py-3 font-semibold">ژمارەی وەسڵ</th>
                 <th className="px-4 py-3 font-semibold">کاتی فرۆشتن</th>
-                <th className="px-4 py-3 font-semibold">کۆی گشتی (دینار)</th>
+                <th className="px-4 py-3 font-semibold">کۆی گشتی</th>
                 <th className="px-4 py-3 font-semibold text-center">کردار</th>
               </tr>
             </thead>
@@ -314,7 +314,7 @@ export function Returns() {
                       : "کات نەزانراوە"}
                   </td>
                   <td className="px-4 py-4 font-mono font-bold text-green-600">
-                    {formatCurrency(r.totalAmount || r.total || 0, "IQD")}
+                    {formatCurrency(r.totalAmount || r.total || 0, r.invoiceCurrency || "IQD")}
                   </td>
                   <td className="px-4 py-4 flex justify-center">
                     <button
@@ -368,7 +368,7 @@ export function Returns() {
                       </td>
                       <td className="px-4 py-3 font-mono">{item.quantity}</td>
                       <td className="px-4 py-3 font-mono text-pink-600">
-                        {formatCurrency(item.unitPrice, item.currency || "IQD")}
+                        {formatCurrency(item.unitPrice, returningReceipt.invoiceCurrency || "IQD")}
                       </td>
                       <td className="px-4 py-3">
                         <button
@@ -394,7 +394,7 @@ export function Returns() {
                 کۆی گشتی:{" "}
                 {formatCurrency(
                   returningReceipt.totalAmount || returningReceipt.total || 0,
-                  "IQD",
+                  returningReceipt.invoiceCurrency || "IQD",
                 )}
               </div>
             </div>
@@ -562,7 +562,7 @@ export function Exchanges() {
               <tr>
                 <th className="px-4 py-3 font-semibold">ژمارەی وەسڵ</th>
                 <th className="px-4 py-3 font-semibold">کاتی فرۆشتن</th>
-                <th className="px-4 py-3 font-semibold">کۆی گشتی (دینار)</th>
+                <th className="px-4 py-3 font-semibold">کۆی گشتی</th>
                 <th className="px-4 py-3 font-semibold text-center">کردار</th>
               </tr>
             </thead>
@@ -578,7 +578,7 @@ export function Exchanges() {
                       : "کات نەزانراوە"}
                   </td>
                   <td className="px-4 py-4 font-mono font-bold text-green-600">
-                    {formatCurrency(r.totalAmount || r.total || 0, "IQD")}
+                    {formatCurrency(r.totalAmount || r.total || 0, r.invoiceCurrency || "IQD")}
                   </td>
                   <td className="px-4 py-4 flex justify-center">
                     <button
@@ -633,7 +633,7 @@ export function Exchanges() {
                       </td>
                       <td className="px-4 py-3 font-mono">{item.quantity}</td>
                       <td className="px-4 py-3 font-mono text-indigo-600">
-                        {formatCurrency(item.unitPrice, item.currency || "IQD")}
+                        {formatCurrency(item.unitPrice, returningReceipt.invoiceCurrency || "IQD")}
                       </td>
                       <td className="px-4 py-3">
                         <button
@@ -659,7 +659,7 @@ export function Exchanges() {
                 کۆی گشتی:{" "}
                 {formatCurrency(
                   returningReceipt.totalAmount || returningReceipt.total || 0,
-                  "IQD",
+                  returningReceipt.invoiceCurrency || "IQD",
                 )}
               </div>
             </div>
