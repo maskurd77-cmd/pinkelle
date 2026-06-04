@@ -99,8 +99,7 @@ export default function Dashboard() {
             const price = item.unitPrice || 0;
             const qty = item.quantity || 1;
 
-            const itemCurrency = item.currency || "IQD";
-            const costUSD = itemCurrency === "IQD" ? cost / exchangeRate : cost;
+            const costUSD = currency === "IQD" ? cost / exchangeRate : cost;
             const priceUSD = currency === "IQD" ? price / exchangeRate : price;
 
             rProfit += (priceUSD - costUSD) * qty;

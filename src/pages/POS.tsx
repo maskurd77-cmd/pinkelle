@@ -298,14 +298,15 @@ export default function POS() {
                 ? originalBasePrice / exchangeRate
                 : originalBasePrice;
 
+          const originalBaseCost = isWholesale ? (c.wholesaleCost || c.unitCost) : c.unitCost;
           const costInFinal =
             invoiceCurrency === "IQD"
               ? itemCurrency === "USD"
-                ? (c.unitCost || 0) * exchangeRate
-                : c.unitCost || 0
+                ? (originalBaseCost || 0) * exchangeRate
+                : originalBaseCost || 0
               : itemCurrency === "IQD"
-                ? (c.unitCost || 0) / exchangeRate
-                : c.unitCost || 0;
+                ? (originalBaseCost || 0) / exchangeRate
+                : originalBaseCost || 0;
 
           return {
             productId: c.id,
@@ -313,7 +314,7 @@ export default function POS() {
             quantity: c.quantity,
             currency: itemCurrency,
             originalUnitPrice: originalPriceInFinal,
-            originalUnitCost: c.unitCost || 0,
+            originalUnitCost: originalBaseCost || 0,
             unitPrice: priceInFinal,
             isWholesale: isWholesale && Boolean(c.wholesalePrice),
             unitCost: costInFinal,

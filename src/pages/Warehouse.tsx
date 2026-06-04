@@ -75,6 +75,9 @@ export default function Warehouse() {
   const metrics = useMemo(() => {
     let totalCost = 0;
     let totalPrice = 0;
+    let totalWholesaleCost = 0;
+    let totalWholesalePrice = 0;
+
     filteredProducts.forEach((p) => {
       const pCurrency = p.currency || "IQD";
       const costInUSD =
@@ -85,11 +88,25 @@ export default function Warehouse() {
         pCurrency === "IQD"
           ? (p.unitPrice || 0) / exchangeRate
           : p.unitPrice || 0;
+          
+      const wCostInUSD =
+        pCurrency === "IQD"
+          ? (p.wholesaleCost || p.unitCost || 0) / exchangeRate
+          : p.wholesaleCost || p.unitCost || 0;
+      const wPriceInUSD =
+        pCurrency === "IQD"
+          ? (p.wholesalePrice || p.unitPrice || 0) / exchangeRate
+          : p.wholesalePrice || p.unitPrice || 0;
+
       totalCost += costInUSD * (p.stock || 0);
       totalPrice += priceInUSD * (p.stock || 0);
+      totalWholesaleCost += wCostInUSD * (p.stock || 0);
+      totalWholesalePrice += wPriceInUSD * (p.stock || 0);
     });
     const expectedProfit = totalPrice - totalCost;
-    return { totalCost, totalPrice, expectedProfit };
+    const expectedWholesaleProfit = totalWholesalePrice - totalWholesaleCost;
+    
+    return { totalCost, totalPrice, expectedProfit, totalWholesaleCost, expectedWholesaleProfit };
   }, [filteredProducts, exchangeRate]);
 
   const lowStockItems = useMemo(() => {
@@ -194,6 +211,23 @@ export default function Warehouse() {
           </p>
           <h3 className="text-xl font-bold font-mono text-green-700">
             {formatCurrency(metrics.expectedProfit, "USD")}
+          </h3>
+        </div>
+
+        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+          <p className="text-slate-500 text-xs font-medium mb-1">کۆی تێچووی جوملە</p>
+          <h3 className="text-xl font-bold font-mono text-slate-800">
+            {formatCurrency(metrics.totalWholesaleCost, "USD")}
+          </h3>
+        </div>
+
+        <div className="bg-emerald-50 p-4 rounded-2xl border border-emerald-100 shadow-sm ring-1 ring-emerald-200 relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-1 bg-emerald-500"></div>
+          <p className="text-emerald-700 text-xs font-medium mb-1">
+            قازانجی پێشبینیکراوی جوملە
+          </p>
+          <h3 className="text-xl font-bold font-mono text-emerald-800">
+            {formatCurrency(metrics.expectedWholesaleProfit, "USD")}
           </h3>
         </div>
 

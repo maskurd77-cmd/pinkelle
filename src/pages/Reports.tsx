@@ -104,6 +104,10 @@ export default function Reports() {
     let retailSalesUSD = 0;
     let wholesaleSalesIQD = 0;
     let wholesaleSalesUSD = 0;
+    let retailProfitIQD = 0;
+    let retailProfitUSD = 0;
+    let wholesaleProfitIQD = 0;
+    let wholesaleProfitUSD = 0;
     let profitIQD = 0;
     let profitUSD = 0;
     let itemsSold = 0;
@@ -140,19 +144,30 @@ export default function Reports() {
           const qty = item.quantity || 1;
           const itemTotal = price * qty;
 
-          if (currency === "IQD") profitIQD += (price - cost) * qty;
-          else profitUSD += (price - cost) * qty;
+          const itemProfit = (price - cost) * qty;
+          if (currency === "IQD") profitIQD += itemProfit;
+          else profitUSD += itemProfit;
 
           itemsSold += qty;
 
           if (item.isWholesale) {
             wholesaleItemsSold += qty;
-            if (currency === "IQD") wholesaleSalesIQD += itemTotal;
-            else wholesaleSalesUSD += itemTotal;
+            if (currency === "IQD") {
+              wholesaleSalesIQD += itemTotal;
+              wholesaleProfitIQD += itemProfit;
+            } else {
+              wholesaleSalesUSD += itemTotal;
+              wholesaleProfitUSD += itemProfit;
+            }
           } else {
             retailItemsSold += qty;
-            if (currency === "IQD") retailSalesIQD += itemTotal;
-            else retailSalesUSD += itemTotal;
+            if (currency === "IQD") {
+              retailSalesIQD += itemTotal;
+              retailProfitIQD += itemProfit;
+            } else {
+              retailSalesUSD += itemTotal;
+              retailProfitUSD += itemProfit;
+            }
           }
 
           const cat = item.category || "گشتی";
@@ -183,6 +198,10 @@ export default function Reports() {
         retailSalesUSD,
         wholesaleSalesIQD,
         wholesaleSalesUSD,
+        retailProfitIQD,
+        retailProfitUSD,
+        wholesaleProfitIQD,
+        wholesaleProfitUSD,
         profitIQD,
         profitUSD,
         totalExpenseIQD,
@@ -264,28 +283,51 @@ export default function Reports() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {[
           {
-            title: "کۆی فرۆشتن",
+            title: "کۆی فرۆشتنی تاک",
             value: (
               <div className="flex flex-col">
-                <span className="text-3xl text-green-600">
-                  {formatCurrency(stats.salesUSD + stats.salesIQD / 1500)}
+                <span className="text-2xl text-blue-600">
+                  {formatCurrency(stats.retailSalesUSD + stats.retailSalesIQD / 1500)}
+                </span>
+                <span className="text-xs text-slate-400 mt-1">
+                  قازانج: {formatCurrency(stats.retailProfitUSD + stats.retailProfitIQD / 1500)}
                 </span>
               </div>
             ),
-            trend: "فرۆشتنی گشتی",
-            color: "pink",
-            gradient: "from-pink-500 to-rose-600",
-            shadow: "shadow-pink-500/20",
+            trend: `${stats.retailItemsSold} دانەی تاک`,
+            color: "blue",
+            gradient: "from-blue-500 to-indigo-600",
+            shadow: "shadow-blue-500/20",
+          },
+          {
+            title: "کۆی فرۆشتنی جوملە",
+            value: (
+              <div className="flex flex-col">
+                <span className="text-2xl text-purple-600">
+                  {formatCurrency(stats.wholesaleSalesUSD + stats.wholesaleSalesIQD / 1500)}
+                </span>
+                <span className="text-xs text-slate-400 mt-1">
+                  قازانج: {formatCurrency(stats.wholesaleProfitUSD + stats.wholesaleProfitIQD / 1500)}
+                </span>
+              </div>
+            ),
+            trend: `${stats.wholesaleItemsSold} دانەی جوملە`,
+            color: "purple",
+            gradient: "from-purple-500 to-fuchsia-600",
+            shadow: "shadow-purple-500/20",
           },
           {
             title: "قازانجی سافی",
             value: (
               <div className="flex flex-col">
-                <span className="text-3xl text-green-600">
+                <span className="text-2xl text-green-600">
                   {formatCurrency(
                     stats.profitUSD +
                       (stats.profitIQD - stats.totalExpenseIQD) / 1500,
                   )}
+                </span>
+                <span className="text-xs text-slate-400 mt-1">
+                  پێش خەرجی: {formatCurrency(stats.profitUSD + stats.profitIQD / 1500)}
                 </span>
               </div>
             ),
@@ -295,32 +337,21 @@ export default function Reports() {
             shadow: "shadow-emerald-500/20",
           },
           {
-            title: "کۆی خەرجی",
+            title: "شیکاری گشتی",
             value: (
-              <div className="flex flex-col">
-                <span className="text-3xl text-orange-600">
-                  {formatCurrency(stats.totalExpenseIQD / 1500)}
+              <div className="flex flex-col gap-1">
+                <span className="text-lg text-slate-800">
+                  {stats.itemsSold} <span className="text-sm">کەرەستە</span>
+                </span>
+                <span className="text-[11px] text-orange-500">
+                  خەرجی: {formatCurrency(stats.totalExpenseIQD / 1500)}
                 </span>
               </div>
             ),
-            trend: "دەستبەکار / بێجگە لە کاڵا",
+            trend: "کۆی گشتی کەرەستەکان و خەرجی",
             color: "orange",
             gradient: "from-orange-500 to-amber-600",
             shadow: "shadow-orange-500/20",
-          },
-          {
-            title: "کالای فرۆشراو",
-            value: (
-              <div className="flex flex-col">
-                <span className="text-3xl">
-                  {stats.itemsSold} <span className="text-lg">دانە</span>
-                </span>
-              </div>
-            ),
-            trend: "بڕی تێپەڕیو",
-            color: "indigo",
-            gradient: "from-indigo-500 to-blue-600",
-            shadow: "shadow-indigo-500/20",
           },
         ].map((stat, i) => (
           <div
