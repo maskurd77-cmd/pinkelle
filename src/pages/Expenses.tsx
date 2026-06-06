@@ -3,6 +3,7 @@ import { Search, Plus, Banknote, Coffee, Truck, Lightbulb, Box } from 'lucide-re
 import { collection, onSnapshot, addDoc, Timestamp } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { formatCurrency } from '../data';
+import { IQDInput } from '../components/IQDInput';
 
 interface Expense {
   id: string;
@@ -148,6 +149,7 @@ export default function Expenses() {
                  <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">بڕی پارە</label>
                     <input required type="number" min="0" value={amount} onChange={e => setAmount(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500" />
+                    <IQDInput usdValue={amount} setUsdValue={(v) => setAmount(v.toString())} />
                  </div>
                  <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">جۆر</label>

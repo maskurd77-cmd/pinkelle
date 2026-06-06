@@ -18,7 +18,6 @@ import {
   History,
   DollarSign,
   Calculator,
-  Trash2,
   ArrowDown,
   ArrowRightLeft,
   ArrowUpDown,
@@ -45,6 +44,7 @@ interface CartItem extends Product {
   quantity: number;
   originalUnitPrice?: number;
   editedPrice?: number;
+  unitType?: 'piece' | 'carton';
 }
 
 export default function POS() {
@@ -97,35 +97,6 @@ export default function POS() {
     "amount",
   );
   const [discountValue, setDiscountValue] = useState<number | "">("");
-  const [invoiceCurrency, setInvoiceCurrency] = useState<"IQD" | "USD">("USD");
-
-  // Currency Converter States
-  const [calcModalOpen, setCalcModalOpen] = useState(false);
-  const [convUSD, setConvUSD] = useState("");
-  const [convIQD, setConvIQD] = useState("");
-
-  const handleConvUSDChange = (val: string) => {
-    setConvUSD(val);
-    const num = parseFloat(val);
-    if (!isNaN(num)) {
-      setConvIQD((num * exchangeRate).toString());
-    } else {
-      setConvIQD("");
-    }
-  };
-
-  const handleConvIQDChange = (val: string) => {
-    setConvIQD(val);
-    const num = parseFloat(val);
-    if (!isNaN(num)) {
-      const usdVal = num / exchangeRate;
-      setConvUSD(
-        Number.isInteger(usdVal) ? usdVal.toString() : usdVal.toFixed(2),
-      );
-    } else {
-      setConvUSD("");
-    }
-  };
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, "products"), (snap) => {
@@ -193,13 +164,36 @@ export default function POS() {
         .map((item) => {
           if (item.id === id) {
             const newQ = item.quantity + delta;
-            if (newQ > 0 && newQ <= item.stock) {
-              return { ...item, quantity: newQ };
+            // Let them go up to stock, but since we support fractions now, simplify the check
+            if (newQ > 0) {
+               return { ...item, quantity: newQ };
             }
           }
           return item;
         })
         .filter((item) => item.quantity > 0),
+    );
+  };
+
+  const setQuantity = (id: string, qty: number) => {
+    setCart((prev) =>
+      prev.map((item) => {
+        if (item.id === id) {
+          return { ...item, quantity: qty };
+        }
+        return item;
+      })
+    );
+  };
+
+  const setUnitType = (id: string, type: "piece" | "carton") => {
+    setCart((prev) =>
+      prev.map((item) => {
+        if (item.id === id) {
+          return { ...item, unitType: type };
+        }
+        return item;
+      })
     );
   };
 
@@ -217,6 +211,10 @@ export default function POS() {
 
   const clearCart = () => setCart([]);
 
+  const getActualPieceQuantity = (item: CartItem) => {
+    return item.unitType === "carton" ? item.quantity * (item.cartonSize || 1) : item.quantity;
+  };
+
   const subtotal = cart.reduce((sum, item) => {
     let applicablePrice;
     if (item.editedPrice !== undefined) {
@@ -226,16 +224,8 @@ export default function POS() {
         ? item.wholesalePrice || item.unitPrice
         : item.unitPrice;
     }
-    const itemCurrency = item.currency || "IQD";
-    const priceInCurrency =
-      invoiceCurrency === "IQD"
-        ? itemCurrency === "USD"
-          ? applicablePrice * exchangeRate
-          : applicablePrice
-        : itemCurrency === "IQD"
-          ? applicablePrice / exchangeRate
-          : applicablePrice;
-    return sum + priceInCurrency * item.quantity;
+    const priceInCurrency = applicablePrice;
+    return sum + priceInCurrency * getActualPieceQuantity(item);
   }, 0);
 
   const discountAmount =
@@ -243,7 +233,7 @@ export default function POS() {
       ? Number(discountValue) || 0
       : (subtotal * (Number(discountValue) || 0)) / 100;
   const total = Math.max(0, subtotal - discountAmount);
-  const cartItemCount = cart.reduce((s, i) => s + i.quantity, 0);
+  const cartItemCount = cart.reduce((s, i) => s + getActualPieceQuantity(i), 0);
 
   const handleCheckoutSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -275,44 +265,23 @@ export default function POS() {
               ? c.wholesalePrice || c.unitPrice
               : c.unitPrice;
           }
-          const itemCurrency = c.currency || "IQD";
-          const priceInFinal =
-            invoiceCurrency === "IQD"
-              ? itemCurrency === "USD"
-                ? applicablePrice * exchangeRate
-                : applicablePrice
-              : itemCurrency === "IQD"
-                ? applicablePrice / exchangeRate
-                : applicablePrice;
+                    const priceInFinal = applicablePrice;
 
           // Always store base original price in final invoice currency too
           const originalBasePrice = isWholesale
             ? c.wholesalePrice || c.unitPrice
             : c.unitPrice;
-          const originalPriceInFinal =
-            invoiceCurrency === "IQD"
-              ? itemCurrency === "USD"
-                ? originalBasePrice * exchangeRate
-                : originalBasePrice
-              : itemCurrency === "IQD"
-                ? originalBasePrice / exchangeRate
-                : originalBasePrice;
+          const originalPriceInFinal = originalBasePrice;
 
           const originalBaseCost = isWholesale ? (c.wholesaleCost || c.unitCost) : c.unitCost;
-          const costInFinal =
-            invoiceCurrency === "IQD"
-              ? itemCurrency === "USD"
-                ? (originalBaseCost || 0) * exchangeRate
-                : originalBaseCost || 0
-              : itemCurrency === "IQD"
-                ? (originalBaseCost || 0) / exchangeRate
-                : originalBaseCost || 0;
+          const costInFinal = originalBaseCost || 0;
 
+          const actualQty = getActualPieceQuantity(c);
           return {
             productId: c.id,
             name: c.name,
-            quantity: c.quantity,
-            currency: itemCurrency,
+            quantity: actualQty,
+            currency: "USD",
             originalUnitPrice: originalPriceInFinal,
             originalUnitCost: originalBaseCost || 0,
             unitPrice: priceInFinal,
@@ -320,14 +289,14 @@ export default function POS() {
             unitCost: costInFinal,
             category: c.category || "گشتی",
             stock: c.stock,
-            total: priceInFinal * c.quantity,
+            total: priceInFinal * actualQty,
           };
         }),
         totalItems: cartItemCount,
         subtotal: subtotal,
         discountAmount: discountAmount,
         totalAmount: total, // In invoiceCurrency
-        invoiceCurrency: invoiceCurrency,
+        invoiceCurrency: "USD",
         timestamp: Timestamp.now(),
       });
 
@@ -335,7 +304,7 @@ export default function POS() {
         // Update stocks
         cart.forEach((item) => {
           const ref = doc(db, "products", item.id);
-          batch.update(ref, { stock: item.stock - item.quantity });
+          batch.update(ref, { stock: item.stock - getActualPieceQuantity(item) });
         });
 
         // Handle Debt if paymentType is 'debt' (قەرز)
@@ -344,7 +313,7 @@ export default function POS() {
           total > 0 &&
           customerDetails.shopName
         ) {
-          const debtAmountIQD = total;
+          const debtAmount = total;
 
           const existingDebt = debts.find(
             (d) =>
@@ -354,16 +323,16 @@ export default function POS() {
           if (existingDebt) {
             const debtRef = doc(db, "debts", existingDebt.id);
             batch.update(debtRef, {
-              amount: (existingDebt.amount || 0) + debtAmountIQD,
+              amount: (existingDebt.amount || 0) + debtAmount,
               remainingAmount:
-                (existingDebt.remainingAmount || 0) + debtAmountIQD,
+                (existingDebt.remainingAmount || 0) + debtAmount,
               updatedAt: Timestamp.now(),
             });
 
             const debtTxRef = doc(collection(db, "debt_transactions"));
             batch.set(debtTxRef, {
               debtId: existingDebt.id,
-              amount: debtAmountIQD,
+              amount: debtAmount,
               type: "add",
               timestamp: Timestamp.now(),
               notes:
@@ -375,8 +344,8 @@ export default function POS() {
             batch.set(debtRef, {
               customerName: customerDetails.shopName,
               phone: customerDetails.phone,
-              amount: debtAmountIQD,
-              remainingAmount: debtAmountIQD,
+              amount: debtAmount,
+              remainingAmount: debtAmount,
               status: "active",
               notes: "پاشماوەی وەسڵ: " + receiptRef.id.slice(-8).toUpperCase(),
               timestamp: Timestamp.now(),
@@ -385,7 +354,7 @@ export default function POS() {
             const debtTxRef = doc(collection(db, "debt_transactions"));
             batch.set(debtTxRef, {
               debtId: debtRef.id,
-              amount: debtAmountIQD,
+              amount: debtAmount,
               type: "add",
               timestamp: Timestamp.now(),
               notes:
@@ -473,13 +442,6 @@ export default function POS() {
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 pr-11 pl-4 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 transition-all font-medium text-slate-800 h-full"
                 />
               </div>
-              <button
-                onClick={() => setCalcModalOpen(true)}
-                className="w-11 h-11 shrink-0 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-200 rounded-xl flex items-center justify-center transition-colors shadow-sm"
-                title="گۆڕینەوەی دراو"
-              >
-                <ArrowRightLeft size={20} />
-              </button>
             </div>
             {/* Mobile Wholesale Toggle */}
             <div className="lg:hidden flex items-center bg-slate-100 p-1.5 rounded-xl border border-slate-200/60 shadow-inner h-[46px]">
@@ -491,7 +453,7 @@ export default function POS() {
               </button>
               <button
                 onClick={() => setIsWholesale(true)}
-                className={`px-4 py-1.5 text-sm font-extrabold rounded-lg transition-all duration-200 flex-1 text-center h-full flex items-center justify-center ${isWholesale ? "bg-indigo-600 text-white shadow-md shadow-indigo-500/20 scale-100" : "text-slate-500 hover:text-slate-700 scale-95 hover:bg-slate-200/50"}`}
+                className={`px-4 py-1.5 text-sm font-extrabold rounded-lg transition-all duration-200 flex-1 text-center h-full flex items-center justify-center ${isWholesale ? "bg-pink-600 text-white shadow-md shadow-pink-500/20 scale-100" : "text-slate-500 hover:text-slate-700 scale-95 hover:bg-slate-200/50"}`}
               >
                 جوملە (Wholesale)
               </button>
@@ -554,7 +516,7 @@ export default function POS() {
                         نرخ {isWholesale ? "(جوملە)" : "(تاک)"}
                       </p>
                       <p
-                        className={`${isWholesale ? "text-indigo-600" : "text-pink-600"} font-extrabold font-mono text-sm tracking-tight`}
+                        className={`${isWholesale ? "text-pink-600" : "text-pink-600"} font-extrabold font-mono text-sm tracking-tight`}
                       >
                         {formatCurrency(
                           isWholesale
@@ -603,7 +565,7 @@ export default function POS() {
       </div>
 
       {/* MOBILE CART BUTTON (Floating) */}
-      <div className="mobile-floating-cart lg:hidden fixed bottom-[calc(max(env(safe-area-inset-bottom),0.5rem)+4.5rem)] left-4 right-4 z-40 print:hidden transition-all">
+      <div className="mobile-floating-cart lg:hidden fixed bottom-[calc(max(env(safe-area-inset-bottom),0.5rem)+5.5rem)] left-4 right-4 z-40 print:hidden transition-all">
         <button
           onClick={() => setMobileCartOpen(true)}
           className="w-full bg-slate-900 text-white py-4 rounded-2xl font-bold text-[15px] flex items-center justify-between px-6 shadow-xl shadow-slate-900/20 active:scale-[0.98] transition-all backdrop-blur-md bg-slate-900/95 border border-slate-700/50"
@@ -619,10 +581,10 @@ export default function POS() {
           </div>
           <div className="flex flex-col items-end">
             <span className="font-mono text-lg tracking-tight text-white">
-              {formatCurrency(total, invoiceCurrency)}
+              {formatCurrency(total)}
             </span>
             <span
-              className={`text-[10px] font-bold tracking-widest ${isWholesale ? "text-indigo-400" : "text-pink-400"}`}
+              className={`text-[10px] font-bold tracking-widest ${isWholesale ? "text-pink-400" : "text-pink-400"}`}
             >
               {isWholesale ? "جوملە" : "تاک"}
             </span>
@@ -632,7 +594,7 @@ export default function POS() {
 
       {/* RIGHT AREA: Cart Sidebar (Desktop & Mobile Slider) */}
       <div
-        className={`fixed inset-y-0 right-0 z-[60] w-[calc(100vw-3rem)] max-w-[400px] bg-slate-50/50 shadow-2xl transition-transform duration-300 transform ${mobileCartOpen ? "translate-x-0" : "translate-x-full"} lg:relative lg:translate-x-0 lg:w-96 lg:shadow-sm lg:rounded-[24px] lg:border lg:border-slate-200 flex flex-col overflow-hidden lg:h-full lg:max-w-none`}
+        className={`fixed inset-y-0 right-0 h-[100dvh] lg:h-full z-[60] w-[calc(100vw-3rem)] max-w-[400px] bg-slate-50/50 shadow-2xl transition-transform duration-300 transform ${mobileCartOpen ? "translate-x-0" : "translate-x-full"} lg:relative lg:translate-x-0 lg:w-96 lg:shadow-sm lg:rounded-[24px] lg:border lg:border-slate-200 flex flex-col overflow-hidden lg:max-w-none`}
       >
         <div className="p-4 border-b border-slate-200/60 bg-white flex flex-col gap-3 shrink-0 shadow-sm z-10 w-full pt-[max(env(safe-area-inset-top),1rem)]">
           <div className="flex items-center justify-between w-full text-slate-900 font-bold text-lg">
@@ -667,7 +629,7 @@ export default function POS() {
             </button>
             <button
               onClick={() => setIsWholesale(true)}
-              className={`py-2 text-xs font-extrabold rounded-lg transition-all duration-200 flex-1 text-center ${isWholesale ? "bg-indigo-600 text-white shadow-md shadow-indigo-500/20 scale-100" : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50 scale-95"}`}
+              className={`py-2 text-xs font-extrabold rounded-lg transition-all duration-200 flex-1 text-center ${isWholesale ? "bg-pink-600 text-white shadow-md shadow-pink-500/20 scale-100" : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50 scale-95"}`}
             >
               کڕیاری جوملە
             </button>
@@ -715,7 +677,7 @@ export default function POS() {
                     userRole === "admin" ? (
                       <div className="flex items-center gap-1">
                         <span
-                          className={`text-[11px] font-bold ${isWholesale ? "text-indigo-600" : "text-pink-600"}`}
+                          className={`text-[11px] font-bold ${isWholesale ? "text-pink-600" : "text-pink-600"}`}
                         >
                           {isWholesale ? "جوملە:" : "تاک:"}
                         </span>
@@ -739,7 +701,7 @@ export default function POS() {
                       </div>
                     ) : (
                       <p
-                        className={`text-[11px] font-mono font-bold ${isWholesale ? "text-indigo-600" : "text-pink-600"}`}
+                        className={`text-[11px] font-mono font-bold ${isWholesale ? "text-pink-600" : "text-pink-600"}`}
                       >
                         {isWholesale ? "جوملە: " : "تاک: "}
                         {formatCurrency(
@@ -761,24 +723,42 @@ export default function POS() {
                     >
                       <Trash2 size={16} />
                     </button>
-                    <div className="flex items-center gap-2 bg-slate-50 rounded-lg border border-slate-200/60 p-0.5 mt-2">
-                      {/* Qty Controls */}
-                      <button
-                        onClick={() => updateQuantity(item.id, 1)}
-                        disabled={item.quantity >= item.stock}
-                        className="w-7 h-7 bg-white rounded-md shadow-sm border border-slate-200 flex items-center justify-center text-slate-600 hover:text-pink-600 disabled:opacity-50 disabled:shadow-none transition-colors"
-                      >
-                        <Plus size={14} strokeWidth={2.5} />
-                      </button>
-                      <span className="text-sm font-bold w-5 text-center font-mono">
-                        {item.quantity}
-                      </span>
-                      <button
-                        onClick={() => updateQuantity(item.id, -1)}
-                        className="w-7 h-7 bg-white rounded-md shadow-sm border border-slate-200 flex items-center justify-center text-slate-600 hover:text-red-500 transition-colors"
-                      >
-                        <Minus size={14} strokeWidth={2.5} />
-                      </button>
+                    <div className="flex flex-col items-end gap-1 mt-2">
+                      <div className="flex items-center gap-1.5 bg-slate-50 rounded-lg border border-slate-200/60 p-0.5">
+                        <button
+                          onClick={() => updateQuantity(item.id, 1)}
+                          disabled={getActualPieceQuantity({ ...item, quantity: item.quantity + 1 }) > item.stock}
+                          className="w-7 h-7 shrink-0 bg-white rounded-md shadow-sm border border-slate-200 flex items-center justify-center text-slate-600 hover:text-pink-600 outline-none disabled:opacity-50 transition-colors"
+                        >
+                          <Plus size={14} strokeWidth={2.5} />
+                        </button>
+                        <input
+                          type="number"
+                          step="any"
+                          min="0"
+                          value={item.quantity}
+                          onChange={(e) => setQuantity(item.id, Number(e.target.value))}
+                          className="w-12 text-sm font-bold text-center font-mono bg-transparent outline-none p-0 m-0"
+                          dir="ltr"
+                        />
+                        <button
+                          onClick={() => updateQuantity(item.id, -1)}
+                          disabled={item.quantity <= 0}
+                          className="w-7 h-7 shrink-0 bg-white rounded-md shadow-sm border border-slate-200 flex items-center justify-center text-slate-600 hover:text-red-500 outline-none disabled:opacity-50 transition-colors"
+                        >
+                          <Minus size={14} strokeWidth={2.5} />
+                        </button>
+                      </div>
+                      {(item.cartonSize || 0) > 1 && (
+                        <select
+                          value={item.unitType || "piece"}
+                          onChange={(e) => setUnitType(item.id, e.target.value as "piece" | "carton")}
+                          className="text-[10px] font-bold bg-slate-100 border border-slate-200 rounded text-slate-600 px-1 py-0.5 outline-none"
+                        >
+                          <option value="piece">دانە</option>
+                          <option value="carton">کارتۆن</option>
+                        </select>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -792,7 +772,7 @@ export default function POS() {
             <div className="flex justify-between items-center text-[13px] text-slate-500 font-bold">
               <span>گشتی کالا ({cartItemCount})</span>
               <span className="font-mono text-slate-700">
-                {formatCurrency(subtotal, invoiceCurrency)}
+                {formatCurrency(subtotal)}
               </span>
             </div>
 
@@ -834,7 +814,7 @@ export default function POS() {
                 کۆی گشتی
               </span>
               <span className="text-2xl font-black font-mono tracking-tight">
-                {formatCurrency(total, invoiceCurrency)}
+                {formatCurrency(total)}
               </span>
             </div>
           </div>
@@ -1079,14 +1059,14 @@ export default function POS() {
                     <div className="space-y-1.5">
                       <label className="flex items-center justify-between text-sm font-bold text-slate-700">
                         <span className="flex items-center gap-1.5">
-                          <MapIcon size={16} className="text-blue-500" />
+                          <MapIcon size={16} className="text-pink-500" />
                           لینکی نەخشە (یان شوێن دیاریبکە)
                         </span>
                         <div className="flex gap-2">
                           <button
                             type="button"
                             onClick={() => setIsLocationPickerOpen(true)}
-                            className="text-xs text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-2 py-1 rounded-md font-semibold transition-colors"
+                            className="text-xs text-pink-600 bg-pink-50 hover:bg-pink-100 px-2 py-1 rounded-md font-semibold transition-colors"
                           >
                             دیاریکردن لە نەخشە
                           </button>
@@ -1110,7 +1090,7 @@ export default function POS() {
                                 );
                               }
                             }}
-                            className="text-xs text-blue-600 bg-blue-50 hover:bg-blue-100 px-2 py-1 rounded-md font-semibold transition-colors"
+                            className="text-xs text-pink-600 bg-pink-50 hover:bg-pink-100 px-2 py-1 rounded-md font-semibold transition-colors"
                           >
                             GPS
                           </button>
@@ -1127,7 +1107,7 @@ export default function POS() {
                         }
                         dir="ltr"
                         placeholder="https://maps.google.com/?q=..."
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-blue-500/50 font-mono text-left text-sm"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-pink-500/50 font-mono text-left text-sm"
                       />
                     </div>
 
@@ -1161,7 +1141,7 @@ export default function POS() {
                       </p>
                     </div>
                     <div className="text-2xl font-bold font-mono text-pink-700">
-                      {formatCurrency(total, invoiceCurrency)}
+                      {formatCurrency(total)}
                     </div>
                   </div>
                 </div>
@@ -1198,79 +1178,6 @@ export default function POS() {
         }}
       />
 
-      {/* CURRENCY CONVERTER MODAL */}
-      {calcModalOpen && (
-        <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center p-0 sm:p-4 backdrop-blur-sm bg-slate-900/40 animate-in fade-in duration-200">
-          <div className="bg-white rounded-t-[32px] sm:rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col transform transition-all animate-in slide-in-from-bottom-10 sm:slide-in-from-bottom-0 sm:zoom-in-95 pb-[max(calc(env(safe-area-inset-bottom)+1rem),1rem)] sm:pb-0">
-            <div className="bg-slate-900 p-5 flex justify-between items-center text-white">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center">
-                  <ArrowRightLeft size={20} />
-                </div>
-                <h2 className="text-xl font-bold">گۆڕینەوەی دراو</h2>
-              </div>
-              <button
-                onClick={() => setCalcModalOpen(false)}
-                className="w-8 h-8 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors"
-                title="داخستن"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <div className="p-6 flex flex-col gap-6">
-              <div className="flex flex-col gap-2">
-                <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-full bg-green-100 text-green-700 flex items-center justify-center text-xs font-bold">
-                    $
-                  </div>
-                  دۆلاری ئەمریکی (USD)
-                </label>
-                <input
-                  type="number"
-                  value={convUSD}
-                  onChange={(e) => handleConvUSDChange(e.target.value)}
-                  placeholder="0.00"
-                  className="w-full bg-slate-50 border-2 border-slate-200 rounded-2xl py-4 px-5 outline-none text-2xl font-mono font-bold text-slate-800 focus:border-green-500 focus:ring-4 focus:ring-green-500/10 transition-all text-left"
-                  dir="ltr"
-                />
-              </div>
-
-              <div className="relative flex justify-center -my-3 z-10">
-                <div className="bg-white p-2 rounded-full border border-slate-200 shadow-sm text-slate-400">
-                  <ArrowUpDown size={20} />
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-full bg-sky-100 text-sky-700 flex items-center justify-center text-xs font-bold">
-                    د.ع
-                  </div>
-                  دیناری عێراقی (IQD)
-                </label>
-                <input
-                  type="number"
-                  value={convIQD}
-                  onChange={(e) => handleConvIQDChange(e.target.value)}
-                  placeholder="0"
-                  className="w-full bg-slate-50 border-2 border-slate-200 rounded-2xl py-4 px-5 outline-none text-2xl font-mono font-bold text-slate-800 focus:border-sky-500 focus:ring-4 focus:ring-sky-500/10 transition-all text-left"
-                  dir="ltr"
-                />
-              </div>
-
-              <div className="bg-slate-50 p-4 rounded-xl text-center border border-slate-200 mt-2">
-                <span className="text-sm font-medium text-slate-500">
-                  نرخی ئاڵوگۆڕی ئێستا:{" "}
-                </span>
-                <span className="font-bold text-slate-800">
-                  100$ = {exchangeRate * 100} IQD
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

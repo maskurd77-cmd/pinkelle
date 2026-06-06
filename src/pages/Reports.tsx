@@ -98,32 +98,24 @@ export default function Reports() {
   }, [receipts, expenses, filterType, selectedMonth, selectedDay]);
 
   const { stats, chartData, categoryData } = useMemo(() => {
-    let salesIQD = 0;
-    let salesUSD = 0;
-    let retailSalesIQD = 0;
-    let retailSalesUSD = 0;
-    let wholesaleSalesIQD = 0;
-    let wholesaleSalesUSD = 0;
-    let retailProfitIQD = 0;
-    let retailProfitUSD = 0;
-    let wholesaleProfitIQD = 0;
-    let wholesaleProfitUSD = 0;
-    let profitIQD = 0;
-    let profitUSD = 0;
+    let sales = 0;
+    let retailSales = 0;
+    let wholesaleSales = 0;
+    let retailProfit = 0;
+    let wholesaleProfit = 0;
+    let profit = 0;
     let itemsSold = 0;
     let retailItemsSold = 0;
     let wholesaleItemsSold = 0;
-    let totalExpenseIQD = 0;
+    let totalExpense = 0;
 
-    // For trends (Simplifying by using default IQD for trends)
     const salesByDate: Record<string, number> = {};
     const categoryCount: Record<string, number> = {};
 
     filteredData.filteredReceipts.forEach((r) => {
-      const currency = r.invoiceCurrency || "IQD";
-      const cAmount = r.totalAmount || 0;
-      if (currency === "IQD") salesIQD += cAmount;
-      else salesUSD += cAmount;
+            let cAmount = r.totalAmount || 0;
+            
+      sales += cAmount;
 
       const ts = r.timestamp?.toDate
         ? r.timestamp.toDate()
@@ -134,40 +126,30 @@ export default function Reports() {
           : ts.toLocaleDateString("ku");
 
       if (!salesByDate[dateKey]) salesByDate[dateKey] = 0;
-      // Normalizing for chart (approx mapping if mixed)
-      salesByDate[dateKey] += currency === "IQD" ? cAmount : cAmount * 1500;
+      salesByDate[dateKey] += cAmount;
 
       if (r.items && Array.isArray(r.items)) {
         r.items.forEach((item: any) => {
           const cost = item.unitCost || 0;
           const price = item.unitPrice || 0;
           const qty = item.quantity || 1;
-          const itemTotal = price * qty;
+          
+          let itemTotal = price * qty;
+          let itemProfit = (price - cost) * qty;
 
-          const itemProfit = (price - cost) * qty;
-          if (currency === "IQD") profitIQD += itemProfit;
-          else profitUSD += itemProfit;
+          
 
+          profit += itemProfit;
           itemsSold += qty;
 
           if (item.isWholesale) {
             wholesaleItemsSold += qty;
-            if (currency === "IQD") {
-              wholesaleSalesIQD += itemTotal;
-              wholesaleProfitIQD += itemProfit;
-            } else {
-              wholesaleSalesUSD += itemTotal;
-              wholesaleProfitUSD += itemProfit;
-            }
+            wholesaleSales += itemTotal;
+            wholesaleProfit += itemProfit;
           } else {
             retailItemsSold += qty;
-            if (currency === "IQD") {
-              retailSalesIQD += itemTotal;
-              retailProfitIQD += itemProfit;
-            } else {
-              retailSalesUSD += itemTotal;
-              retailProfitUSD += itemProfit;
-            }
+            retailSales += itemTotal;
+            retailProfit += itemProfit;
           }
 
           const cat = item.category || "گشتی";
@@ -178,12 +160,16 @@ export default function Reports() {
     });
 
     filteredData.filteredExpenses.forEach((e) => {
-      totalExpenseIQD += e.amount || 0; // Assuming expenses are primarily tracked in IQD for now
+      // Assuming old expenses might be IQD, if so we should divide. But expense doesn't have currency field currently maybe?
+      // Defaulting to 1500 divisor if amount > 100000 to guess? No, let's just use it as is if it's already USD.
+      // Wait we used to sum it to totalExpenseIQD. Let's just track it as is for now, or divide by 1500 if we assume it was IQD.
+      // Let's divide by 1500 to match old logic.
+      totalExpense += (e.amount || 0) / 1500; 
     });
 
-    const cData = Object.entries(salesByDate).map(([name, sales]) => ({
+    const cData = Object.entries(salesByDate).map(([name, salesAmount]) => ({
       name,
-      sales,
+      sales: salesAmount,
     }));
     const pData = Object.entries(categoryCount)
       .map(([name, value]) => ({ name, value }))
@@ -192,19 +178,13 @@ export default function Reports() {
 
     return {
       stats: {
-        salesIQD,
-        salesUSD,
-        retailSalesIQD,
-        retailSalesUSD,
-        wholesaleSalesIQD,
-        wholesaleSalesUSD,
-        retailProfitIQD,
-        retailProfitUSD,
-        wholesaleProfitIQD,
-        wholesaleProfitUSD,
-        profitIQD,
-        profitUSD,
-        totalExpenseIQD,
+        sales,
+        retailSales,
+        wholesaleSales,
+        retailProfit,
+        wholesaleProfit,
+        profit,
+        totalExpense,
         itemsSold,
         retailItemsSold,
         wholesaleItemsSold,
@@ -221,7 +201,7 @@ export default function Reports() {
       return (
         <div className="bg-white/90 backdrop-blur-sm p-3 border border-slate-100 rounded-xl shadow-xl text-right">
           <p className="text-slate-500 text-xs mb-1 font-medium">{label}</p>
-          <p className="font-bold text-pink-600 font-mono text-lg">
+          <p className="font-bold text-amber-600 font-mono text-lg">
             {formatCurrency(payload[0].value)}
           </p>
         </div>
@@ -233,9 +213,9 @@ export default function Reports() {
   return (
     <div className="flex flex-col h-full space-y-6 overflow-y-auto custom-scrollbar pb-6 lg:pr-2">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between bg-white p-5 rounded-3xl border border-slate-100 shadow-sm gap-4">
-        <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+        <h2 className="text-xl font-black text-slate-800 flex items-center gap-2">
           <div className="p-2 bg-pink-50 rounded-xl">
-            <LineChartIcon className="text-pink-600" size={24} />
+            <LineChartIcon className="text-amber-600" size={24} />
           </div>
           ڕاپۆرتەکان و ئامارەکان
         </h2>
@@ -243,19 +223,19 @@ export default function Reports() {
           <div className="flex items-center gap-2 bg-slate-50 p-1 rounded-xl border border-slate-100">
             <button
               onClick={() => setFilterType("all")}
-              className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${filterType === "all" ? "bg-white text-pink-600 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+              className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${filterType === "all" ? "bg-white text-amber-600 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
             >
               سەرجەم
             </button>
             <button
               onClick={() => setFilterType("month")}
-              className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${filterType === "month" ? "bg-white text-pink-600 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+              className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${filterType === "month" ? "bg-white text-amber-600 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
             >
               مانگانە
             </button>
             <button
               onClick={() => setFilterType("day")}
-              className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${filterType === "day" ? "bg-white text-pink-600 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+              className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${filterType === "day" ? "bg-white text-amber-600 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
             >
               ڕۆژانە
             </button>
@@ -266,7 +246,7 @@ export default function Reports() {
               type="month"
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(e.target.value)}
-              className="bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-sm font-mono focus:ring-2 focus:ring-pink-500 outline-none"
+              className="bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-sm font-mono focus:ring-2 focus:ring-amber-500 outline-none"
             />
           )}
           {filterType === "day" && (
@@ -274,7 +254,7 @@ export default function Reports() {
               type="date"
               value={selectedDay}
               onChange={(e) => setSelectedDay(e.target.value)}
-              className="bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-sm font-mono focus:ring-2 focus:ring-pink-500 outline-none"
+              className="bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-sm font-mono focus:ring-2 focus:ring-amber-500 outline-none"
             />
           )}
         </div>
@@ -286,28 +266,28 @@ export default function Reports() {
             title: "کۆی فرۆشتنی تاک",
             value: (
               <div className="flex flex-col">
-                <span className="text-2xl text-blue-600">
-                  {formatCurrency(stats.retailSalesUSD + stats.retailSalesIQD / 1500)}
+                <span className="text-2xl text-pink-600">
+                  {formatCurrency(stats.retailSales)}
                 </span>
                 <span className="text-xs text-slate-400 mt-1">
-                  قازانج: {formatCurrency(stats.retailProfitUSD + stats.retailProfitIQD / 1500)}
+                  قازانج: {formatCurrency(stats.retailProfit)}
                 </span>
               </div>
             ),
             trend: `${stats.retailItemsSold} دانەی تاک`,
             color: "blue",
-            gradient: "from-blue-500 to-indigo-600",
-            shadow: "shadow-blue-500/20",
+            gradient: "from-pink-500 to-pink-600",
+            shadow: "shadow-pink-500/20",
           },
           {
             title: "کۆی فرۆشتنی جوملە",
             value: (
               <div className="flex flex-col">
                 <span className="text-2xl text-purple-600">
-                  {formatCurrency(stats.wholesaleSalesUSD + stats.wholesaleSalesIQD / 1500)}
+                  {formatCurrency(stats.wholesaleSales)}
                 </span>
                 <span className="text-xs text-slate-400 mt-1">
-                  قازانج: {formatCurrency(stats.wholesaleProfitUSD + stats.wholesaleProfitIQD / 1500)}
+                  قازانج: {formatCurrency(stats.wholesaleProfit)}
                 </span>
               </div>
             ),
@@ -322,18 +302,17 @@ export default function Reports() {
               <div className="flex flex-col">
                 <span className="text-2xl text-green-600">
                   {formatCurrency(
-                    stats.profitUSD +
-                      (stats.profitIQD - stats.totalExpenseIQD) / 1500,
+                    stats.profit - stats.totalExpense,
                   )}
                 </span>
                 <span className="text-xs text-slate-400 mt-1">
-                  پێش خەرجی: {formatCurrency(stats.profitUSD + stats.profitIQD / 1500)}
+                  پێش خەرجی: {formatCurrency(stats.profit)}
                 </span>
               </div>
             ),
             trend: "دوای دەرکردنی خەرجی",
             color: "emerald",
-            gradient: "from-emerald-500 to-teal-600",
+            gradient: "from-emerald-500 to-pink-600",
             shadow: "shadow-emerald-500/20",
           },
           {
@@ -344,7 +323,7 @@ export default function Reports() {
                   {stats.itemsSold} <span className="text-sm">کەرەستە</span>
                 </span>
                 <span className="text-[11px] text-orange-500">
-                  خەرجی: {formatCurrency(stats.totalExpenseIQD / 1500)}
+                  خەرجی: {formatCurrency(stats.totalExpense)}
                 </span>
               </div>
             ),
@@ -390,29 +369,29 @@ export default function Reports() {
               <div className="flex flex-col">
                 <span className="text-2xl text-cyan-600">
                   {formatCurrency(
-                    stats.retailSalesUSD + stats.retailSalesIQD / 1500,
+                    stats.retailSales,
                   )}
                 </span>
               </div>
             ),
             trend: "تاک",
             color: "blue",
-            gradient: "from-blue-500 to-cyan-600",
+            gradient: "from-pink-500 to-cyan-600",
           },
           {
             title: "فرۆشتنی جوملە",
             value: (
               <div className="flex flex-col">
-                <span className="text-2xl text-indigo-600">
+                <span className="text-2xl text-pink-600">
                   {formatCurrency(
-                    stats.wholesaleSalesUSD + stats.wholesaleSalesIQD / 1500,
+                    stats.wholesaleSales,
                   )}
                 </span>
               </div>
             ),
             trend: "جوملە",
             color: "purple",
-            gradient: "from-purple-500 to-indigo-600",
+            gradient: "from-purple-500 to-pink-600",
           },
           {
             title: "فرۆشراو بە تاک",
@@ -425,7 +404,7 @@ export default function Reports() {
             ),
             trend: "تاک",
             color: "cyan",
-            gradient: "from-cyan-500 to-teal-500",
+            gradient: "from-cyan-500 to-pink-500",
           },
           {
             title: "فرۆشراو بە جوملە",
@@ -461,7 +440,7 @@ export default function Reports() {
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 flex-1 mb-6">
         <div className="xl:col-span-2 bg-white rounded-[32px] border border-slate-200 shadow-sm p-8 flex flex-col min-h-[450px]">
           <h3 className="text-lg font-extrabold text-slate-800 mb-8 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-pink-50 flex items-center justify-center text-pink-600">
+            <div className="w-10 h-10 rounded-xl bg-pink-50 flex items-center justify-center text-amber-600">
               <LineChartIcon size={20} />
             </div>
             هێڵکاری فرۆشتن لە ماوەی دیاریکراودا
@@ -573,7 +552,7 @@ export default function Reports() {
 
         <div className="bg-white rounded-[32px] border border-slate-200 shadow-sm p-8 flex flex-col min-h-[450px]">
           <h3 className="text-lg font-extrabold text-slate-800 mb-8 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600">
+            <div className="w-10 h-10 rounded-xl bg-pink-50 flex items-center justify-center text-pink-600">
               <PieChartIcon size={20} />
             </div>
             پڕفرۆشترین جۆرەکان

@@ -67,7 +67,7 @@ export default function Layout({
     <div className="h-full flex flex-col">
       <div className="p-6 border-b border-slate-100 flex items-center gap-3">
         <img
-          src="https://skilled-indigo-cux52hz9.edgeone.app/Pink%20Elle%20logo%20new-1_page-0001.jpg"
+          src="https://skilled-pink-cux52hz9.edgeone.app/Pink%20Elle%20logo%20new-1_page-0001.jpg"
           alt="Pink Elle Logo"
           className="w-12 h-12 object-contain rounded-xl"
         />

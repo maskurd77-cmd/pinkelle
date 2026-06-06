@@ -91,21 +91,21 @@ export default function Companies() {
         <div className="flex-1 overflow-auto custom-scrollbar p-4 sm:p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {filtered.map((company, i) => (
             <div key={company.id} className="bg-white border border-slate-200 rounded-2xl p-6 hover:shadow-xl hover:shadow-pink-500/5 hover:-translate-y-1 transition-all duration-300 relative group flex flex-col items-center text-center">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-50 to-indigo-100 flex items-center justify-center text-indigo-500 mb-5 shadow-inner border border-indigo-100 group-hover:scale-110 transition-transform duration-300 text-2xl font-extrabold">
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-pink-50 to-pink-100 flex items-center justify-center text-pink-500 mb-5 shadow-inner border border-pink-100 group-hover:scale-110 transition-transform duration-300 text-2xl font-extrabold">
                 {company.name.charAt(0)}
               </div>
-              <h3 className="font-extrabold text-slate-800 text-lg mb-1 group-hover:text-indigo-600 transition-colors">{company.name}</h3>
+              <h3 className="font-extrabold text-slate-800 text-lg mb-1 group-hover:text-pink-600 transition-colors">{company.name}</h3>
               
               <div className="flex flex-col gap-2.5 text-xs text-slate-600 items-center justify-center mb-6 mt-4 flex-1 w-full bg-slate-50/50 rounded-xl py-3 px-2 border border-slate-100">
                 {company.phone && (
                   <div className="flex items-center gap-2 justify-center bg-white px-3 py-1.5 rounded-lg border border-slate-100 shadow-sm w-full max-w-[200px]">
-                    <Phone size={14} className="text-indigo-400 shrink-0" />
+                    <Phone size={14} className="text-pink-400 shrink-0" />
                     <span dir="ltr" className="font-mono font-medium text-slate-700 truncate">{company.phone}</span>
                   </div>
                 )}
                 {company.address && (
                   <div className="flex items-center gap-2 justify-center bg-white px-3 py-1.5 rounded-lg border border-slate-100 shadow-sm w-full max-w-[200px]">
-                    <MapPin size={14} className="text-indigo-400 shrink-0" />
+                    <MapPin size={14} className="text-pink-400 shrink-0" />
                     <span className="font-medium text-slate-700 truncate">{company.address}</span>
                   </div>
                 )}
@@ -115,7 +115,7 @@ export default function Companies() {
               </div>
 
               <div className="flex items-center justify-center gap-3 w-full border-t border-slate-100 pt-5 mt-auto">
-                <button onClick={() => openModalForEdit(company)} className="flex-1 text-slate-500 hover:text-blue-600 hover:bg-blue-50 py-2 px-3 rounded-xl transition-colors flex items-center justify-center gap-2 text-sm font-bold border border-transparent hover:border-blue-100">
+                <button onClick={() => openModalForEdit(company)} className="flex-1 text-slate-500 hover:text-pink-600 hover:bg-pink-50 py-2 px-3 rounded-xl transition-colors flex items-center justify-center gap-2 text-sm font-bold border border-transparent hover:border-pink-100">
                   <Edit size={16} /> دەستکاری
                 </button>
                 <div className="w-px h-6 bg-slate-200"></div>

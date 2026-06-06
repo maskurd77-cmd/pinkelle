@@ -107,7 +107,7 @@ export default function VisitsPage() {
       {/* Header */}
       <div className="bg-white px-6 py-5 border-b border-slate-200/60 sticky top-0 z-10 shadow-sm flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 bg-indigo-100 rounded-2xl flex items-center justify-center text-indigo-600 shadow-inner">
+          <div className="w-12 h-12 bg-pink-100 rounded-2xl flex items-center justify-center text-pink-600 shadow-inner">
             <MapPin size={24} />
           </div>
           <div>
@@ -123,7 +123,7 @@ export default function VisitsPage() {
             placeholder="گەڕان بەدوای کڕیار یان مەندوب..." 
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full sm:w-72 bg-slate-50 hover:bg-slate-100/80 transition-colors border-none rounded-xl pr-10 pl-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 font-medium text-sm placeholder:text-slate-400"
+            className="w-full sm:w-72 bg-slate-50 hover:bg-slate-100/80 transition-colors border-none rounded-xl pr-10 pl-4 py-3 focus:outline-none focus:ring-2 focus:ring-pink-500/50 font-medium text-sm placeholder:text-slate-400"
           />
         </div>
       </div>
@@ -134,14 +134,14 @@ export default function VisitsPage() {
            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {mandubStats.filter(m => m.name.includes(searchTerm)).map(stat => (
                  <div key={stat.name} onClick={() => setSelectedMandub(stat.name)} className="bg-white border flex flex-col border-slate-200 rounded-3xl p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer relative overflow-hidden group">
-                    <div className="absolute -right-10 -top-10 w-32 h-32 bg-indigo-50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                    <div className="absolute -right-10 -top-10 w-32 h-32 bg-pink-50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></div>
                     <div className="flex items-center gap-4 mb-6 z-10">
-                       <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-indigo-500 to-indigo-600 flex items-center justify-center text-white font-extrabold text-2xl shadow-md">
+                       <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-pink-500 to-pink-600 flex items-center justify-center text-white font-extrabold text-2xl shadow-md">
                           {stat.name.charAt(0)}
                        </div>
                        <div>
                           <h3 className="font-extrabold text-slate-800 text-xl">{stat.name}</h3>
-                          <span className="text-xs text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md font-bold mt-1 inline-block">مەندوب</span>
+                          <span className="text-xs text-pink-600 bg-pink-50 px-2 py-0.5 rounded-md font-bold mt-1 inline-block">مەندوب</span>
                        </div>
                     </div>
 
@@ -175,7 +175,7 @@ export default function VisitsPage() {
               
               {mandubStats.length === 0 && (
                  <div className="col-span-full bg-white rounded-3xl p-12 flex flex-col items-center justify-center border-2 border-dashed border-slate-200 mt-4 max-w-lg mx-auto">
-                   <div className="w-20 h-20 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-300 mb-4">
+                   <div className="w-20 h-20 bg-pink-50 rounded-full flex items-center justify-center text-pink-300 mb-4">
                      <Users size={40} />
                    </div>
                    <p className="text-slate-500 font-bold text-lg">هیچ داتایەک نەدۆزرایەوە.</p>
@@ -201,7 +201,7 @@ export default function VisitsPage() {
                             <div>
                                 <h3 className="font-extrabold text-slate-800 text-lg mb-1">{visit.customerName}</h3>
                                 <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium font-mono" dir="ltr">
-                                   <Calendar size={12} className="text-indigo-400" />
+                                   <Calendar size={12} className="text-pink-400" />
                                    {formatDateTime(visit.startTime)}
                                 </div>
                             </div>

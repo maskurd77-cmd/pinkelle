@@ -160,7 +160,7 @@ export default function Receipts() {
       <div className="print:hidden flex-1 bg-white rounded-[24px] border border-slate-200 shadow-sm flex flex-col overflow-hidden">
         <div className="px-6 py-5 border-b border-slate-100 flex flex-col xl:flex-row items-start xl:items-center justify-between bg-white gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center">
+            <div className="w-10 h-10 bg-pink-50 text-pink-600 rounded-xl flex items-center justify-center">
               <ReceiptText size={20} />
             </div>
             <h2 className="text-xl font-extrabold text-slate-800">وەسڵەکان</h2>
@@ -168,7 +168,7 @@ export default function Receipts() {
             <div className="flex bg-slate-100 p-1 rounded-xl mr-6">
               <button
                 onClick={() => setActiveTab("completed")}
-                className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${activeTab === "completed" ? "bg-white text-indigo-700 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+                className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${activeTab === "completed" ? "bg-white text-pink-700 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
               >
                 پسوولە پەسەندکراوەکان
               </button>
@@ -197,7 +197,7 @@ export default function Receipts() {
                 onChange={(e) => setSearch(e.target.value)}
                 type="text"
                 placeholder="گەڕان بۆ ژمارەی وەسڵ یان کڕیار..."
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 pr-10 pl-4 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-medium text-slate-800 shadow-sm"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 pr-10 pl-4 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 transition-all font-medium text-slate-800 shadow-sm"
               />
             </div>
           </div>
@@ -256,7 +256,7 @@ export default function Receipts() {
                   <td className="px-6 py-4 text-slate-600 font-bold font-mono">
                     {rec.totalItems} دانە
                   </td>
-                  <td className="px-6 py-4 font-bold text-indigo-700">
+                  <td className="px-6 py-4 font-bold text-pink-700">
                     {rec.sellerName || "نەزانراو"}
                   </td>
                   <td className="px-6 py-4 font-extrabold text-slate-900 font-mono whitespace-nowrap">
@@ -291,7 +291,7 @@ export default function Receipts() {
                         )}
                       <button
                         onClick={() => setSelectedReceipt(rec)}
-                        className="text-indigo-600 bg-indigo-50 hover:bg-indigo-100 hover:text-indigo-700 font-bold px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 shadow-sm text-xs"
+                        className="text-pink-600 bg-pink-50 hover:bg-pink-100 hover:text-pink-700 font-bold px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 shadow-sm text-xs"
                       >
                         <Eye size={14} /> بینین و چاپ
                       </button>
@@ -327,7 +327,7 @@ export default function Receipts() {
           <div className="bg-white rounded-t-[32px] sm:rounded-[24px] shadow-2xl max-w-4xl w-full max-h-[95dvh] sm:max-h-full overflow-hidden flex flex-col animate-in slide-in-from-bottom-10 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-200">
             <div className="p-4 sm:p-5 border-b border-slate-100 flex justify-between items-center bg-white shrink-0">
               <div className="flex items-center gap-2 sm:gap-3">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center shrink-0">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-pink-50 text-pink-600 rounded-xl flex items-center justify-center shrink-0">
                   <Printer size={18} className="sm:w-5 sm:h-5" />
                 </div>
                 <h2 className="font-extrabold text-slate-800 text-base sm:text-lg">
@@ -337,7 +337,7 @@ export default function Receipts() {
               <div className="flex gap-2">
                 <button
                   onClick={handlePrint}
-                  className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl flex items-center gap-2 hover:bg-indigo-700 hover:shadow-lg hover:shadow-indigo-500/20 font-bold text-sm transition-all"
+                  className="px-5 py-2.5 bg-pink-600 text-white rounded-xl flex items-center gap-2 hover:bg-pink-700 hover:shadow-lg hover:shadow-pink-500/20 font-bold text-sm transition-all"
                 >
                   <Printer size={16} /> چاپکردن
                 </button>
@@ -383,7 +383,7 @@ export function ReceiptPrintLayout({ receipt }: { receipt: any }) {
         {/* Right Side - Logo */}
         <div className="flex items-center justify-center shrink-0 w-32 h-32">
           <img
-            src="https://skilled-indigo-cux52hz9.edgeone.app/Pink%20Elle%20logo%20new-1_page-0001.jpg"
+            src="https://skilled-pink-cux52hz9.edgeone.app/Pink%20Elle%20logo%20new-1_page-0001.jpg"
             alt="Pink Elle Logo"
             className="w-full h-full object-contain mix-blend-multiply drop-shadow-sm"
           />
@@ -556,7 +556,7 @@ export function ReceiptPrintLayout({ receipt }: { receipt: any }) {
           <tbody>
             {/* Render real rows */}
             {receipt.items?.map((item: any, i: number) => {
-              const itemCurrency = receipt.invoiceCurrency || "IQD";
+              const itemCurrency = "USD";
               // Calculate discount if any
               const isDiscounted =
                 item.originalUnitPrice &&
@@ -631,8 +631,7 @@ export function ReceiptPrintLayout({ receipt }: { receipt: any }) {
               <td className="p-1.5 font-bold bg-pink-50 text-base font-mono">
                 {formatCurrency(
                   receipt.totalAmount || receipt.total || 0,
-                  receipt.invoiceCurrency || "IQD",
-                ).replace(receipt.invoiceCurrency || "IQD", "")}
+                )}
               </td>
             </tr>
           </tbody>
@@ -659,8 +658,7 @@ export function ReceiptPrintLayout({ receipt }: { receipt: any }) {
                     {receipt.paymentType === "نەقد"
                       ? formatCurrency(
                           receipt.totalAmount || receipt.total || 0,
-                          receipt.invoiceCurrency || "IQD",
-                        ).replace(receipt.invoiceCurrency || "IQD", "")
+                        )
                       : "0"}
                   </td>
                   <td className="border border-black p-2 bg-gray-100">
@@ -672,8 +670,7 @@ export function ReceiptPrintLayout({ receipt }: { receipt: any }) {
                     {receipt.paymentType === "قەرز"
                       ? formatCurrency(
                           receipt.totalAmount || receipt.total || 0,
-                          receipt.invoiceCurrency || "IQD",
-                        ).replace(receipt.invoiceCurrency || "IQD", "")
+                        )
                       : "0"}
                   </td>
                   <td className="border border-black p-2 bg-gray-100">
@@ -686,8 +683,7 @@ export function ReceiptPrintLayout({ receipt }: { receipt: any }) {
                       <td className="border border-black p-2 w-32 font-mono text-sm text-gray-600">
                         {formatCurrency(
                           receipt.subtotal || 0,
-                          receipt.invoiceCurrency || "IQD",
-                        ).replace(receipt.invoiceCurrency || "IQD", "")}
+                        )}
                       </td>
                       <td className="border border-black p-2 bg-gray-100">
                         بڕی بێ داشکاندن
@@ -697,8 +693,7 @@ export function ReceiptPrintLayout({ receipt }: { receipt: any }) {
                       <td className="border border-black p-2 w-32 font-mono text-sm text-red-600">
                         {formatCurrency(
                           receipt.discount || receipt.discountAmount || 0,
-                          receipt.invoiceCurrency || "IQD",
-                        ).replace(receipt.invoiceCurrency || "IQD", "")}
+                        )}
                       </td>
                       <td className="border border-black p-2 bg-gray-100">
                         داشکاندن (الخصم)
@@ -710,25 +705,12 @@ export function ReceiptPrintLayout({ receipt }: { receipt: any }) {
                   <td className="border border-black p-2 w-32 font-mono text-lg font-black bg-pink-50">
                     {formatCurrency(
                       receipt.totalAmount || receipt.total || 0,
-                      receipt.invoiceCurrency || "IQD",
                     )}
                   </td>
                   <td className="border border-black p-2 bg-pink-100 text-lg font-black">
                     المجموع (کۆی گشتی)
                   </td>
                 </tr>
-                {receipt.exchangeRate && receipt.exchangeRate > 0 && (
-                <tr>
-                  <td className="border border-black p-2 w-32 font-mono text-sm font-black bg-slate-50 text-slate-600">
-                    {receipt.invoiceCurrency === "USD"
-                      ? formatCurrency((receipt.totalAmount || receipt.total || 0) * receipt.exchangeRate, "IQD")
-                      : formatCurrency((receipt.totalAmount || receipt.total || 0) / receipt.exchangeRate, "USD")}
-                  </td>
-                  <td className="border border-black p-2 bg-slate-100 text-sm font-bold text-slate-700">
-                    بەرامبەر بە (المقابل)
-                  </td>
-                </tr>
-                )}
               </tbody>
             </table>
           </div>

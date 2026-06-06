@@ -1,3 +1,4 @@
+import { IQDInput } from '../components/IQDInput';
 import React, { useState, useEffect } from "react";
 import {
   collection,
@@ -34,36 +35,24 @@ export default function SafesPage({ settings }: any) {
 
   const [isAddingSafe, setIsAddingSafe] = useState(false);
   const [newSafeName, setNewSafeName] = useState("");
-  const [newSafeIQD, setNewSafeIQD] = useState("");
-  const [newSafeUSD, setNewSafeUSD] = useState("");
+    const [newSafeUSD, setNewSafeUSD] = useState("");
 
   const [isTransferring, setIsTransferring] = useState(false);
   const [transferFrom, setTransferFrom] = useState("");
   const [transferTo, setTransferTo] = useState("");
   const [transferAmount, setTransferAmount] = useState("");
-  const [transferFromCurrency, setTransferFromCurrency] = useState<
-    "IQD" | "USD"
-  >("IQD");
-  const [transferToCurrency, setTransferToCurrency] = useState<"IQD" | "USD">(
-    "IQD",
-  );
-  const [transferExchangeRate, setTransferExchangeRate] = useState<number>(
-    settings?.exchangeRate || 1500,
-  );
-  const [transferNote, setTransferNote] = useState("");
+      const [transferNote, setTransferNote] = useState("");
 
   const [isAdjusting, setIsAdjusting] = useState(false);
   const [adjustSafeId, setAdjustSafeId] = useState("");
   const [adjustType, setAdjustType] = useState<"add" | "subtract">("add");
   const [adjustAmount, setAdjustAmount] = useState("");
-  const [adjustCurrency, setAdjustCurrency] = useState<"IQD" | "USD">("IQD");
-  const [adjustNote, setAdjustNote] = useState("");
+    const [adjustNote, setAdjustNote] = useState("");
 
   const [isHawala, setIsHawala] = useState(false);
   const [hawalaSafe, setHawalaSafe] = useState("");
   const [hawalaAmount, setHawalaAmount] = useState("");
-  const [hawalaCurrency, setHawalaCurrency] = useState<"IQD" | "USD">("USD");
-  const [hawalaFee, setHawalaFee] = useState("0");
+    const [hawalaFee, setHawalaFee] = useState("0");
   const [hawalaReceiver, setHawalaReceiver] = useState("");
   const [hawalaOffice, setHawalaOffice] = useState("");
   const [hawalaNote, setHawalaNote] = useState("");
@@ -106,14 +95,12 @@ export default function SafesPage({ settings }: any) {
     if (!newSafeName.trim()) return;
     await addDoc(collection(db, "safes"), {
       name: newSafeName,
-      balanceIQD: Number(newSafeIQD) || 0,
-      balanceUSD: Number(newSafeUSD) || 0,
+            balance: Number(newSafeUSD) || 0,
       createdAt: Timestamp.now(),
     });
     setIsAddingSafe(false);
     setNewSafeName("");
-    setNewSafeIQD("");
-    setNewSafeUSD("");
+        setNewSafeUSD("");
   };
 
   const handleDeleteSafe = async (id: string, name: string) => {
@@ -122,17 +109,7 @@ export default function SafesPage({ settings }: any) {
     }
   };
 
-  const calculateReceivedAmount = () => {
-    const amount = Number(transferAmount) || 0;
-    if (amount <= 0) return 0;
-    if (transferFromCurrency === transferToCurrency) return amount;
-    if (transferFromCurrency === "USD" && transferToCurrency === "IQD")
-      return amount * transferExchangeRate;
-    if (transferFromCurrency === "IQD" && transferToCurrency === "USD")
-      return amount / transferExchangeRate;
-    return amount;
-  };
-
+  
   const handleTransfer = async (e: React.FormEvent) => {
     e.preventDefault();
     if (
@@ -151,33 +128,21 @@ export default function SafesPage({ settings }: any) {
 
     if (!fromSafe || !toSafe) return;
 
-    const receivedAmount = calculateReceivedAmount();
+    const receivedAmount = amount;
     const isPending = userRole !== "admin" && userRole !== "accountant";
 
     const batch = writeBatch(db);
 
     if (!isPending) {
       // Deduct from sender
-      if (transferFromCurrency === "IQD") {
-        batch.update(doc(db, "safes", transferFrom), {
-          balanceIQD: (fromSafe.balanceIQD || 0) - amount,
-        });
-      } else {
-        batch.update(doc(db, "safes", transferFrom), {
-          balanceUSD: (fromSafe.balanceUSD || 0) - amount,
-        });
-      }
+      batch.update(doc(db, "safes", transferFrom), {
+        balance: (fromSafe.balance || 0) - amount,
+      });
 
       // Add to receiver
-      if (transferToCurrency === "IQD") {
-        batch.update(doc(db, "safes", transferTo), {
-          balanceIQD: (toSafe.balanceIQD || 0) + receivedAmount,
-        });
-      } else {
-        batch.update(doc(db, "safes", transferTo), {
-          balanceUSD: (toSafe.balanceUSD || 0) + receivedAmount,
-        });
-      }
+      batch.update(doc(db, "safes", transferTo), {
+        balance: (toSafe.balance || 0) + receivedAmount,
+      });
     }
 
     // Record Transaction
@@ -188,13 +153,10 @@ export default function SafesPage({ settings }: any) {
       toSafeId: toSafe.id,
       toSafeName: toSafe.name,
       amount: amount,
-      currency: transferFromCurrency,
+      currency: 'USD',
       receivedAmount: receivedAmount,
-      receivedCurrency: transferToCurrency,
-      exchangeRate:
-        transferFromCurrency !== transferToCurrency
-          ? transferExchangeRate
-          : null,
+      receivedCurrency: 'USD',
+      exchangeRate: 1,
       note: transferNote,
       status: isPending ? "pending" : "completed",
       timestamp: Timestamp.now(),
@@ -205,7 +167,7 @@ export default function SafesPage({ settings }: any) {
     setIsTransferring(false);
     setTransferAmount("");
     setTransferNote("");
-    setTransferExchangeRate(settings?.exchangeRate || 1500);
+    
   };
 
   const handleAdjust = async (e: React.FormEvent) => {
@@ -221,19 +183,11 @@ export default function SafesPage({ settings }: any) {
     const batch = writeBatch(db);
 
     if (!isPending) {
-      if (adjustCurrency === "IQD") {
         const field =
           adjustType === "add"
-            ? (safeInfo.balanceIQD || 0) + amount
-            : (safeInfo.balanceIQD || 0) - amount;
-        batch.update(doc(db, "safes", adjustSafeId), { balanceIQD: field });
-      } else {
-        const field =
-          adjustType === "add"
-            ? (safeInfo.balanceUSD || 0) + amount
-            : (safeInfo.balanceUSD || 0) - amount;
-        batch.update(doc(db, "safes", adjustSafeId), { balanceUSD: field });
-      }
+            ? (safeInfo.balance || 0) + amount
+            : (safeInfo.balance || 0) - amount;
+        batch.update(doc(db, "safes", adjustSafeId), { balance: field });
     }
 
     batch.set(doc(collection(db, "safe_transactions")), {
@@ -241,7 +195,7 @@ export default function SafesPage({ settings }: any) {
       safeId: safeInfo.id,
       safeName: safeInfo.name,
       amount: amount,
-      currency: adjustCurrency,
+      currency: 'USD',
       note: adjustNote,
       status: isPending ? "pending" : "completed",
       timestamp: Timestamp.now(),
@@ -271,15 +225,9 @@ export default function SafesPage({ settings }: any) {
     const batch = writeBatch(db);
 
     if (!isPending) {
-      if (hawalaCurrency === "IQD") {
         batch.update(doc(db, "safes", hawalaSafe), {
-          balanceIQD: (safeInfo.balanceIQD || 0) - totalDeduct,
+          balance: (safeInfo.balance || 0) - totalDeduct,
         });
-      } else {
-        batch.update(doc(db, "safes", hawalaSafe), {
-          balanceUSD: (safeInfo.balanceUSD || 0) - totalDeduct,
-        });
-      }
     }
 
     batch.set(doc(collection(db, "safe_transactions")), {
@@ -289,7 +237,7 @@ export default function SafesPage({ settings }: any) {
       amount: totalDeduct, // Total deducted
       netAmount: amount, // Only the sent amount
       fee: fee,
-      currency: hawalaCurrency,
+      currency: 'USD',
       receiver: hawalaReceiver,
       office: hawalaOffice,
       note: hawalaNote,
@@ -316,25 +264,13 @@ export default function SafesPage({ settings }: any) {
         const toSafe = safes.find((s) => s.id === tx.toSafeId);
         if (!fromSafe || !toSafe) return;
 
-        if (tx.currency === "IQD") {
-          batch.update(doc(db, "safes", tx.fromSafeId), {
-            balanceIQD: (fromSafe.balanceIQD || 0) - tx.amount,
-          });
-        } else {
-          batch.update(doc(db, "safes", tx.fromSafeId), {
-            balanceUSD: (fromSafe.balanceUSD || 0) - tx.amount,
-          });
-        }
+        batch.update(doc(db, "safes", tx.fromSafeId), {
+          balance: (fromSafe.balance || 0) - tx.amount,
+        });
 
-        if (tx.receivedCurrency === "IQD") {
-          batch.update(doc(db, "safes", tx.toSafeId), {
-            balanceIQD: (toSafe.balanceIQD || 0) + tx.receivedAmount,
-          });
-        } else {
-          batch.update(doc(db, "safes", tx.toSafeId), {
-            balanceUSD: (toSafe.balanceUSD || 0) + tx.receivedAmount,
-          });
-        }
+        batch.update(doc(db, "safes", tx.toSafeId), {
+          balance: (toSafe.balance || 0) + tx.receivedAmount,
+        });
       } else if (
         tx.type === "deposit" ||
         tx.type === "withdrawal" ||
@@ -343,17 +279,10 @@ export default function SafesPage({ settings }: any) {
         const safeInfo = safes.find((s) => s.id === tx.safeId);
         if (!safeInfo) return;
 
-        if (tx.currency === "IQD") {
-          const change = tx.type === "deposit" ? tx.amount : -tx.amount;
-          batch.update(doc(db, "safes", tx.safeId), {
-            balanceIQD: (safeInfo.balanceIQD || 0) + change,
-          });
-        } else {
-          const change = tx.type === "deposit" ? tx.amount : -tx.amount;
-          batch.update(doc(db, "safes", tx.safeId), {
-            balanceUSD: (safeInfo.balanceUSD || 0) + change,
-          });
-        }
+        const change = tx.type === "deposit" ? tx.amount : -tx.amount;
+        batch.update(doc(db, "safes", tx.safeId), {
+          balance: (safeInfo.balance || 0) + change,
+        });
       }
 
       batch.update(doc(db, "safe_transactions", tx.id), {
@@ -401,7 +330,7 @@ export default function SafesPage({ settings }: any) {
           </button>
           <button
             onClick={() => setIsTransferring(true)}
-            className="px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl font-bold hover:bg-indigo-100 flex items-center gap-2 transition-colors"
+            className="px-4 py-2 bg-pink-50 text-pink-600 rounded-xl font-bold hover:bg-pink-100 flex items-center gap-2 transition-colors"
           >
             <ArrowRightLeft size={18} /> پارە گواستنەوە
           </button>
@@ -446,9 +375,9 @@ export default function SafesPage({ settings }: any) {
                   بالانسی دۆلار
                 </span>
                 <span
-                  className={`font-mono font-bold text-lg ${safe.balanceUSD < 0 ? "text-red-600" : "text-emerald-700"}`}
+                  className={`font-mono font-bold text-lg ${safe.balance < 0 ? "text-red-600" : "text-emerald-700"}`}
                 >
-                  {formatCurrency(safe.balanceUSD || 0, "USD")}
+                  {formatCurrency(safe.balance || 0, "USD")}
                 </span>
               </div>
             </div>
@@ -540,7 +469,7 @@ export default function SafesPage({ settings }: any) {
                   </td>
                   <td className="px-6 py-4 text-sm font-bold">
                     {t.type === "transfer" && (
-                      <span className="text-indigo-600 bg-indigo-50 px-2 py-1 rounded inline-flex items-center gap-1">
+                      <span className="text-pink-600 bg-pink-50 px-2 py-1 rounded inline-flex items-center gap-1">
                         <ArrowRightLeft size={14} /> گواستنەوە
                       </span>
                     )}
@@ -668,20 +597,7 @@ export default function SafesPage({ settings }: any) {
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-bold text-slate-600 mb-1">
-                    بالانسی دینار (IQD)
-                  </label>
-                  <input
-                    type="number"
-                    step="any"
-                    value={newSafeIQD}
-                    onChange={(e) => setNewSafeIQD(e.target.value)}
-                    className="w-full font-mono bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-pink-500 outline-none text-left transition-all"
-                    dir="ltr"
-                    placeholder="0"
-                  />
-                </div>
+                
                 <div>
                   <label className="block text-sm font-bold text-slate-600 mb-1">
                     بالانسی دۆلار (USD)
@@ -694,7 +610,8 @@ export default function SafesPage({ settings }: any) {
                     className="w-full font-mono bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-pink-500 outline-none text-left transition-all"
                     dir="ltr"
                     placeholder="0"
-                  />
+                  /> 
+<IQDInput usdValue={newSafeUSD} setUsdValue={(val) => setNewSafeUSD(val.toString())} />
                 </div>
               </div>
             </div>
@@ -771,22 +688,8 @@ export default function SafesPage({ settings }: any) {
                     className="w-full font-mono bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-slate-400 outline-none text-left font-bold"
                     dir="ltr"
                     placeholder="0"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-bold text-slate-600 mb-1">
-                    دراو
-                  </label>
-                  <select
-                    value={adjustCurrency}
-                    onChange={(e) =>
-                      setAdjustCurrency(e.target.value as "IQD" | "USD")
-                    }
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2 py-2.5 focus:ring-2 focus:ring-slate-400 outline-none font-bold text-slate-700"
-                  >
-                    <option value="IQD">دینار</option>
-                    <option value="USD">دۆلار</option>
-                  </select>
+                  /> 
+<IQDInput usdValue={adjustAmount} setUsdValue={(val) => setAdjustAmount(val.toString())} />
                 </div>
               </div>
               <div>
@@ -820,6 +723,7 @@ export default function SafesPage({ settings }: any) {
         </div>
       )}
 
+      
       {/* Transfer Modal */}
       {isTransferring && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex justify-center items-center p-4 z-50 overflow-y-auto">
@@ -827,184 +731,94 @@ export default function SafesPage({ settings }: any) {
             onSubmit={handleTransfer}
             className="bg-white rounded-3xl w-full max-w-xl shadow-2xl p-6 relative overflow-hidden my-8"
           >
-            <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-100 rounded-full blur-3xl -mx-10 -my-10 opacity-50 pointer-events-none"></div>
+            <div className="absolute top-0 right-0 w-32 h-32 bg-pink-100 rounded-full blur-3xl -mx-10 -my-10 opacity-50 pointer-events-none"></div>
             <h2 className="text-xl font-extrabold text-slate-800 mb-6 flex items-center gap-2">
-              <ArrowRightLeft className="text-indigo-600" /> گواستنەوەی پارە
-              نێوان قاسەکان
+              <ArrowRightLeft className="text-pink-600" /> گواستنەوەی پارە نێوان قاسەکان
             </h2>
             <div className="space-y-5 mb-6 relative">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                  <label className="block text-sm font-bold text-indigo-600 mb-2">
+                  <label className="block text-sm font-bold text-pink-600 mb-2">
                     لە قاسەی (دەرچوو)
                   </label>
                   <select
                     required
                     value={transferFrom}
                     onChange={(e) => setTransferFrom(e.target.value)}
-                    className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none font-bold text-slate-700 mb-3"
+                    className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-pink-500 outline-none font-bold text-slate-700"
                   >
                     <option value="">خاوەن پارە...</option>
                     {safes.map((s) => (
                       <option key={s.id} value={s.id}>
-                        {s.name} ({formatCurrency(s.balanceUSD || 0)})
+                        {s.name} ({formatCurrency(s.balance || 0)})
                       </option>
                     ))}
                   </select>
-
-                  <div className="flex gap-2">
-                    <div className="flex-1">
-                      <label className="block text-[11px] font-bold text-slate-500 mb-1">
-                        بڕی پارە
-                      </label>
-                      <input
-                        required
-                        type="number"
-                        min="0"
-                        step="any"
-                        value={transferAmount}
-                        onChange={(e) => setTransferAmount(e.target.value)}
-                        className="w-full font-mono bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-right"
-                        placeholder="0"
-                        dir="ltr"
-                      />
-                    </div>
-                    <div className="w-[80px]">
-                      <label className="block text-[11px] font-bold text-slate-500 mb-1">
-                        دراو
-                      </label>
-                      <select
-                        value={transferFromCurrency}
-                        onChange={(e) =>
-                          setTransferFromCurrency(
-                            e.target.value as "IQD" | "USD",
-                          )
-                        }
-                        className="w-full bg-white border border-slate-200 rounded-xl px-1 py-2 font-bold text-slate-700 font-mono text-center"
-                      >
-                        <option value="IQD">IQD</option>
-                        <option value="USD">USD</option>
-                      </select>
-                    </div>
-                  </div>
                 </div>
-
                 <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
                   <label className="block text-sm font-bold text-emerald-600 mb-2">
-                    بۆ قاسەی (هاتوو)
+                    بۆ قاسەی (وەرگر)
                   </label>
                   <select
                     required
                     value={transferTo}
                     onChange={(e) => setTransferTo(e.target.value)}
-                    className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 focus:ring-2 focus:ring-emerald-500 outline-none font-bold text-slate-700 mb-3"
+                    className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-emerald-500 outline-none font-bold text-slate-700"
                   >
                     <option value="">وەرگر...</option>
-                    {safes.map((s) => (
+                    {safes.filter(s => s.id !== transferFrom).map((s) => (
                       <option key={s.id} value={s.id}>
-                        {s.name} ({formatCurrency(s.balanceUSD || 0)})
+                        {s.name} ({formatCurrency(s.balance || 0)})
                       </option>
                     ))}
                   </select>
-
-                  <div className="flex gap-2 mt-auto">
-                    <div className="w-[80px]">
-                      <label className="block text-[11px] font-bold text-slate-500 mb-1">
-                        دراوی وەرگرتن
-                      </label>
-                      <select
-                        value={transferToCurrency}
-                        onChange={(e) =>
-                          setTransferToCurrency(e.target.value as "IQD" | "USD")
-                        }
-                        className="w-full bg-indigo-50 border border-indigo-200 rounded-xl px-1 py-2 font-bold text-indigo-700 font-mono text-center outline-none"
-                      >
-                        <option value="IQD">IQD</option>
-                        <option value="USD">USD</option>
-                      </select>
-                    </div>
-                    <div className="flex-1 border-r border-slate-200 pr-3">
-                      <label className="block text-[11px] font-bold text-slate-500 mb-1">
-                        دەرئەنجام{" "}
-                        <span className="font-normal text-[9px]">
-                          (ئەوەی دەچێتە سەر قاسەی وەرگر)
-                        </span>
-                      </label>
-                      <div
-                        className="w-full font-mono bg-white border border-dashed border-emerald-300 rounded-xl px-3 py-2 font-bold text-emerald-700 text-left truncate flex items-center h-[42px]"
-                        dir="ltr"
-                      >
-                        {formatCurrency(
-                          calculateReceivedAmount(),
-                          transferToCurrency,
-                        )}
-                      </div>
-                    </div>
-                  </div>
                 </div>
               </div>
 
-              {transferFromCurrency !== transferToCurrency && (
-                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
-                  <Calculator
-                    className="text-amber-500 shrink-0 mt-0.5"
-                    size={20}
-                  />
-                  <div className="flex-1">
-                    <label className="block text-sm font-bold text-amber-800 mb-1">
-                      نرخی ئاڵوگۆڕ لەم کاتەدا (Rate)
-                    </label>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="number"
-                        step="any"
-                        value={transferExchangeRate}
-                        onChange={(e) =>
-                          setTransferExchangeRate(Number(e.target.value) || 0)
-                        }
-                        className="font-mono bg-white border border-amber-200 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-amber-500 outline-none text-left w-32 font-bold text-amber-900"
-                        dir="ltr"
-                      />
-                      <span className="text-xs text-amber-700 font-bold">
-                        1 USD = {transferExchangeRate} IQD
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              )}
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">
+                   بڕی گواستنەوە بە دۆلار
+                </label>
+                <input
+                  required
+                  type="number"
+                  min="0"
+                  step="any"
+                  value={transferAmount}
+                  onChange={(e) => setTransferAmount(e.target.value)}
+                  className="w-full bg-white border-2 border-slate-200 rounded-xl px-4 py-3 focus:border-pink-500 outline-none font-bold font-mono text-xl"
+                  placeholder="0"
+                  dir="ltr"
+                /> 
+<IQDInput usdValue={transferAmount} setUsdValue={(val) => setTransferAmount(val.toString())} />
+              </div>
 
               <div>
-                <label className="block text-sm font-bold text-slate-600 mb-1">
+                <label className="block text-sm font-bold text-slate-700 mb-2">
                   تێبینی
                 </label>
                 <input
                   type="text"
                   value={transferNote}
                   onChange={(e) => setTransferNote(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-indigo-500 outline-none"
-                  placeholder="هۆکاری گواستنەوە..."
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-pink-500 outline-none"
+                  placeholder="ئارەزوومەندانە..."
                 />
               </div>
             </div>
-            <div className="flex gap-2 justify-end relative">
+            <div className="flex gap-3 justify-end relative mt-2 pt-5 border-t border-slate-100">
               <button
                 type="button"
                 onClick={() => setIsTransferring(false)}
-                className="px-4 py-2 text-slate-600 bg-slate-100 rounded-xl font-bold hover:bg-slate-200 transition-colors"
+                className="px-6 py-2.5 text-slate-600 bg-white border border-slate-200 rounded-xl font-bold hover:bg-slate-50 transition-colors"
               >
                 پاشگەزبوونەوە
               </button>
               <button
                 type="submit"
-                disabled={
-                  !transferAmount ||
-                  !transferFrom ||
-                  !transferTo ||
-                  transferFrom === transferTo
-                }
-                className="px-6 py-2 text-white bg-indigo-600 rounded-xl font-bold hover:bg-indigo-700 transition-colors disabled:opacity-50 shadow-lg shadow-indigo-200 flex items-center gap-2"
+                className="px-8 py-2.5 text-white bg-pink-600 rounded-xl font-bold hover:bg-pink-700 transition-colors shadow-md shadow-pink-200 flex items-center gap-2"
               >
-                <ArrowRightLeft size={18} /> جێبەجێکردن
+                <ArrowRightLeft size={18} /> گواستنەوە
               </button>
             </div>
           </form>
@@ -1013,40 +827,39 @@ export default function SafesPage({ settings }: any) {
 
       {/* Hawala Modal */}
       {isHawala && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex justify-center items-center p-4 z-50 overflow-y-auto">
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex justify-center items-center p-4 z-50 overflow-y-auto">
           <form
             onSubmit={handleHawala}
-            className="bg-white rounded-[24px] w-full max-w-xl shadow-2xl p-7 relative overflow-hidden my-8"
+            className="bg-white rounded-3xl w-full max-w-xl shadow-2xl p-6 relative overflow-hidden my-8"
           >
-            <div className="absolute top-0 right-0 w-40 h-40 bg-amber-100 rounded-bl-full -z-10 opacity-50 pointer-events-none"></div>
-            <h2 className="text-2xl font-black text-slate-800 mb-6 flex items-center gap-3">
-              <Send className="text-amber-500" size={26} /> حەواڵەی کەسی
-              (دەرەکی)
+            <div className="absolute top-0 right-0 w-32 h-32 bg-amber-100 rounded-full blur-3xl -mx-10 -my-10 opacity-50 pointer-events-none"></div>
+            <h2 className="text-xl font-extrabold text-slate-800 mb-6 flex items-center gap-2">
+              <Send className="text-amber-600" /> حەواڵەی پارە
             </h2>
-            <div className="space-y-5 mb-8 relative">
-              <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100">
-                <label className="block text-sm font-bold text-slate-700 mb-2">
-                  لە کام قاسەوە پارەکە دەڕوات؟
+            <div className="space-y-5 mb-6 relative">
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                <label className="block text-sm font-bold text-amber-700 mb-2">
+                  لە کام قاسە حەواڵە دەکرێت؟
                 </label>
                 <select
                   required
                   value={hawalaSafe}
                   onChange={(e) => setHawalaSafe(e.target.value)}
-                  className="w-full bg-white border-2 border-slate-200 rounded-xl px-4 py-3 focus:border-amber-500 outline-none font-bold text-slate-700"
+                  className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-amber-500 outline-none font-bold text-slate-700"
                 >
-                  <option value="">هەڵبژاردنی قاسە...</option>
+                  <option value="">قاسە هەڵبژێرە...</option>
                   {safes.map((s) => (
                     <option key={s.id} value={s.id}>
-                      {s.name} ({formatCurrency(s.balanceUSD || 0)})
+                      {s.name} ({formatCurrency(s.balance || 0)})
                     </option>
                   ))}
                 </select>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-bold text-slate-700 mb-2">
-                    بڕی حەواڵە
+                    بڕی حەواڵەکە (ئەوەی دەڕوات)
                   </label>
                   <input
                     required
@@ -1055,42 +868,28 @@ export default function SafesPage({ settings }: any) {
                     step="any"
                     value={hawalaAmount}
                     onChange={(e) => setHawalaAmount(e.target.value)}
-                    className="w-full font-mono bg-white border-2 border-slate-200 rounded-xl px-4 py-3 font-bold text-right focus:border-amber-500 outline-none text-xl text-amber-700"
+                    className="w-full bg-white border-2 border-slate-200 rounded-xl px-4 py-3 focus:border-amber-500 outline-none font-bold font-mono"
                     placeholder="0"
                     dir="ltr"
-                  />
+                  /> 
+<IQDInput usdValue={hawalaAmount} setUsdValue={(val) => setHawalaAmount(val.toString())} />
                 </div>
-                <div className="flex gap-2">
-                  <div className="flex-1">
-                    <label className="block text-sm font-bold text-slate-700 mb-2">
-                      کرێی حەواڵە (عمولە)
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      step="any"
-                      value={hawalaFee}
-                      onChange={(e) => setHawalaFee(e.target.value)}
-                      className="w-full font-mono bg-white border-2 border-slate-200 rounded-xl px-4 py-3 font-bold text-right focus:border-amber-500 outline-none"
-                      placeholder="0"
-                      dir="ltr"
-                    />
-                  </div>
-                  <div className="w-[80px]">
-                    <label className="block text-sm font-bold text-slate-700 mb-2">
-                      دراو
-                    </label>
-                    <select
-                      value={hawalaCurrency}
-                      onChange={(e) =>
-                        setHawalaCurrency(e.target.value as "IQD" | "USD")
-                      }
-                      className="w-full bg-white border-2 border-slate-200 rounded-xl px-2 py-3 font-bold text-slate-700 font-mono text-center outline-none focus:border-amber-500"
-                    >
-                      <option value="USD">USD</option>
-                      <option value="IQD">IQD</option>
-                    </select>
-                  </div>
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-2">
+                    عمولەی حەواڵە
+                  </label>
+                  <input
+                    required
+                    type="number"
+                    min="0"
+                    step="any"
+                    value={hawalaFee}
+                    onChange={(e) => setHawalaFee(e.target.value)}
+                    className="w-full bg-white border-2 border-slate-200 rounded-xl px-4 py-3 focus:border-amber-500 outline-none font-bold font-mono"
+                    placeholder="0"
+                    dir="ltr"
+                  /> 
+<IQDInput usdValue={hawalaFee} setUsdValue={(val) => setHawalaFee(val.toString())} />
                 </div>
               </div>
 
@@ -1098,21 +897,15 @@ export default function SafesPage({ settings }: any) {
                 <span className="font-bold text-amber-800 text-sm">
                   کۆی گشتی (ئەوەی لە قاسە کەم دەبێتەوە):
                 </span>
-                <span
-                  className="font-mono font-black text-amber-700 text-xl"
-                  dir="ltr"
-                >
-                  {formatCurrency(
-                    (Number(hawalaAmount) || 0) + (Number(hawalaFee) || 0),
-                    hawalaCurrency,
-                  )}
+                <span className="font-mono font-black text-amber-700 text-xl" dir="ltr">
+                  {formatCurrency((Number(hawalaAmount) || 0) + (Number(hawalaFee) || 0))}
                 </span>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-bold text-slate-700 mb-2">
-                    ناوی وەرگر (کەسی حەواڵە بۆ کراو)
+                    ناوی وەرگر
                   </label>
                   <input
                     required
@@ -1161,12 +954,7 @@ export default function SafesPage({ settings }: any) {
               </button>
               <button
                 type="submit"
-                disabled={
-                  !hawalaSafe ||
-                  !hawalaAmount ||
-                  !hawalaReceiver ||
-                  !hawalaOffice
-                }
+                disabled={!hawalaSafe || !hawalaAmount || !hawalaReceiver || !hawalaOffice}
                 className="px-8 py-2.5 text-white bg-amber-500 rounded-xl font-bold hover:bg-amber-600 transition-colors disabled:opacity-50 shadow-md shadow-amber-200 flex items-center gap-2"
               >
                 <Send size={18} /> حەواڵە بکە

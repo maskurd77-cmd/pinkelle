@@ -1,3 +1,4 @@
+import { IQDInput } from '../components/IQDInput';
 import React, { useState, useEffect, useMemo } from "react";
 import {
   Search,
@@ -72,10 +73,6 @@ export default function DebtBook() {
   const [activeTab, setActiveTab] = useState<
     "debts" | "pending_tx" | "pending_returns"
   >("debts");
-  const [exchangeRate, setExchangeRate] = useState<number>(1500);
-
-  const [paymentCurrency, setPaymentCurrency] = useState<"IQD" | "USD">("USD");
-  const [newCurrency, setNewCurrency] = useState<"IQD" | "USD">("USD");
 
   useEffect(() => {
     if (auth.currentUser) {
@@ -122,9 +119,6 @@ export default function DebtBook() {
     );
 
     const unsubSettings = onSnapshot(doc(db, "settings", "globals"), (snap) => {
-      if (snap.exists() && snap.data().exchangeRate) {
-        setExchangeRate(snap.data().exchangeRate);
-      }
     });
 
     return () => {
@@ -345,8 +339,6 @@ export default function DebtBook() {
     const amountInputRaw = parseFloat(paymentAmount);
     if (amountInputRaw <= 0) return;
 
-    const amountInputIQD = amountInputRaw;
-
     let newRemaining = selectedDebt.remainingAmount;
     let newTotalAmount = selectedDebt.amount;
 
@@ -354,10 +346,10 @@ export default function DebtBook() {
 
     if (!isPending) {
       if (actionType === "pay") {
-        newRemaining -= amountInputIQD;
+        newRemaining -= amountInputRaw;
       } else {
-        newRemaining += amountInputIQD;
-        newTotalAmount += amountInputIQD;
+        newRemaining += amountInputRaw;
+        newTotalAmount += amountInputRaw;
       }
       const finalRemaining = newRemaining < 0 ? 0 : newRemaining;
       const newStatus = finalRemaining === 0 ? "paid" : "active";
@@ -371,10 +363,8 @@ export default function DebtBook() {
 
     await addDoc(collection(db, "debt_transactions"), {
       debtId: selectedDebt.id,
-      amount: amountInputIQD,
+      amount: amountInputRaw,
       originalAmount: amountInputRaw,
-      originalCurrency: paymentCurrency,
-      exchangeRate: paymentCurrency === "USD" ? exchangeRate : 1,
       type: actionType,
       status: isPending ? "pending" : "completed",
       customerName: selectedDebt.customerName, // Added for UI
@@ -383,15 +373,14 @@ export default function DebtBook() {
       notes:
         paymentNote ||
         (actionType === "pay"
-          ? `دانەوەی قەرز بە دەست (${paymentCurrency})`
-          : `زیادکردنی قەرز بە دەست (${paymentCurrency})`),
+          ? `دانەوەی قەرز بە دەست`
+          : `زیادکردنی قەرز بە دەست`),
     });
 
     setPaymentModalOpen(false);
     setSelectedDebt(null);
     setPaymentAmount("");
     setPaymentNote("");
-    setPaymentCurrency("IQD");
   };
 
   const handleCreateDebt = async (e: React.FormEvent) => {
@@ -399,7 +388,6 @@ export default function DebtBook() {
     if (!newName || !newAmount) return;
 
     const amountValRaw = parseFloat(newAmount);
-    const amountValIQD = amountValRaw;
 
     const existingDebt = debts.find((d) => d.customerName === newName);
     const isPending = userRole !== "admin" && userRole !== "accountant";
@@ -407,47 +395,43 @@ export default function DebtBook() {
     if (existingDebt) {
       if (!isPending) {
         await updateDoc(doc(db, "debts", existingDebt.id), {
-          amount: existingDebt.amount + amountValIQD,
-          remainingAmount: existingDebt.remainingAmount + amountValIQD,
+          amount: existingDebt.amount + amountValRaw,
+          remainingAmount: existingDebt.remainingAmount + amountValRaw,
           status: "active",
           lastPaymentDate: Timestamp.now(),
         });
       }
       await addDoc(collection(db, "debt_transactions"), {
         debtId: existingDebt.id,
-        amount: amountValIQD,
+        amount: amountValRaw,
         originalAmount: amountValRaw,
-        originalCurrency: newCurrency,
-        exchangeRate: newCurrency === "USD" ? exchangeRate : 1,
         type: "add",
         status: isPending ? "pending" : "completed",
         customerName: existingDebt.customerName,
         createdBy: userName || "نەزانراو",
         timestamp: Timestamp.now(),
-        notes: `زیادکردنی قەرز بە دەست (${newCurrency})`,
+        notes: `کاردانەوەی زیادکردنی قەرز بە دەست`,
       });
     } else {
       if (!isPending) {
         const debtRef = await addDoc(collection(db, "debts"), {
           customerName: newName,
           phone: newPhone,
-          amount: amountValIQD,
-          remainingAmount: amountValIQD,
+          amount: amountValRaw,
+          remainingAmount: amountValRaw,
           status: "active",
           timestamp: Timestamp.now(),
         });
         await addDoc(collection(db, "debt_transactions"), {
           debtId: debtRef.id,
-          amount: amountValIQD,
+          amount: amountValRaw,
           originalAmount: amountValRaw,
-          originalCurrency: newCurrency,
-          exchangeRate: newCurrency === "USD" ? exchangeRate : 1,
           type: "add", // new initial debt
           status: "completed",
           customerName: newName,
           createdBy: userName || "نەزانراو",
           timestamp: Timestamp.now(),
-          notes: `قەرزی نوێ (${newCurrency})`,
+          notes: `قەرزی پێشوو / نوێ`,
         });
       } else {
         // Create a placeholder debt with 0 amount, and a pending transaction to add the amount
@@ -461,16 +445,14 @@ export default function DebtBook() {
         });
         await addDoc(collection(db, "debt_transactions"), {
           debtId: debtRef.id,
-          amount: amountValIQD,
+          amount: amountValRaw,
           originalAmount: amountValRaw,
-          originalCurrency: newCurrency,
-          exchangeRate: newCurrency === "USD" ? exchangeRate : 1,
           type: "add",
           status: "pending",
           customerName: newName,
           createdBy: userName || "نەزانراو",
           timestamp: Timestamp.now(),
-          notes: `قەرزی نوێ (چاوەڕێی پەسەندکردن) (${newCurrency})`,
+          notes: `قەرزی نوێ (چاوەڕێی پەسەندکردن)`,
         });
       }
     }
@@ -547,7 +529,7 @@ export default function DebtBook() {
             </p>
             <h3 className="text-2xl font-black font-mono text-red-700 tracking-tight flex flex-col gap-1">
               <span>
-                {formatCurrency(totalRemaining / (exchangeRate || 1500), "USD")}
+                {formatCurrency(totalRemaining)}
               </span>
             </h3>
           </div>
@@ -562,8 +544,8 @@ export default function DebtBook() {
         {/* Table Header */}
         <div className="px-6 py-5 border-b border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between bg-white gap-4">
           <div className="flex items-center gap-3">
-            <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-              <FileText className="text-pink-600" /> دەفتەری قەرز
+            <h2 className="text-xl font-black text-slate-800 flex items-center gap-2">
+              <FileText className="text-rose-600" /> دەفتەری قەرز
             </h2>
             <div className="flex bg-slate-100 p-1 rounded-xl mr-4">
               <button
@@ -612,7 +594,7 @@ export default function DebtBook() {
                 onChange={(e) => setSearch(e.target.value)}
                 type="text"
                 placeholder="گەڕان بۆ ناوی قەرزار..."
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 pr-10 pl-4 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 transition-all font-medium text-slate-800 shadow-sm"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 pr-10 pl-4 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-pink-500 transition-all font-medium text-slate-800 shadow-sm"
                 disabled={activeTab !== "debts"}
               />
             </div>
@@ -626,9 +608,9 @@ export default function DebtBook() {
                 </button>
                 <button
                   onClick={() => setNewDebtModalOpen(true)}
-                  className="px-4 py-2.5 bg-pink-600 text-white rounded-xl text-sm font-bold hover:bg-pink-700 transition-all transform active:scale-95 whitespace-nowrap flex items-center gap-2 shadow-md shadow-pink-500/20 print:hidden"
+                  className="px-4 py-2.5 bg-rose-600 text-white rounded-xl text-sm font-bold hover:bg-rose-700 transition-all transform active:scale-95 whitespace-nowrap flex items-center gap-2 shadow-md shadow-pink-500/20 print:hidden"
                 >
-                  <UserPlus size={16} /> قەرزارڕێک زیاد بکە
+                  <UserPlus size={16} /> قەرزی پێشوو زیاد بکە
                 </button>
               </>
             )}
@@ -709,10 +691,7 @@ export default function DebtBook() {
                       </div>
                       <div className="text-xs text-orange-600 mt-1">
                         بڕی کەمکردنەوەی قەرز:{" "}
-                        {formatCurrency(
-                          tx.reductionAmount || 0,
-                          tx.receiptData?.invoiceCurrency || "IQD",
-                        )}
+                        {formatCurrency(tx.reductionAmount || 0)}
                       </div>
                     </div>
                     <div className="flex items-center gap-2 flex-wrap">
@@ -809,10 +788,7 @@ export default function DebtBook() {
                           return (
                             <div className="flex flex-col gap-1.5 w-fit">
                               <span className="inline-flex px-3 py-1 rounded-lg bg-orange-50 text-orange-700 font-bold font-mono whitespace-nowrap shadow-sm border border-orange-200">
-                                {formatCurrency(
-                                  debt.remainingAmount / (exchangeRate || 1500),
-                                  "USD",
-                                )}
+                                {formatCurrency(debt.remainingAmount)}
                               </span>
                               {pendingPay > 0 && (
                                 <span
@@ -869,7 +845,7 @@ export default function DebtBook() {
                         </button>
                         <button
                           onClick={() => handleViewHistory(debt)}
-                          className="text-indigo-700 text-xs font-bold px-2.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors border border-indigo-200 flex items-center gap-1.5 shadow-sm"
+                          className="text-pink-700 text-xs font-bold px-2.5 py-1.5 bg-pink-50 hover:bg-pink-100 rounded-lg transition-colors border border-pink-200 flex items-center gap-1.5 shadow-sm"
                         >
                           <FileClock size={14} /> مێژوو
                         </button>
@@ -882,10 +858,9 @@ export default function DebtBook() {
                               amount: debt.remainingAmount || 0,
                               isGeneric: true,
                               originalAmount: debt.remainingAmount || 0,
-                              originalCurrency: debt.customerCurrency || "IQD",
                             });
                           }}
-                          className="text-pink-700 text-xs font-bold px-2.5 py-1.5 bg-pink-50 hover:bg-pink-100 rounded-lg transition-colors border border-pink-200 flex items-center gap-1.5 shadow-sm"
+                          className="text-pink-700 text-xs font-bold px-2.5 py-1.5 bg-pink-50 hover:bg-pink-100 rounded-lg transition-colors border border-rose-200 flex items-center gap-1.5 shadow-sm"
                           title="چاپکردنی قەبزی قەرز"
                         >
                           <Printer size={14} /> قەبز
@@ -915,7 +890,7 @@ export default function DebtBook() {
                           <button
                             onClick={() => {
                               const msg = encodeURIComponent(
-                                `سڵاو بەڕێز ${debt.customerName}،\nقەرزی ماوەتان لای (پینک ئێللێ) بریتییە لە: ${formatCurrency(debt.remainingAmount / (exchangeRate || 1500), "USD")}.\nتکایە لە کاتی گونجاودا سەردانمان بکەنەوە.`,
+                                `سڵاو بەڕێز ${debt.customerName}،\nقەرزی ماوەتان لای (پینک ئێللێ) بریتییە لە: ${formatCurrency(debt.remainingAmount)}.\nتکایە لە کاتی گونجاودا سەردانمان بکەنەوە.`,
                               );
                               window.open(
                                 `https://wa.me/${debt.phone.replace(/[^0-9]/g, "")}?text=${msg}`,
@@ -1017,11 +992,9 @@ export default function DebtBook() {
                     min="0"
                     step="0.01"
                     max={
-                      actionType === "pay" && paymentCurrency === "IQD"
+                      actionType === "pay"
                         ? selectedDebt.remainingAmount
-                        : actionType === "pay" && paymentCurrency === "USD"
-                          ? selectedDebt.remainingAmount / exchangeRate
-                          : undefined
+                        : undefined
                     }
                     value={paymentAmount}
                     onChange={(e) => setPaymentAmount(e.target.value)}
@@ -1079,7 +1052,7 @@ export default function DebtBook() {
           >
             <div className="px-6 py-5 border-b border-slate-100 bg-gradient-to-l from-pink-50 to-white flex justify-between items-center">
               <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                <UserPlus className="text-pink-600" size={20} />
+                <UserPlus className="text-rose-600" size={20} />
                 زیادکردنی قەرزی نوێ
               </h2>
               <button
@@ -1162,11 +1135,11 @@ export default function DebtBook() {
                     step="0.01"
                     value={newAmount}
                     onChange={(e) => setNewAmount(e.target.value)}
-                    className="w-full bg-pink-50/50 border-2 border-pink-200 rounded-xl p-3 focus:outline-none focus:border-pink-500 font-mono text-xl text-center font-bold text-pink-700 transition-colors"
+                    className="w-full bg-pink-50/50 border-2 border-rose-200 rounded-xl p-3 focus:outline-none focus:border-pink-500 font-mono text-xl text-center font-bold text-pink-700 transition-colors"
                     placeholder="0"
                     dir="ltr"
                   />
-                  <div className="w-24 border-2 border-pink-200 bg-pink-50 rounded-xl flex items-center justify-center font-bold text-lg font-mono text-pink-700">
+                  <div className="w-24 border-2 border-rose-200 bg-pink-50 rounded-xl flex items-center justify-center font-bold text-lg font-mono text-pink-700">
                     USD
                   </div>
                 </div>
@@ -1182,7 +1155,7 @@ export default function DebtBook() {
               </button>
               <button
                 type="submit"
-                className="px-6 py-2.5 bg-pink-600 text-white hover:bg-pink-700 rounded-xl text-sm font-bold transition-all shadow-sm shadow-pink-200"
+                className="px-6 py-2.5 bg-rose-600 text-white hover:bg-rose-700 rounded-xl text-sm font-bold transition-all shadow-sm shadow-pink-200"
               >
                 پاشەکەوتکردن
               </button>
@@ -1198,7 +1171,7 @@ export default function DebtBook() {
               <div className="absolute top-0 right-0 w-32 h-32 bg-pink-50 rounded-bl-full -z-10 opacity-50"></div>
               <div>
                 <h2 className="text-xl font-extrabold text-slate-800 flex items-center gap-2">
-                  <FileClock className="text-indigo-600" size={24} />
+                  <FileClock className="text-pink-600" size={24} />
                   مێژووی مامەڵەکان
                 </h2>
                 <p className="text-sm font-medium text-slate-500 mt-1">
@@ -1248,15 +1221,7 @@ export default function DebtBook() {
                         </td>
                         <td className="px-6 py-4 flex flex-col gap-1 text-sm text-slate-900 font-extrabold font-mono">
                           <span>
-                            {formatCurrency(
-                              h.originalCurrency === "USD"
-                                ? h.originalAmount ||
-                                    h.amount /
-                                      (h.exchangeRate || exchangeRate || 1500)
-                                : h.amount /
-                                    (h.exchangeRate || exchangeRate || 1500),
-                              "USD",
-                            )}
+                            {formatCurrency(h.amount)}
                           </span>
                         </td>
                         <td className="px-6 py-4 text-sm font-bold flex flex-wrap gap-2 items-center">
@@ -1287,7 +1252,7 @@ export default function DebtBook() {
                           {h.type === "pay" && h.status !== "pending" && (
                             <button
                               onClick={() => setPrintTx(h)}
-                              className="text-pink-600 hover:bg-pink-50 p-2 rounded-lg transition-colors border border-transparent hover:border-pink-200"
+                              className="text-rose-600 hover:bg-pink-50 p-2 rounded-lg transition-colors border border-transparent hover:border-rose-200"
                               title="چاپکردنی وەسڵی قەبز"
                             >
                               <Printer size={16} />

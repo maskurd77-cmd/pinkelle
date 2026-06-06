@@ -174,13 +174,8 @@ export function DebtReceiptModal({
                     <span className="border-b-[1.5px] border-dashed border-slate-400 flex-1 pb-1 px-4 font-mono text-xl text-emerald-700 tracking-wider flex justify-between items-center">
                       <span>
                         {formatCurrency(
-                          transaction.originalCurrency === "USD"
-                            ? transaction.originalAmount || transaction.amount
-                            : (transaction.originalAmount ||
-                                transaction.amount) /
-                                (transaction.exchangeRate || 1500),
-                          "USD",
-                        ).replace("USD", "")}
+                             transaction.originalAmount || transaction.amount
+                        )}
                       </span>
                       <span className="text-xs text-emerald-500 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100 ml-2">
                         دۆلار / USD
@@ -197,10 +192,8 @@ export function DebtReceiptModal({
                 <span className="border-b-[1.5px] border-dashed border-slate-400 w-64 pb-1 px-4 font-mono text-xl text-red-600 tracking-wider flex justify-between items-center">
                   <span>
                     {formatCurrency(
-                      (debt.remainingAmount || 0) /
-                        (transaction.exchangeRate || 1500),
-                      "USD",
-                    ).replace("USD", "")}
+                      debt.remainingAmount || 0
+                    )}
                   </span>
                   <span className="text-[10px] text-red-500 bg-red-50 px-1.5 py-0.5 rounded border border-red-100 ml-1 leading-none">
                     دۆلار / USD

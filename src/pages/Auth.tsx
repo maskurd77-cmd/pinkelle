@@ -27,7 +27,7 @@ export default function AuthPage() {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8" dir="rtl">
       <div className="sm:mx-auto sm:w-full sm:max-w-md flex flex-col items-center">
-        <img src="https://skilled-indigo-cux52hz9.edgeone.app/Pink%20Elle%20logo%20new-1_page-0001.jpg" alt="Pink Elle Logo" className="w-24 h-24 object-contain rounded-2xl shadow-lg" />
+        <img src="https://skilled-pink-cux52hz9.edgeone.app/Pink%20Elle%20logo%20new-1_page-0001.jpg" alt="Pink Elle Logo" className="w-24 h-24 object-contain rounded-2xl shadow-lg" />
         <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
           چوونە ژوورەوە
         </h2>
@@ -61,7 +61,7 @@ export default function AuthPage() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="focus:ring-indigo-500 focus:border-indigo-500 block w-full pr-10 sm:text-sm border-gray-300 rounded-md h-10 border px-3 text-left"
+                  className="focus:ring-pink-500 focus:border-pink-500 block w-full pr-10 sm:text-sm border-gray-300 rounded-md h-10 border px-3 text-left"
                   placeholder="admin@example.com"
                   dir="ltr"
                 />
@@ -81,7 +81,7 @@ export default function AuthPage() {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="focus:ring-indigo-500 focus:border-indigo-500 block w-full pr-10 sm:text-sm border-gray-300 rounded-md h-10 border px-3 text-left"
+                  className="focus:ring-pink-500 focus:border-pink-500 block w-full pr-10 sm:text-sm border-gray-300 rounded-md h-10 border px-3 text-left"
                   placeholder="******"
                   dir="ltr"
                 />
@@ -92,7 +92,7 @@ export default function AuthPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
+                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-pink-600 hover:bg-pink-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-pink-500 disabled:opacity-50"
               >
                 {loading ? 'چاوەڕێ بە...' : 'چوونە ژوورەوە'}
               </button>

@@ -51,7 +51,7 @@ export const reduceCustomerDebt = async (
   try {
     let finalAmountToReduce = amountToReduce;
     if (receipt.invoiceCurrency === "USD") {
-      finalAmountToReduce = amountToReduce * (receipt.exchangeRate || 1500);
+      finalAmountToReduce = amountToReduce;
     }
 
     const debtsQ = query(
@@ -369,7 +369,7 @@ export function Returns() {
                       </td>
                       <td className="px-4 py-3 font-mono">{item.quantity}</td>
                       <td className="px-4 py-3 font-mono text-pink-600">
-                        {formatCurrency(item.unitPrice, returningReceipt.invoiceCurrency || "IQD")}
+                        {formatCurrency(item.unitPrice)}
                       </td>
                       <td className="px-4 py-3">
                         <button
@@ -396,7 +396,6 @@ export function Returns() {
                 کۆی گشتی:{" "}
                 {formatCurrency(
                   returningReceipt.totalAmount || returningReceipt.total || 0,
-                  returningReceipt.invoiceCurrency || "IQD",
                 )}
               </div>
             </div>
@@ -580,12 +579,12 @@ export function Exchanges() {
                       : "کات نەزانراوە"}
                   </td>
                   <td className="px-4 py-4 font-mono font-bold text-green-600">
-                    {formatCurrency(r.totalAmount || r.total || 0, r.invoiceCurrency || "IQD")}
+                    {formatCurrency(r.totalAmount || r.total || 0)}
                   </td>
                   <td className="px-4 py-4 flex justify-center">
                     <button
                       onClick={() => setReturningReceipt(r)}
-                      className="text-indigo-600 hover:bg-indigo-50 p-2 rounded-lg transition-colors flex items-center gap-2 font-bold text-xs border border-indigo-100"
+                      className="text-pink-600 hover:bg-pink-50 p-2 rounded-lg transition-colors flex items-center gap-2 font-bold text-xs border border-pink-100"
                     >
                       <ArrowLeftRight size={14} /> هەڵبژاردن بۆ گۆڕینەوە
                     </button>
@@ -635,13 +634,13 @@ export function Exchanges() {
                         {item.name}
                       </td>
                       <td className="px-4 py-3 font-mono">{item.quantity}</td>
-                      <td className="px-4 py-3 font-mono text-indigo-600">
-                        {formatCurrency(item.unitPrice, returningReceipt.invoiceCurrency || "IQD")}
+                      <td className="px-4 py-3 font-mono text-pink-600">
+                        {formatCurrency(item.unitPrice)}
                       </td>
                       <td className="px-4 py-3">
                         <button
                           onClick={() => handleReturnSingleItem(i)}
-                          className="px-3 py-1.5 bg-indigo-100 text-indigo-700 rounded hover:bg-indigo-200 text-xs font-bold transition-colors"
+                          className="px-3 py-1.5 bg-pink-100 text-pink-700 rounded hover:bg-pink-200 text-xs font-bold transition-colors"
                         >
                           گۆڕینەوە
                         </button>
@@ -663,7 +662,6 @@ export function Exchanges() {
                 کۆی گشتی:{" "}
                 {formatCurrency(
                   returningReceipt.totalAmount || returningReceipt.total || 0,
-                  returningReceipt.invoiceCurrency || "IQD",
                 )}
               </div>
             </div>
@@ -839,7 +837,7 @@ export function UsersPage() {
               </span>
             )}
             {u.role === "accountant" && (
-              <span className="absolute top-3 left-3 text-[10px] font-black tracking-wider bg-indigo-100 text-indigo-700 px-2.5 py-1 rounded-lg">
+              <span className="absolute top-3 left-3 text-[10px] font-black tracking-wider bg-pink-100 text-pink-700 px-2.5 py-1 rounded-lg">
                 محاسب
               </span>
             )}
@@ -908,7 +906,7 @@ export function UsersPage() {
                       setAllowedPages(u.permissions || []);
                       setIsModalOpen(true);
                     }}
-                    className="flex-1 sm:flex-none text-xs font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-3 py-2 rounded-xl transition-colors text-center"
+                    className="flex-1 sm:flex-none text-xs font-bold text-pink-600 hover:text-pink-800 bg-pink-50 hover:bg-pink-100 px-3 py-2 rounded-xl transition-colors text-center"
                   >
                     دەسەڵاتەکان
                   </button>
@@ -925,8 +923,8 @@ export function UsersPage() {
             onSubmit={handleUpdateRole}
             className="bg-white rounded-[24px] shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col"
           >
-            <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-gradient-to-l from-indigo-50/50 to-white">
-              <h2 className="font-bold text-indigo-900 text-lg flex items-center gap-2">
+            <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-gradient-to-l from-pink-50/50 to-white">
+              <h2 className="font-bold text-pink-900 text-lg flex items-center gap-2">
                 دیاریکردنی دەسەڵاتەکان
               </h2>
               <button
@@ -944,7 +942,7 @@ export function UsersPage() {
                     بەکارهێنەر
                   </p>
                   <p
-                    className="text-sm font-bold text-indigo-600 font-mono"
+                    className="text-sm font-bold text-pink-600 font-mono"
                     dir="ltr"
                   >
                     {editingUser.email}
@@ -957,13 +955,13 @@ export function UsersPage() {
 
               <div>
                 <label className="block text-sm font-bold text-slate-700 mb-2 flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-pink-500"></span>
                   جۆری بەکارهێنەر (ڕۆڵ)
                 </label>
                 <select
                   id="edit-role-select"
                   defaultValue={editingUser.role}
-                  className="w-full bg-white border-2 border-slate-200 rounded-xl p-3 outline-none focus:border-indigo-500 font-bold text-slate-700 transition-colors"
+                  className="w-full bg-white border-2 border-slate-200 rounded-xl p-3 outline-none focus:border-pink-500 font-bold text-slate-700 transition-colors"
                 >
                   <option value="admin">بەڕێوەبەر (Admin)</option>
                   <option value="accountant">
@@ -974,20 +972,20 @@ export function UsersPage() {
               </div>
               <div className="pt-4 border-t border-slate-100">
                 <label className="block text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-pink-500"></span>
                   دەسەڵاتەکانی بینین (تەنیا بۆ کارمەند)
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4 max-h-[40vh] overflow-y-auto px-1 pb-2 custom-scrollbar">
                   {permissionsOptions.map((opt) => (
                     <label
                       key={opt.id}
-                      className={`flex items-center gap-3 p-3.5 border-2 rounded-xl cursor-pointer transition-all text-sm font-bold select-none ${allowedPages.includes(opt.id) ? "border-indigo-500 bg-indigo-50 text-indigo-700 shadow-sm" : "border-slate-100 bg-white text-slate-600 hover:border-slate-200"}`}
+                      className={`flex items-center gap-3 p-3.5 border-2 rounded-xl cursor-pointer transition-all text-sm font-bold select-none ${allowedPages.includes(opt.id) ? "border-pink-500 bg-pink-50 text-pink-700 shadow-sm" : "border-slate-100 bg-white text-slate-600 hover:border-slate-200"}`}
                     >
                       <input
                         type="checkbox"
                         checked={allowedPages.includes(opt.id)}
                         onChange={() => togglePermission(opt.id)}
-                        className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 focus:ring-offset-0"
+                        className="w-4 h-4 text-pink-600 border-gray-300 rounded focus:ring-pink-500 focus:ring-offset-0"
                       />
                       {opt.label}
                     </label>
@@ -1005,7 +1003,7 @@ export function UsersPage() {
               </button>
               <button
                 type="submit"
-                className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 transition-colors shadow-sm shadow-indigo-200"
+                className="px-6 py-2.5 bg-pink-600 text-white rounded-xl text-sm font-bold hover:bg-pink-700 transition-colors shadow-sm shadow-pink-200"
               >
                 پاشەکەوتکردن
               </button>
@@ -1187,7 +1185,6 @@ export function SettingsPage() {
     shopPhone: "0750 000 0000",
     shopAddress: "سۆران",
     receiptFooter: "بەخێربێن بۆ پینک ئێللێ",
-    exchangeRate: 1500,
     pinCode: "",
     telegramBotToken: "",
     telegramChatId: "",
@@ -1236,6 +1233,8 @@ export function SettingsPage() {
             "customers",
             "visits",
             "companies",
+            "safes",
+            "safe_transactions"
           ];
         } else if (colName === "debts") {
           colsToDelete = ["debts", "debt_transactions"];
@@ -1437,82 +1436,6 @@ export function SettingsPage() {
                     حاسیبەی گۆڕینەوەی دراو
                   </h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* USD to IQD */}
-                    <div className="space-y-2 relative">
-                      <label className="text-xs font-bold text-slate-500 block">
-                        لە دۆلار بۆ دینار
-                      </label>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-slate-400">
-                          $
-                        </span>
-                        <input
-                          type="number"
-                          placeholder="بڕ بە دۆلار..."
-                          dir="ltr"
-                          onChange={(e) => {
-                            const val = Number(e.target.value);
-                            const target = document.getElementById(
-                              "usd-to-iqd-result",
-                            ) as HTMLInputElement;
-                            if (target)
-                              target.value =
-                                (
-                                  val * (settings.exchangeRate || 1500)
-                                ).toLocaleString() + " IQD";
-                          }}
-                          className="w-full bg-white border border-slate-300 rounded-lg py-2 pl-8 pr-3 font-mono text-sm focus:outline-none focus:border-pink-500"
-                        />
-                      </div>
-                      <input
-                        id="usd-to-iqd-result"
-                        type="text"
-                        readOnly
-                        placeholder="ئەنجام بە دینار"
-                        dir="ltr"
-                        className="w-full bg-slate-100 border border-transparent rounded-lg py-2 px-3 font-mono text-sm text-slate-700 font-bold"
-                      />
-                    </div>
-
-                    {/* IQD to USD */}
-                    <div className="space-y-2 relative">
-                      <label className="text-xs font-bold text-slate-500 block">
-                        لە دینار بۆ دۆلار
-                      </label>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-slate-400 text-xs">
-                          IQD
-                        </span>
-                        <input
-                          type="number"
-                          placeholder="بڕ بە دینار..."
-                          dir="ltr"
-                          onChange={(e) => {
-                            const val = Number(e.target.value);
-                            const target = document.getElementById(
-                              "iqd-to-usd-result",
-                            ) as HTMLInputElement;
-                            if (target)
-                              target.value =
-                                "$ " +
-                                (
-                                  val / (settings.exchangeRate || 1500)
-                                ).toLocaleString(undefined, {
-                                  maximumFractionDigits: 2,
-                                });
-                          }}
-                          className="w-full bg-white border border-slate-300 rounded-lg py-2 pl-10 pr-3 font-mono text-sm focus:outline-none focus:border-pink-500"
-                        />
-                      </div>
-                      <input
-                        id="iqd-to-usd-result"
-                        type="text"
-                        readOnly
-                        placeholder="ئەنجام بە دۆلار"
-                        dir="ltr"
-                        className="w-full bg-slate-100 border border-transparent rounded-lg py-2 px-3 font-mono text-sm text-slate-700 font-bold"
-                      />
-                    </div>
                   </div>
                 </div>
               </div>
@@ -1582,9 +1505,9 @@ export function SettingsPage() {
               <button
                 type="button"
                 onClick={handleRestore}
-                className="p-4 bg-white border border-slate-200 hover:border-blue-300 hover:bg-blue-50 rounded-xl transition-all shadow-sm flex flex-col items-center justify-center gap-3 group"
+                className="p-4 bg-white border border-slate-200 hover:border-pink-300 hover:bg-pink-50 rounded-xl transition-all shadow-sm flex flex-col items-center justify-center gap-3 group"
               >
-                <div className="bg-blue-100 p-3 rounded-full text-blue-600 group-hover:scale-110 transition-transform">
+                <div className="bg-pink-100 p-3 rounded-full text-pink-600 group-hover:scale-110 transition-transform">
                   <Upload size={24} />
                 </div>
                 <div className="text-center">
@@ -1603,7 +1526,7 @@ export function SettingsPage() {
 
           {/* Telegram Settings */}
           <section className="space-y-4">
-            <h3 className="font-bold text-lg border-l-4 border-blue-500 pl-2 text-slate-800">
+            <h3 className="font-bold text-lg border-l-4 border-pink-500 pl-2 text-slate-800">
               ڕێکخستنەکانی تێلیگرام (Telegram)
             </h3>
             <p className="text-xs text-slate-500 mb-2">
@@ -1625,7 +1548,7 @@ export function SettingsPage() {
                       telegramBotToken: e.target.value,
                     })
                   }
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all font-mono text-sm text-left opacity-70 focus:opacity-100"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 focus:ring-2 focus:ring-pink-500 focus:outline-none transition-all font-mono text-sm text-left opacity-70 focus:opacity-100"
                   dir="ltr"
                 />
               </div>
@@ -1640,7 +1563,7 @@ export function SettingsPage() {
                   onChange={(e) =>
                     setSettings({ ...settings, telegramChatId: e.target.value })
                   }
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all font-mono text-sm text-left opacity-70 focus:opacity-100"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 focus:ring-2 focus:ring-pink-500 focus:outline-none transition-all font-mono text-sm text-left opacity-70 focus:opacity-100"
                   dir="ltr"
                 />
               </div>
@@ -1660,6 +1583,99 @@ export function SettingsPage() {
                 : "پاشەکەوتکردنی گۆڕانکارییەکان"}
             </button>
           </div>
+        </div>
+      </div>
+
+            {/* Migration Section */}
+      <div className="bg-pink-50 border border-pink-200 rounded-2xl p-6 md:p-8 shadow-sm space-y-6 mb-8">
+        <div className="flex items-start gap-4">
+          <div className="w-12 h-12 bg-pink-100 rounded-xl flex items-center justify-center text-pink-600 shrink-0">
+            <ArrowLeftRight size={24} />
+          </div>
+          <div className="flex-1">
+            <h3 className="font-bold text-xl text-pink-900">گۆڕینی داتاکانی پێشوو (دینار بۆ دۆلار)</h3>
+            <p className="text-sm text-pink-700 mt-1 font-medium">
+              ئەگەر پێشتر کڕین و فرۆشتنت بە دینار زانیارییەکانت داخڵ کردووە، ئەوا بە یەک کلیک هەموو سیستەمەکە دۆکامێنتەکان کەنڤەرت دەکات بۆ دۆلار.
+            </p>
+            <p className="text-xs text-pink-500 font-bold mt-2">تێبینی: نرخی 100 دۆلار = {((settings.exchangeRate || 1500) * 100).toLocaleString()} دینار هەژمار دەکرێت بۆ کەنڤەرت کردن.</p>
+          </div>
+        </div>
+        <div className="flex justify-end">
+           <button
+             onClick={async () => {
+                if(!confirm('دڵنیایت لەم کارە؟ ئەمە هەموو نرخەکانی ناو (کالاکان، خەرجییەکان، قەرزەکان، قاسەکان) دابەشی نرخی دۆلار دەکات.')) return;
+                try {
+                  const rate = (settings.exchangeRate || 1500);
+                  
+                  // Products
+                  const pSnap = await getDocs(collection(db, 'products'));
+                  for(let d of pSnap.docs) {
+                    const data = d.data();
+                    let update: any = {};
+                    if(data.unitCost && data.unitCost > 1000) update.unitCost = Number((data.unitCost / rate).toFixed(2));
+                    if(data.unitPrice && data.unitPrice > 1000) update.unitPrice = Number((data.unitPrice / rate).toFixed(2));
+                    if(data.wholesaleCost && data.wholesaleCost > 1000) update.wholesaleCost = Number((data.wholesaleCost / rate).toFixed(2));
+                    if(data.wholesalePrice && data.wholesalePrice > 1000) update.wholesalePrice = Number((data.wholesalePrice / rate).toFixed(2));
+                    if(Object.keys(update).length > 0) {
+                      await updateDoc(doc(db, 'products', d.id), update);
+                    }
+                  }
+
+                  // Expenses
+                  const eSnap = await getDocs(collection(db, 'expenses'));
+                  for(let d of eSnap.docs) {
+                     if(d.data().amount > 1000) {
+                        await updateDoc(doc(db, 'expenses', d.id), { amount: Number((d.data().amount / rate).toFixed(2)) });
+                     }
+                  }
+
+                  // Debts
+                  const debtSnap = await getDocs(collection(db, 'debts'));
+                  for(let d of debtSnap.docs) {
+                     const data = d.data();
+                     let update: any = {};
+                     if(data.amount && data.amount > 1000) update.amount = Number((data.amount / rate).toFixed(2));
+                     if(data.remainingAmount && data.remainingAmount > 1000) update.remainingAmount = Number((data.remainingAmount / rate).toFixed(2));
+                     if(Object.keys(update).length > 0) {
+                        await updateDoc(doc(db, 'debts', d.id), update);
+                     }
+                  }
+
+                  // Debt Transactions
+                  const dtSnap = await getDocs(collection(db, 'debt_transactions'));
+                  for(let d of dtSnap.docs) {
+                     if(d.data().amount > 1000) {
+                        await updateDoc(doc(db, 'debt_transactions', d.id), { amount: Number((d.data().amount / rate).toFixed(2)) });
+                     }
+                  }
+
+                  // Safes
+                  const safeSnap = await getDocs(collection(db, 'safes'));
+                  for(let d of safeSnap.docs) {
+                     if(d.data().balance > 1000) {
+                        await updateDoc(doc(db, 'safes', d.id), { balance: Number((d.data().balance / rate).toFixed(2)) });
+                     }
+                  }
+
+                  // Safe Transactions
+                  const stSnap = await getDocs(collection(db, 'safe_transactions'));
+                  for(let d of stSnap.docs) {
+                     if(d.data().amount > 1000) {
+                        await updateDoc(doc(db, 'safe_transactions', d.id), { amount: Number((d.data().amount / rate).toFixed(2)) });
+                     }
+                  }
+
+                  alert('بە سەرکەوتوویی گۆڕدرا بۆ دۆلار!');
+                } catch(e) {
+                   console.error(e);
+                   alert('هەڵەیەک ڕوویدا');
+                }
+             }}
+             className="bg-pink-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-pink-700 transition-colors flex items-center gap-2 shadow-sm"
+           >
+              <ArrowLeftRight size={18} />
+              گۆڕینی هەموو نرخەکان بۆ دۆلار
+           </button>
         </div>
       </div>
 
@@ -1719,6 +1735,12 @@ export function SettingsPage() {
             className="py-3 px-4 bg-white border border-red-200 text-red-700 hover:bg-red-100 rounded-xl text-sm font-bold transition-colors shadow-sm flex flex-col items-center justify-center text-center gap-2"
           >
             <Trash2 size={20} /> سڕینەوەی مەندوبەکان
+          </button>
+          <button
+            onClick={() => handleClearAlert("safe_transactions", "مێژووی مامەڵەکانی قاسە")}
+            className="py-3 px-4 bg-white border border-red-200 text-red-700 hover:bg-red-100 rounded-xl text-sm font-bold transition-colors shadow-sm flex flex-col items-center justify-center text-center gap-2"
+          >
+            <Trash2 size={20} /> سڕینەوەی مامەڵەی قاسەکان
           </button>
           <button
             onClick={() => handleClearAlert("ALL", "هەموو داتاکان بە یەکجاری")}

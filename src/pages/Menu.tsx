@@ -49,7 +49,7 @@ export default function MenuPage() {
          <div className="max-w-7xl mx-auto px-6 py-12 relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
             <div className="flex items-center gap-6">
                 <div className="bg-white p-2 rounded-2xl shadow-xl w-32 h-32 flex items-center justify-center shrink-0 shrink-0 transform transition-transform hover:scale-105 duration-300">
-                    <img src="https://skilled-indigo-cux52hz9.edgeone.app/Pink%20Elle%20logo%20new-1_page-0001.jpg" alt="Pink Elle Logo" className="w-full h-full object-contain rounded-xl" />
+                    <img src="https://skilled-pink-cux52hz9.edgeone.app/Pink%20Elle%20logo%20new-1_page-0001.jpg" alt="Pink Elle Logo" className="w-full h-full object-contain rounded-xl" />
                 </div>
                 <div>
                    <h1 className="text-4xl md:text-5xl font-black tracking-tight mb-2 text-white drop-shadow-md">PINK ELLE CATALOGUE</h1>
@@ -134,7 +134,7 @@ export default function MenuPage() {
                                {product.wholesalePrice ? (
                                   <div className="flex items-center justify-between pt-1">
                                       <span className="text-xs font-extrabold text-slate-400">جوملە</span>
-                                      <span className="font-mono font-bold text-indigo-600 text-sm tracking-tight">{formatCurrency(product.wholesalePrice, product.currency)}</span>
+                                      <span className="font-mono font-bold text-pink-600 text-sm tracking-tight">{formatCurrency(product.wholesalePrice, product.currency)}</span>
                                   </div>
                                ) : null}
                             </div>
@@ -183,7 +183,7 @@ export default function MenuPage() {
                         {selectedProduct.wholesalePrice ? (
                            <div className="flex flex-col gap-1 mt-4">
                               <span className="text-sm font-bold text-slate-400">نرخی جوملە</span>
-                              <span className="font-mono font-bold text-2xl text-indigo-600">{formatCurrency(selectedProduct.wholesalePrice, selectedProduct.currency)}</span>
+                              <span className="font-mono font-bold text-2xl text-pink-600">{formatCurrency(selectedProduct.wholesalePrice, selectedProduct.currency)}</span>
                            </div>
                         ) : null}
                         

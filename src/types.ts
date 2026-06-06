@@ -8,7 +8,10 @@ export interface Product {
   wholesaleCost?: number; // تێچووی جوملە
   wholesalePrice?: number; // نرخی جوملە
   packSize: number;     // قەبارەی تەک
+  cartonSize?: number;  // یەک کارتۆن چەند دانەیە؟
   stock: number;        // ستۆک
   barcode: string;      // بارکۆد
   imageUrl?: string;    // وێنەی کاڵا
+  minStockAlert?: number; // کەمترین ئاگادارکردنەوەی ستۆک
+  location?: string;      // شوێن / ڕەفە
 }

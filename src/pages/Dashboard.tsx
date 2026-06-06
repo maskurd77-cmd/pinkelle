@@ -33,9 +33,7 @@ import {
 
 export default function Dashboard() {
   const [receipts, setReceipts] = useState<any[]>([]);
-  const [exchangeRate, setExchangeRate] = useState<number>(1500);
-  const [isSavingEx, setIsSavingEx] = useState(false);
-
+    
   useEffect(() => {
     const unsubReceipts = onSnapshot(collection(db, "receipts"), (snap) => {
       setReceipts(snap.docs.map((d) => d.data()));
@@ -43,33 +41,16 @@ export default function Dashboard() {
     const unsubSettings = onSnapshot(
       doc(db, "system", "settings"),
       (docSnap) => {
-        if (docSnap.exists() && docSnap.data().exchangeRate) {
-          setExchangeRate(docSnap.data().exchangeRate);
-        }
+        
       },
     );
     return () => {
       unsubReceipts();
-      unsubSettings();
+      
     };
   }, []);
 
-  const handleUpdateExchangeRate = async () => {
-    setIsSavingEx(true);
-    try {
-      await setDoc(
-        doc(db, "system", "settings"),
-        { exchangeRate },
-        { merge: true },
-      );
-      alert("نرخی دۆلار نوێکرایەوە");
-    } catch (error) {
-      console.error(error);
-      alert("هەڵە ڕوویدا");
-    }
-    setIsSavingEx(false);
-  };
-
+  
   const todayStats = useMemo(() => {
     const todayStr = new Date().toDateString();
 
@@ -84,11 +65,7 @@ export default function Dashboard() {
         : new Date(r.timestamp);
       if (ts.toDateString() === todayStr) {
         count++;
-        const currency = r.invoiceCurrency || "IQD";
-        const amountUSD =
-          currency === "IQD"
-            ? (r.totalAmount || 0) / exchangeRate
-            : r.totalAmount || 0;
+        const amountUSD = r.totalAmount || 0;
         sales += amountUSD;
 
         let rProfit = 0;
@@ -99,8 +76,8 @@ export default function Dashboard() {
             const price = item.unitPrice || 0;
             const qty = item.quantity || 1;
 
-            const costUSD = currency === "IQD" ? cost / exchangeRate : cost;
-            const priceUSD = currency === "IQD" ? price / exchangeRate : price;
+            const costUSD = cost;
+            const priceUSD = price;
 
             rProfit += (priceUSD - costUSD) * qty;
             rItems += qty;
@@ -113,7 +90,7 @@ export default function Dashboard() {
     });
 
     return { sales, profit, count, itemsSold };
-  }, [receipts, exchangeRate]);
+  }, [receipts]);
 
   const { monthlyStats, chartData } = useMemo(() => {
     const now = new Date();
@@ -152,11 +129,7 @@ export default function Dashboard() {
       const m = ts.getMonth();
       const y = ts.getFullYear();
 
-      const currency = r.invoiceCurrency || "IQD";
-      const amountUSD =
-        currency === "IQD"
-          ? (r.totalAmount || 0) / exchangeRate
-          : r.totalAmount || 0;
+      const amountUSD = r.totalAmount || 0;
 
       if (m === currentMonth && y === currentYear) {
         thisMonthSales += amountUSD;
@@ -228,7 +201,7 @@ export default function Dashboard() {
       },
       chartData: cData,
     };
-  }, [receipts, exchangeRate]);
+  }, [receipts]);
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
@@ -246,41 +219,6 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6 flex-1 overflow-auto custom-scrollbar lg:pr-2">
-      {/* Exchange Rate Setup */}
-      <div className="bg-gradient-to-r from-slate-900 to-slate-800 p-5 rounded-3xl shadow-md flex flex-col sm:flex-row items-center justify-between gap-4 text-white">
-        <div>
-          <h2 className="text-sm font-bold flex items-center gap-2 text-pink-300">
-            <DollarSign size={18} /> نرخی دراو (ئەمڕۆ)
-          </h2>
-          <p className="text-xs text-slate-400 mt-1">
-            نرخی ١ دۆلار بە دینار دیاری بکە بۆ هەژمارکردنی دروست.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="bg-slate-950/50 p-1 flex items-center rounded-xl border border-white/10">
-            <span className="text-slate-400 text-sm font-bold font-mono px-3 pl-1">
-              $1 =
-            </span>
-            <input
-              type="number"
-              value={exchangeRate}
-              onChange={(e) => setExchangeRate(Number(e.target.value))}
-              className="w-24 bg-transparent outline-none text-white font-mono font-bold py-1.5 focus:ring-0 text-center"
-            />
-            <span className="text-slate-400 text-sm font-bold px-3 pr-1">
-              د.ع
-            </span>
-          </div>
-          <button
-            onClick={handleUpdateExchangeRate}
-            disabled={isSavingEx}
-            className="p-2.5 bg-pink-600 hover:bg-pink-700 rounded-xl transition-colors disabled:opacity-50"
-          >
-            <Save size={18} />
-          </button>
-        </div>
-      </div>
-
       {/* Today's Overview */}
       <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
         <Activity className="text-pink-600" size={20} />
@@ -330,8 +268,8 @@ export default function Dashboard() {
                 {todayStats.count}
               </p>
             </div>
-            <div className="p-2 bg-blue-50 rounded-xl">
-              <Receipt size={24} className="text-blue-500" />
+            <div className="p-2 bg-pink-50 rounded-xl">
+              <Receipt size={24} className="text-pink-500" />
             </div>
           </div>
         </div>

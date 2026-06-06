@@ -9,7 +9,7 @@ import L from 'leaflet';
 
 import AccountStatementModal from '../components/AccountStatementModal';
 
-const pinkElleIcon = L.divIcon({
+const skyElleIcon = L.divIcon({
   html: `<div class="flex flex-col items-center drop-shadow-xl">
            <div class="w-12 h-12 bg-gradient-to-br from-pink-500 to-pink-600 rounded-full border-[3px] border-white flex items-center justify-center shadow-inner relative z-10 overflow-hidden">
                <span class="text-white font-extrabold text-sm italic font-serif">Pink<br/>Elle</span>
@@ -61,7 +61,7 @@ function MapSearchBox() {
                className="w-full text-sm outline-none px-3 py-2 bg-transparent text-slate-800 font-bold"
                dir="rtl"
              />
-             <button type="submit" disabled={isSearching} className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-xl transition-colors">
+             <button type="submit" disabled={isSearching} className="p-2 text-pink-600 hover:bg-pink-50 rounded-xl transition-colors">
                 <Search size={18} />
              </button>
           </form>
@@ -74,7 +74,7 @@ function MapSearchBox() {
                     onClick={() => handleSelect(r.lat, r.lon)}
                     className="p-3 border-b border-slate-50 last:border-0 hover:bg-slate-50 cursor-pointer flex gap-3 text-right group transition-colors"
                   >
-                     <div className="text-slate-400 group-hover:text-indigo-500 mt-0.5 shrink-0"><MapPin size={16} /></div>
+                     <div className="text-slate-400 group-hover:text-pink-500 mt-0.5 shrink-0"><MapPin size={16} /></div>
                      <div className="text-xs text-slate-600 font-bold leading-relaxed">{r.display_name}</div>
                   </div>
                ))}
@@ -343,7 +343,7 @@ export default function Customers() {
              </button>
              <button
                 onClick={() => setViewMode('map')}
-                className={`px-4 py-2 text-sm font-bold rounded-lg transition-all duration-200 flex-1 flex items-center justify-center gap-2 ${viewMode === 'map' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
+                className={`px-4 py-2 text-sm font-bold rounded-lg transition-all duration-200 flex-1 flex items-center justify-center gap-2 ${viewMode === 'map' ? 'bg-pink-600 text-white shadow-md' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
              >
                 <MapIcon size={16} /> نەخشە
              </button>
@@ -408,7 +408,7 @@ export default function Customers() {
                          <MapPin size={14} className="text-slate-400 shrink-0" />
                          <span className="text-sm text-slate-500 truncate block w-full flex-1">{customer.address || 'ناونیشان دیارینەکراوە'}</span>
                          {customer.locationUrl && (
-                             <a href={customer.locationUrl} target="_blank" rel="noopener noreferrer" className="shrink-0 w-8 h-8 flex items-center justify-center bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors" title="کردنەوەی نەخشە">
+                             <a href={customer.locationUrl} target="_blank" rel="noopener noreferrer" className="shrink-0 w-8 h-8 flex items-center justify-center bg-pink-50 text-pink-600 rounded-lg hover:bg-pink-100 transition-colors" title="کردنەوەی نەخشە">
                                 <MapIcon size={16} />
                              </a>
                          )}
@@ -439,7 +439,7 @@ export default function Customers() {
                          <div className="mb-2">
                              <button
                                onClick={() => setShowAccountStatement(customer)}
-                               className="w-full bg-slate-100 hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 border border-slate-200 hover:border-indigo-200 px-3 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-colors"
+                               className="w-full bg-slate-100 hover:bg-pink-50 text-slate-600 hover:text-pink-600 border border-slate-200 hover:border-pink-200 px-3 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-colors"
                              >
                                 <FileText size={14} />
                                 کەشفی حیساب
@@ -470,7 +470,7 @@ export default function Customers() {
                              } else {
                                  return (
                                      <button onClick={() => handleStartVisitClick(customer)} className="w-full bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 p-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all">
-                                         <PlayCircle size={16} className="text-indigo-500" />
+                                         <PlayCircle size={16} className="text-pink-500" />
                                          دەستپێکردنی سەردان
                                      </button>
                                  );
@@ -529,7 +529,7 @@ export default function Customers() {
                         const activeVisit = visits.find(v => v.customerId === customer.id && v.status === 'active');
 
                         return (
-                           <Marker key={customer.id} position={[lat, lng]} icon={pinkElleIcon}>
+                           <Marker key={customer.id} position={[lat, lng]} icon={skyElleIcon}>
                               <Popup>
                                  <div className="p-1 font-sans" dir="rtl">
                                     <h4 className="font-extrabold text-slate-800 text-sm mb-1">{customer.name}</h4>
@@ -541,7 +541,7 @@ export default function Customers() {
                                        {activeVisit ? (
                                            <span className="text-xs font-bold text-emerald-600">لەسەرداندایە ({activeVisit.mandubName})</span>
                                        ) : (
-                                           <button onClick={() => handleStartVisitClick(customer)} className="bg-indigo-50 text-indigo-600 hover:bg-indigo-100 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors w-full">
+                                           <button onClick={() => handleStartVisitClick(customer)} className="bg-pink-50 text-pink-600 hover:bg-pink-100 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors w-full">
                                               سەردانی کڕیار
                                            </button>
                                        )}
@@ -580,27 +580,27 @@ export default function Customers() {
                    <input type="text" value={newPhone} onChange={e => setNewPhone(e.target.value)} dir="ltr" className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-pink-500/50 font-mono text-left" />
                                <label className="flex items-center justify-between text-sm font-bold text-slate-700 mb-1.5">
                       <span className="flex items-center gap-1">
-                         <MapIcon size={14} className="text-blue-500" />
+                         <MapIcon size={14} className="text-pink-500" />
                          لینکی نەخشە (یان شوێن دیاریبکە)
                       </span>
                       <div className="flex gap-2">
                          <button 
                            type="button" 
                            onClick={() => setIsLocationPickerOpen(true)}
-                           className="text-xs text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-2 py-1 rounded-md font-semibold transition-colors"
+                           className="text-xs text-pink-600 bg-pink-50 hover:bg-pink-100 px-2 py-1 rounded-md font-semibold transition-colors"
                          >
                             دیاریکردن لە نەخشە
                          </button>
                          <button 
                            type="button" 
                            onClick={handleGetCurrentLocation}
-                           className="text-xs text-blue-600 bg-blue-50 hover:bg-blue-100 px-2 py-1 rounded-md font-semibold transition-colors"
+                           className="text-xs text-pink-600 bg-pink-50 hover:bg-pink-100 px-2 py-1 rounded-md font-semibold transition-colors"
                          >
                             GPS شوێنی ئێستا
                          </button>
                       </div>
                    </label>
-                   <input type="url" value={newLocationUrl} onChange={e => setNewLocationUrl(e.target.value)} dir="ltr" placeholder="https://maps.google.com/?q=..." className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-blue-500/50 font-mono text-left text-sm" />
+                   <input type="url" value={newLocationUrl} onChange={e => setNewLocationUrl(e.target.value)} dir="ltr" placeholder="https://maps.google.com/?q=..." className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-pink-500/50 font-mono text-left text-sm" />
                 </div>
              </div>
              <div className="px-6 py-5 bg-slate-50 border-t border-slate-100 flex justify-end gap-3 rounded-b-3xl">
@@ -629,7 +629,7 @@ export default function Customers() {
          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
             <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col">
                <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center relative overflow-hidden">
-                 <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50 rounded-bl-full -z-10 opacity-50"></div>
+                 <div className="absolute top-0 right-0 w-32 h-32 bg-pink-50 rounded-bl-full -z-10 opacity-50"></div>
                  <div>
                     <h2 className="text-xl font-extrabold text-slate-800">ناوی مەندوب</h2>
                     <p className="text-sm font-medium text-slate-500 mt-1">تکایە ناوی خۆت بنووسە</p>
@@ -640,7 +640,7 @@ export default function Customers() {
                </div>
                <div className="p-6">
                   <label className="block text-sm font-bold text-slate-700 mb-1.5 flex items-center gap-1">
-                     <User size={16} className="text-indigo-500" />
+                     <User size={16} className="text-pink-500" />
                      ناو
                   </label>
                   <input 
@@ -648,7 +648,7 @@ export default function Customers() {
                      autoFocus
                      value={tempMandubName} 
                      onChange={e => setTempMandubName(e.target.value)} 
-                     className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 font-medium" 
+                     className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-pink-500/50 font-medium" 
                      placeholder="بۆ نموونە: ئەحمەد..."
                   />
                </div>
@@ -663,7 +663,7 @@ export default function Customers() {
                      }
                   }} 
                   disabled={!tempMandubName.trim()}
-                  className="px-6 py-2.5 bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 disabled:hover:bg-indigo-600 rounded-xl text-sm font-bold shadow-sm transition-colors">
+                  className="px-6 py-2.5 bg-pink-600 text-white hover:bg-pink-700 disabled:opacity-50 disabled:hover:bg-pink-600 rounded-xl text-sm font-bold shadow-sm transition-colors">
                    دەستپێکردن
                  </button>
                </div>

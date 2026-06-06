@@ -111,10 +111,7 @@ export default function AccountStatementModal({
           docNo: tx.id.slice(-6).toUpperCase(),
           details: tx.notes || "زیادکردنی قەرز",
           type: "دۆلار",
-          debit:
-            tx.originalCurrency === "USD"
-              ? tx.originalAmount || tx.amount
-              : (tx.originalAmount || tx.amount) / (tx.exchangeRate || 1500),
+          debit: tx.originalAmount || tx.amount,
           credit: 0,
         });
       }
@@ -126,10 +123,7 @@ export default function AccountStatementModal({
         details: tx.notes || "دانەوەی قەرز",
         type: "دۆلار",
         debit: 0,
-        credit:
-          tx.originalCurrency === "USD"
-            ? tx.originalAmount || tx.amount
-            : (tx.amount || tx.paidAmount || 0) / (tx.exchangeRate || 1500),
+        credit: tx.originalAmount || tx.amount || tx.paidAmount || 0,
       });
     }
   });
@@ -234,7 +228,7 @@ export default function AccountStatementModal({
 
             <button
               onClick={handlePrint}
-              className="bg-indigo-50 text-indigo-600 hover:bg-indigo-100 px-4 py-2 rounded-xl flex items-center gap-2 font-bold transition-colors"
+              className="bg-pink-50 text-pink-600 hover:bg-pink-100 px-4 py-2 rounded-xl flex items-center gap-2 font-bold transition-colors"
             >
               <Printer size={18} /> چاپکردن
             </button>
