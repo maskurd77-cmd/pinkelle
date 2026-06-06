@@ -108,14 +108,17 @@ export default function Reports() {
     let retailItemsSold = 0;
     let wholesaleItemsSold = 0;
     let totalExpense = 0;
+    let totalDiscounts = 0;
 
     const salesByDate: Record<string, number> = {};
     const categoryCount: Record<string, number> = {};
 
     filteredData.filteredReceipts.forEach((r) => {
             let cAmount = r.totalAmount || 0;
+            let dAmount = r.discountAmount || 0;
             
       sales += cAmount;
+      totalDiscounts += dAmount;
 
       const ts = r.timestamp?.toDate
         ? r.timestamp.toDate()
@@ -188,6 +191,7 @@ export default function Reports() {
         itemsSold,
         retailItemsSold,
         wholesaleItemsSold,
+        totalDiscounts,
       },
       chartData: cData,
       categoryData: pData,
@@ -361,7 +365,7 @@ export default function Reports() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-6">
         {[
           {
             title: "فرۆشتنی تاک",
@@ -419,6 +423,19 @@ export default function Reports() {
             trend: "جوملە",
             color: "fuchsia",
             gradient: "from-fuchsia-500 to-purple-500",
+          },
+          {
+            title: "بڕی داشکاندن کراو",
+            value: (
+              <div className="flex flex-col">
+                <span className="text-2xl text-red-500">
+                  {formatCurrency(stats.totalDiscounts)}
+                </span>
+              </div>
+            ),
+            trend: "کۆی داشکاندنەکان",
+            color: "red",
+            gradient: "from-orange-400 to-red-500",
           },
         ].map((stat, i) => (
           <div

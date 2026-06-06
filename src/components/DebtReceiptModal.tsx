@@ -154,7 +154,10 @@ export function DebtReceiptModal({
             style={{ fontFamily: "Arial, sans-serif" }}
           >
             <style type="text/css" media="print">
-              {"@page { size: A5 landscape; margin: 4mm; }"}
+              {`
+                @page { size: A5 landscape; margin: 0; }
+                body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+              `}
             </style>
 
             {/* Simple aesthetic border */}

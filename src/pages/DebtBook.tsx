@@ -509,6 +509,55 @@ export default function DebtBook() {
     return () => unsubHistory();
   }, [selectedDebt, historyModalOpen]);
 
+  const handleDeleteTransaction = async (txId: string, type: string, amount: number, status: string) => {
+    if (!selectedDebt) return;
+    if (
+      !window.confirm(
+        "ئایا دڵنیای لە سڕینەوەی ئەم مامەڵەیە؟ ئەم کارە قەرزەکان دەگەڕێنێتەوە دۆخی پێشتر."
+      )
+    )
+      return;
+
+    try {
+      if (status === "completed") {
+        const debtRef = doc(db, "debts", selectedDebt.id);
+        const debtSnap = await getDoc(debtRef);
+        const debtData = debtSnap.data();
+        if (debtData) {
+          let newAmount = debtData.amount || 0;
+          let newRemainingAmount = debtData.remainingAmount || 0;
+
+          if (type === "pay") {
+            // Revert payment: increase remaining amount
+            newRemainingAmount += amount;
+          } else if (type === "add") {
+            // Revert addition: decrease total amount and remaining amount
+            newAmount -= amount;
+            newRemainingAmount -= amount;
+            if (newAmount < 0) newAmount = 0;
+            if (newRemainingAmount < 0) newRemainingAmount = 0;
+          }
+
+          const newStatus = newRemainingAmount <= 0 ? "paid" : "active";
+
+          await updateDoc(debtRef, {
+            amount: newAmount,
+            remainingAmount: newRemainingAmount,
+            status: newStatus,
+          });
+        }
+      }
+
+      await deleteDoc(doc(db, "debt_transactions", txId));
+      
+      // Update selectedDebt locally to reflect changes in UI instantly,
+      // though the onSnapshot will pull debts eventually. It's safer to just let the onSnapshot handle it.
+      // We will close the transaction history if it becomes empty or update UI.
+    } catch (e: any) {
+      alert("هەڵەیەک ڕوویدا لە کاتی سڕینەوەی مامەڵەکە: " + e.message);
+    }
+  };
+
   const formatDate = (ts: any) => {
     if (!ts) return "هیچ";
     const d = ts.toDate ? ts.toDate() : new Date(ts);
@@ -890,7 +939,7 @@ export default function DebtBook() {
                           <button
                             onClick={() => {
                               const msg = encodeURIComponent(
-                                `سڵاو بەڕێز ${debt.customerName}،\nقەرزی ماوەتان لای (پینک ئێللێ) بریتییە لە: ${formatCurrency(debt.remainingAmount)}.\nتکایە لە کاتی گونجاودا سەردانمان بکەنەوە.`,
+                                `سڵاو بەڕێز ${debt.customerName}،\nقەرزی ماوەتان لای (پینک ئێللێ) بریتییە لە: ${formatCurrency(debt.remainingAmount)}`,
                               );
                               window.open(
                                 `https://wa.me/${debt.phone.replace(/[^0-9]/g, "")}?text=${msg}`,
@@ -1249,15 +1298,26 @@ export default function DebtBook() {
                           {h.createdBy ? `(لایەن: ${h.createdBy})` : ""}
                         </td>
                         <td className="px-6 py-4 text-center">
-                          {h.type === "pay" && h.status !== "pending" && (
-                            <button
-                              onClick={() => setPrintTx(h)}
-                              className="text-rose-600 hover:bg-pink-50 p-2 rounded-lg transition-colors border border-transparent hover:border-rose-200"
-                              title="چاپکردنی وەسڵی قەبز"
-                            >
-                              <Printer size={16} />
-                            </button>
-                          )}
+                          <div className="flex items-center justify-center gap-2">
+                            {h.type === "pay" && h.status !== "pending" && (
+                              <button
+                                onClick={() => setPrintTx(h)}
+                                className="text-rose-600 hover:bg-pink-50 p-2 rounded-lg transition-colors border border-transparent hover:border-rose-200"
+                                title="چاپکردنی وەسڵی قەبز"
+                              >
+                                <Printer size={16} />
+                              </button>
+                            )}
+                            {(userRole === "admin" || userRole === "accountant") && (
+                              <button
+                                onClick={() => handleDeleteTransaction(h.id, h.type, h.amount, h.status)}
+                                className="text-slate-400 hover:text-red-600 hover:bg-red-50 p-2 rounded-lg transition-colors border border-transparent hover:border-red-200"
+                                title="سڕینەوەی ئەم مامەڵەیە"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))}

@@ -6,12 +6,10 @@ import { db } from "../firebase";
 
 export default function AccountStatementModal({
   customer,
-  receipts: initialReceipts,
   debts,
   onClose,
 }: any) {
   const [debtTransactions, setDebtTransactions] = useState<any[]>([]);
-  const [receipts, setReceipts] = useState<any[]>(initialReceipts || []);
   const [loading, setLoading] = useState(true);
   const [fromDate, setFromDate] = useState<string>("");
   const [toDate, setToDate] = useState<string>("");
@@ -27,20 +25,6 @@ export default function AccountStatementModal({
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
-
-      let fetchedReceipts = initialReceipts;
-      if (!fetchedReceipts) {
-        const qReceipts = query(
-          collection(db, "receipts"),
-          where("customerName", "==", customer.name),
-        );
-        const snapReceipts = await getDocs(qReceipts);
-        fetchedReceipts = snapReceipts.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-        setReceipts(fetchedReceipts);
-      }
 
       const debtIds = customerDebts.map((d: any) => d.id);
       let trans: any[] = [];
@@ -63,64 +47,25 @@ export default function AccountStatementModal({
       setLoading(false);
     };
     fetchData();
-  }, [customer.name, debts, initialReceipts]);
+  }, [customer.name, debts]);
 
   // Build the ledger
   let ledgerEntries: any[] = [];
-
-  // Add receipts
-  receipts.forEach((r: any) => {
-    if (r.customerName !== customer.name) return;
-    const ts = r.timestamp?.toDate ? r.timestamp.toDate() : new Date();
-
-    // Purchase (Debit)
-    ledgerEntries.push({
-      date: ts,
-      docNo: r.id.slice(-6).toUpperCase(),
-      details: `پسووڵەی کڕین ژمارە: ${r.id.slice(-6).toUpperCase()}`,
-      type: "دۆلار",
-      debit:
-        r.invoiceCurrency === "USD"
-          ? r.totalAmount
-          : r.totalAmount / (r.exchangeRate || 1500),
-      credit: 0,
-      isReceipt: true,
-      originalId: r.id,
-    });
-
-    // If paid by cash, add payment line
-    if (r.paymentType === "cash" || r.paymentType === "نەقد") {
-      ledgerEntries.push({
-        date: new Date(ts.getTime() + 1000), // add 1s to make it appear after purchase
-        docNo: r.id.slice(-6).toUpperCase(),
-        details: `پارەدانی نەقد ڕاستەوخۆ بۆ وەسڵی ژمارە: ${r.id.slice(-6).toUpperCase()}`,
-        type: "دۆلار",
-        debit: 0,
-        credit:
-          r.invoiceCurrency === "USD"
-            ? r.totalAmount
-            : r.totalAmount / (r.exchangeRate || 1500),
-        isCashPaid: true,
-      });
-    }
-  });
 
   // Add Debt Transactions
   debtTransactions.forEach((tx: any) => {
     const ts = tx.timestamp?.toDate ? tx.timestamp.toDate() : new Date();
 
     if (tx.type === "add") {
-      // Only include if it doesn't mention 'وەسڵ', to avoid duplicating receipts
-      if (!tx.notes?.includes("وەسڵ")) {
-        ledgerEntries.push({
-          date: ts,
-          docNo: tx.id.slice(-6).toUpperCase(),
-          details: tx.notes || "زیادکردنی قەرز",
-          type: "دۆلار",
-          debit: tx.originalAmount || tx.amount,
-          credit: 0,
-        });
-      }
+      // Include all debt additions, including from POS
+      ledgerEntries.push({
+        date: ts,
+        docNo: tx.id.slice(-6).toUpperCase(),
+        details: tx.notes || "زیادکردنی قەرز",
+        type: "دۆلار",
+        debit: tx.originalAmount || tx.amount,
+        credit: 0,
+      });
     } else if (tx.type === "pay") {
       // Payment (Credit)
       ledgerEntries.push({
@@ -248,10 +193,13 @@ export default function AccountStatementModal({
         </div>
 
         {/* Print Layout */}
-        <div className="p-8 print:p-4" dir="rtl">
-          <div className="mb-6 border border-pink-600/20 rounded-2xl p-6 bg-slate-50/40 shadow-sm print:shadow-none print:border-2 print:border-black print:rounded-lg print:p-5 print:bg-transparent">
+        <div className="p-8 print:p-[12mm] min-h-screen" dir="rtl">
+          <div className="mb-6 border border-pink-600/20 rounded-2xl p-6 bg-slate-50/40 shadow-sm print:shadow-none print:border-2 print:border-black print:rounded-lg print:p-6 print:bg-transparent">
             <style type="text/css" media="print">
-              {"@page { size: A4 portrait; margin: 10mm; }"}
+              {`
+                @page { size: A4 portrait; margin: 0; }
+                body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+              `}
             </style>
             
             {/* Top row */}
@@ -300,12 +248,12 @@ export default function AccountStatementModal({
             </div>
 
             {/* Address Bar */}
-            <div className="text-center font-extrabold text-xs mb-3 bg-gray-100 py-1 border border-black rounded">
-              سۆران - شۆڕش - بەرامبەر مزگەوتی شۆڕش <span className="text-pink-600 text-[12px]">📍</span>
+            <div className="text-center font-black text-sm mb-4 bg-gray-200 py-1.5 border-2 border-black rounded-lg print:bg-gray-200">
+              سۆران - شۆڕش - بەرامبەر مزگەوتی شۆڕش <span className="text-pink-600 text-[14px]">📍</span>
             </div>
 
             {/* Customer Details Box */}
-            <div className="border border-black rounded p-3 bg-slate-50/50 flex justify-between items-center text-sm font-bold">
+            <div className="border-2 border-black rounded-xl p-3 bg-slate-100 flex justify-between items-center text-sm font-bold print:bg-slate-100 mb-6 shadow-sm">
               <div>
                 بەرێز (اسم العميل): <span className="text-pink-600 text-base">{customer.name}</span>
               </div>
@@ -338,28 +286,28 @@ export default function AccountStatementModal({
               <table className="w-full text-sm text-center font-bold border-collapse print:text-black">
                 <thead className="bg-[#f8f9fa] print:bg-transparent">
                   <tr>
-                    <th className="p-3 border border-black whitespace-nowrap bg-gray-100 w-16">
+                    <th className="p-2 border-2 border-black whitespace-nowrap bg-gray-200 print:bg-gray-200 w-12 text-sm">
                       ڕیزبەندی
                     </th>
-                    <th className="p-3 border border-black whitespace-nowrap bg-gray-100 w-24">
+                    <th className="p-2 border-2 border-black whitespace-nowrap bg-gray-200 print:bg-gray-200 w-20 text-sm">
                       بەڵگە
                     </th>
-                    <th className="p-3 border border-black whitespace-nowrap bg-gray-100 w-32">
+                    <th className="p-2 border-2 border-black whitespace-nowrap bg-gray-200 print:bg-gray-200 w-28 text-sm">
                       بەروار
                     </th>
-                    <th className="p-3 border border-black bg-gray-100 flex-1 min-w-[200px]">
+                    <th className="p-2 border-2 border-black bg-gray-200 print:bg-gray-200 flex-1 min-w-[200px] text-sm">
                       ڕوون کردنەوەی بەڵگە
                     </th>
-                    <th className="p-3 border border-black whitespace-nowrap bg-gray-100 w-24">
+                    <th className="p-2 border-2 border-black whitespace-nowrap bg-gray-200 print:bg-gray-200 w-20 text-sm">
                       جۆری بەڵگە
                     </th>
-                    <th className="p-3 border border-black whitespace-nowrap bg-gray-100 w-32 text-red-600">
-                      قەرزدار
+                    <th className="p-2 border-2 border-black whitespace-nowrap bg-red-100 print:bg-red-100 w-28 text-red-700 text-sm">
+                      قەرزدار (-)
                     </th>
-                    <th className="p-3 border border-black whitespace-nowrap bg-gray-100 w-32 text-emerald-600">
-                      قەرزدەر
+                    <th className="p-2 border-2 border-black whitespace-nowrap bg-emerald-100 print:bg-emerald-100 w-28 text-emerald-700 text-sm">
+                      قەرزدەر (+)
                     </th>
-                    <th className="p-3 border border-black whitespace-nowrap bg-gray-100 w-36">
+                    <th className="p-2 border-2 border-black whitespace-nowrap bg-slate-200 print:bg-slate-200 w-32 text-sm font-black">
                       ماوە
                     </th>
                   </tr>
@@ -367,32 +315,32 @@ export default function AccountStatementModal({
                 <tbody>
                   {/* Initial Balance (zero or previous balance) */}
                   <tr>
-                    <td className="p-3 border border-black font-mono">1</td>
-                    <td className="p-3 border border-black font-mono">-</td>
-                    <td className="p-3 border border-black font-mono">-</td>
-                    <td className="p-3 border border-black text-right pr-4">
+                    <td className="p-2 border-2 border-black font-mono font-medium text-sm">1</td>
+                    <td className="p-2 border-2 border-black font-mono font-medium text-sm">-</td>
+                    <td className="p-2 border-2 border-black font-mono font-medium text-sm">-</td>
+                    <td className="p-2 border-2 border-black text-right pr-4 font-extrabold text-sm">
                       مانەوەی یەکەم دەورە
                     </td>
-                    <td className="p-3 border border-black">دۆلار</td>
-                    <td className="p-3 border border-black font-mono text-slate-400">
+                    <td className="p-2 border-2 border-black text-sm">دۆلار</td>
+                    <td className="p-2 border-2 border-black font-mono text-slate-400 text-sm">
                       -
                     </td>
-                    <td className="p-3 border border-black font-mono text-slate-400">
+                    <td className="p-2 border-2 border-black font-mono text-slate-400 text-sm">
                       -
                     </td>
-                    <td className="p-3 border border-black font-mono" dir="ltr">
+                    <td className="p-2 border-2 border-black font-mono font-extrabold text-sm" dir="ltr">
                       {formatCurrency(previousBalance)}
                     </td>
                   </tr>
                   {filteredEntries.map((entry, idx) => (
-                    <tr key={idx}>
-                      <td className="p-3 border border-black font-mono">
+                    <tr key={idx} className="hover:bg-slate-50 transition-colors">
+                      <td className="p-2 border-2 border-black font-mono font-medium text-sm">
                         {idx + 2}
                       </td>
-                      <td className="p-3 border border-black font-mono">
+                      <td className="p-2 border-2 border-black font-mono font-medium text-sm">
                         {entry.docNo}
                       </td>
-                      <td className="p-3 border border-black font-mono">
+                      <td className="p-2 border-2 border-black font-mono font-medium text-sm">
                         {entry.date
                           .toLocaleDateString("en-CA", {
                             year: "numeric",
@@ -401,18 +349,18 @@ export default function AccountStatementModal({
                           })
                           .replace(/-/g, "/")}
                       </td>
-                      <td className="p-3 border border-black text-right pr-4 text-xs sm:text-sm">
+                      <td className="p-2 border-2 border-black text-right pr-4 text-xs sm:text-sm font-semibold">
                         {entry.details}
                       </td>
-                      <td className="p-3 border border-black">{entry.type}</td>
-                      <td className="p-3 border border-black font-mono">
+                      <td className="p-2 border-2 border-black text-sm">{entry.type}</td>
+                      <td className="p-2 border-2 border-black font-mono font-bold text-sm text-red-600 print:text-red-700">
                         {entry.debit > 0 ? formatCurrency(entry.debit) : "0"}
                       </td>
-                      <td className="p-3 border border-black font-mono">
+                      <td className="p-2 border-2 border-black font-mono font-bold text-sm text-emerald-600 print:text-emerald-700">
                         {entry.credit > 0 ? formatCurrency(entry.credit) : "0"}
                       </td>
                       <td
-                        className="p-3 border border-black font-mono font-extrabold"
+                        className="p-2 border-2 border-black font-mono font-extrabold bg-slate-50 print:bg-slate-100 text-sm"
                         dir="ltr"
                       >
                         {formatCurrency(entry.balance)}
@@ -420,25 +368,25 @@ export default function AccountStatementModal({
                     </tr>
                   ))}
                   {/* Final Balance Row */}
-                  <tr className="bg-gray-100 print:bg-transparent border-t-4 border-black">
+                  <tr className="bg-gray-200 print:bg-gray-200 border-t-[3px] border-black">
                     <td
                       colSpan={5}
-                      className="p-3 border border-black font-extrabold text-left pl-4"
+                      className="p-2 border-2 border-black font-extrabold text-left pl-4 text-sm"
                     >
                       کۆی گشتی حیساب:
                     </td>
-                    <td className="p-3 border border-black font-mono font-bold text-red-600">
+                    <td className="p-2 border-2 border-black font-mono font-bold text-red-700 text-sm">
                       {formatCurrency(
                         filteredEntries.reduce((sum, e) => sum + e.debit, 0),
                       )}
                     </td>
-                    <td className="p-3 border border-black font-mono font-bold text-emerald-600">
+                    <td className="p-2 border-2 border-black font-mono font-bold text-emerald-700 text-sm">
                       {formatCurrency(
                         filteredEntries.reduce((sum, e) => sum + e.credit, 0),
                       )}
                     </td>
                     <td
-                      className="p-3 border border-black font-mono font-black text-lg"
+                      className="p-2 border-2 border-black font-mono font-black text-base"
                       dir="ltr"
                     >
                       {formatCurrency(runningBalance)}
