@@ -145,14 +145,38 @@ export function DebtReceiptModal({
         {/* Printable Area - Landscape layout */}
         <div className="p-4 sm:p-8 shrink-0 bg-slate-100 print:bg-white print:p-0 print:overflow-visible">
           <div
-            className="w-full bg-white text-black p-[6mm] box-border relative shadow-sm mx-auto flex flex-col justify-between print:shadow-none print:w-full print:m-0"
+            className="printable-receipt-area w-full bg-white text-black p-[6mm] box-border relative shadow-sm mx-auto flex flex-col justify-between print:shadow-none print:w-full print:m-0"
             dir="rtl"
             style={{ fontFamily: "Arial, sans-serif" }}
           >
             <style type="text/css" media="print">
               {`
-                @page { size: A5 landscape; margin: 0; }
-                body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                @page { 
+                  size: A5 landscape; 
+                  margin: 0; 
+                }
+                body { 
+                  visibility: hidden !important; 
+                  background-color: white !important;
+                  -webkit-print-color-adjust: exact !important;
+                  print-color-adjust: exact !important;
+                }
+                .printable-receipt-area, .printable-receipt-area * {
+                  visibility: visible !important;
+                }
+                .printable-receipt-area {
+                  position: absolute !important;
+                  left: 0 !important;
+                  top: 0 !important;
+                  width: 210mm !important;
+                  height: 148mm !important;
+                  margin: 0 !important;
+                  padding: 10mm !important;
+                  box-sizing: border-box !important;
+                  background-color: white !important;
+                  box-shadow: none !important;
+                  border: none !important;
+                }
               `}
             </style>
 

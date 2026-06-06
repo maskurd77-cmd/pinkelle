@@ -195,14 +195,39 @@ export default function AccountStatementModal({
         {/* Print Layout */}
         <div className="p-4 sm:p-8 shrink-0 bg-slate-50 print:bg-white print:p-0 print:overflow-visible flex justify-center">
           <div 
-            className="w-[210mm] min-h-[297mm] bg-white text-black p-[7mm] box-border relative shadow-sm mx-auto flex flex-col print:shadow-none print:w-[210mm] print:m-0"
+            className="printable-statement-area w-[210mm] min-h-[297mm] bg-white text-black p-[7mm] box-border relative shadow-sm mx-auto flex flex-col print:shadow-none print:w-[210mm] print:m-0"
             dir="rtl"
             style={{ fontFamily: "Arial, sans-serif" }}
           >
             <style type="text/css" media="print">
               {`
-                @page { size: A4 portrait; margin: 0; }
-                body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                @page { 
+                  size: A4 portrait; 
+                  margin: 0; 
+                }
+                body { 
+                  visibility: hidden !important;
+                  background-color: white !important;
+                  -webkit-print-color-adjust: exact !important; 
+                  print-color-adjust: exact !important; 
+                }
+                .printable-statement-area, .printable-statement-area * {
+                  visibility: visible !important;
+                }
+                .printable-statement-area {
+                  position: absolute !important;
+                  left: 0 !important;
+                  top: 0 !important;
+                  width: 210mm !important;
+                  min-height: 297mm !important;
+                  height: auto !important;
+                  margin: 0 !important;
+                  padding: 10mm !important;
+                  box-sizing: border-box !important;
+                  background-color: white !important;
+                  box-shadow: none !important;
+                  border: none !important;
+                }
               `}
             </style>
             
