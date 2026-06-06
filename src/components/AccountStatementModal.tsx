@@ -141,9 +141,9 @@ export default function AccountStatementModal({
   });
 
   return (
-    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-[9999] print:p-0 print:bg-white print:block print:z-[99999] overflow-y-auto">
-      <div className="bg-white rounded-3xl w-full max-w-[95vw] lg:max-w-6xl my-auto shadow-2xl print:shadow-none print:w-full print:max-w-none print:rounded-none">
-        <div className="sticky top-0 bg-white/80 backdrop-blur-md p-6 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4 z-[50] print:hidden">
+    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex py-10 justify-center p-4 z-[9999] print:static print:inset-auto print:bg-white print:p-0 print:w-full print:h-auto overflow-y-auto">
+      <div className="bg-white rounded-3xl w-full max-w-5xl h-fit shadow-2xl print:shadow-none print:w-full print:max-w-none print:rounded-none print:m-0 flex flex-col">
+        <div className="sticky top-0 bg-white/80 backdrop-blur-md p-6 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4 z-[50] print:hidden rounded-t-3xl border-b-2">
           <div>
             <h2 className="text-2xl font-extrabold text-slate-800">
               ڕاپۆرتی کەشفی حیساب
@@ -193,9 +193,9 @@ export default function AccountStatementModal({
         </div>
 
         {/* Print Layout */}
-        <div className="p-4 sm:p-8 overflow-auto bg-slate-50 flex-1 flex justify-center custom-scrollbar print:bg-white print:p-0 print:overflow-visible">
+        <div className="p-4 sm:p-8 shrink-0 bg-slate-50 print:bg-white print:p-0 print:overflow-visible">
           <div 
-            className="w-full max-w-[210mm] min-h-[297mm] bg-white text-black p-[6mm] box-border relative shadow-sm mx-auto flex flex-col print:shadow-none print:w-full print:m-0"
+            className="w-full bg-white text-black p-[10mm] box-border relative shadow-sm mx-auto flex flex-col print:shadow-none print:w-full print:m-0"
             dir="rtl"
             style={{ fontFamily: "Arial, sans-serif" }}
           >

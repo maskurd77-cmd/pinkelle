@@ -103,8 +103,8 @@ export function DebtReceiptModal({
   }, [debt.id, transaction.id, transaction.isGeneric, debt.remainingAmount]);
 
   return (
-    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 print:p-0 print:bg-white print:block print:z-[99999] overflow-y-auto">
-      <div className="bg-white rounded-[24px] shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col print:shadow-none print:w-full print:max-w-none print:rounded-none">
+    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 print:static print:inset-auto print:bg-white print:p-0 print:w-full print:h-auto overflow-y-auto">
+      <div className="bg-white rounded-[24px] shadow-2xl w-full max-w-3xl flex flex-col print:shadow-none print:w-full print:max-w-none print:rounded-none">
         {/* Header */}
         <div className="px-6 py-4 flex justify-between items-center bg-slate-50 border-b border-slate-100 print:hidden hidden md:flex">
           <h2 className="font-extrabold text-slate-800 text-lg flex items-center gap-2">
@@ -143,9 +143,9 @@ export function DebtReceiptModal({
         </div>
 
         {/* Printable Area - Landscape layout */}
-        <div className="p-4 sm:p-8 overflow-auto bg-slate-100 flex-1 flex justify-center custom-scrollbar print:bg-white print:p-0 print:overflow-visible">
+        <div className="p-4 sm:p-8 shrink-0 bg-slate-100 print:bg-white print:p-0 print:overflow-visible">
           <div
-            className="w-[210mm] min-h-[148mm] h-[148mm] max-h-[148mm] bg-white text-black p-[6mm] box-border relative shadow-sm mx-auto flex flex-col justify-between overflow-hidden print:shadow-none print:w-[210mm] print:h-[148mm] print:m-0"
+            className="w-full bg-white text-black p-[6mm] box-border relative shadow-sm mx-auto flex flex-col justify-between print:shadow-none print:w-full print:m-0"
             dir="rtl"
             style={{ fontFamily: "Arial, sans-serif" }}
           >

@@ -937,7 +937,15 @@ export default function DebtBook() {
                         </button>
                         {debt.phone && (
                           <a
-                            href={`https://wa.me/${debt.phone.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(
+                            href={`https://wa.me/${
+                              (() => {
+                                let num = debt.phone.replace(/[^0-9]/g, "");
+                                if (num.startsWith("00964")) num = num.substring(2);
+                                else if (num.startsWith("0")) num = "964" + num.substring(1);
+                                else if (!num.startsWith("964") && num.length === 10) num = "964" + num;
+                                return num;
+                              })()
+                            }?text=${encodeURIComponent(
                               `سڵاو بەڕێز ${debt.customerName}،\nقەرزی ماوەتان لای (پینک ئێللێ) بریتییە لە: ${formatCurrency(debt.remainingAmount)}`
                             )}`}
                             target="_blank"
