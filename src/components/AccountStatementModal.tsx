@@ -141,7 +141,7 @@ export default function AccountStatementModal({
   });
 
   return (
-    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex py-10 justify-center p-4 z-[9999] print:static print:inset-auto print:bg-white print:p-0 print:w-full print:h-auto overflow-y-auto">
+    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex py-10 justify-center p-4 z-[9999] print:static print:inset-auto print:bg-white print:p-0 print:w-full print:h-auto overflow-y-auto print:overflow-visible">
       <div className="bg-white rounded-3xl w-full max-w-5xl h-fit shadow-2xl print:shadow-none print:w-full print:max-w-none print:rounded-none print:m-0 flex flex-col">
         <div className="sticky top-0 bg-white/80 backdrop-blur-md p-6 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4 z-[50] print:hidden rounded-t-3xl border-b-2">
           <div>
@@ -205,43 +205,31 @@ export default function AccountStatementModal({
                   size: A4 portrait; 
                   margin: 0; 
                 }
-                html, body {
-                  margin: 0 !important;
-                  padding: 0 !important;
-                  height: 100% !important;
-                  overflow: hidden !important;
+                body { 
+                  visibility: hidden !important; 
                   background-color: white !important;
                   -webkit-print-color-adjust: exact !important; 
-                  print-color-adjust: exact !important;
+                  print-color-adjust: exact !important; 
                 }
-                /* Hide everything in the body by default in print mode */
-                body {
-                  visibility: hidden !important;
-                }
-                /* Make only the statements container and its children visible */
                 .printable-statement-area, .printable-statement-area * {
                   visibility: visible !important;
                 }
-                /* Place the statement perfectly on the screen/printed page */
                 .printable-statement-area {
-                  position: fixed !important;
+                  position: absolute !important;
                   left: 0 !important;
                   top: 0 !important;
                   width: 210mm !important;
-                  height: 297mm !important;
-                  max-height: 297mm !important;
+                  min-height: 297mm !important;
                   margin: 0 !important;
                   padding: 10mm !important;
                   box-sizing: border-box !important;
                   background-color: white !important;
                   box-shadow: none !important;
                   border: 2px solid black !important;
-                  overflow: hidden !important;
                   display: flex !important;
                   flex-direction: column !important;
-                  z-index: 9999999 !important;
                 }
-                .print\:hidden {
+                .print\\:hidden {
                   display: none !important;
                 }
                 /* Maintain exact backgrounds of header cells upon PDF generation */
