@@ -193,9 +193,9 @@ export default function AccountStatementModal({
         </div>
 
         {/* Print Layout */}
-        <div className="p-4 sm:p-8 shrink-0 bg-slate-50 print:bg-white print:p-0 print:overflow-visible">
+        <div className="p-4 sm:p-8 shrink-0 bg-slate-50 print:bg-white print:p-0 print:overflow-visible flex justify-center">
           <div 
-            className="w-full bg-white text-black p-[10mm] box-border relative shadow-sm mx-auto flex flex-col print:shadow-none print:w-full print:m-0"
+            className="w-[210mm] min-h-[297mm] bg-white text-black p-[7mm] box-border relative shadow-sm mx-auto flex flex-col print:shadow-none print:w-[210mm] print:m-0"
             dir="rtl"
             style={{ fontFamily: "Arial, sans-serif" }}
           >
@@ -206,18 +206,18 @@ export default function AccountStatementModal({
               `}
             </style>
             
-            {/* Top row */}
-            <div className="flex justify-between items-center border-b-[3px] border-black pb-3 mb-4 relative">
-              {/* Logo Right */}
-              <div className="shrink-0 w-24 h-24">
+            {/* Top Header - Compact Row Layout */}
+            <div className="flex justify-between items-center mb-2 border-b-[3px] border-black pb-2 relative">
+              {/* Right Side - Logo */}
+              <div className="flex items-center justify-center shrink-0 w-24 h-24">
                 <img
                   src="https://cheerful-pink-qakkchpr.edgeone.app/Pink%20Elle%20logo%20new-1_page-0001.jpg"
                   alt="Pink Elle Logo"
-                  className="w-full h-full object-contain"
+                  className="w-full h-full object-contain mix-blend-multiply drop-shadow-sm"
                 />
               </div>
 
-              {/* Center Title and subtitle */}
+              {/* Center - Company Info */}
               <div className="flex-1 text-center px-4">
                 <h1
                   className="text-3xl font-extrabold text-pink-600 tracking-widest mb-1 leading-none"
@@ -228,192 +228,197 @@ export default function AccountStatementModal({
                 <h4 className="text-xs font-bold text-slate-600 mb-1">
                   بۆ بازرگانی گشتی - سنووردار
                 </h4>
-                <div className="inline-block mt-2 bg-pink-100 text-pink-700 font-extrabold border-2 border-pink-700 px-6 py-1 rounded-full text-base">
-                  ڕاپۆرتی کەشفی حیساب (کشف حساب)
-                </div>
               </div>
 
-              {/* Left Side Phones */}
+              {/* Left Side - Contacts */}
               <div className="shrink-0 text-right flex flex-col gap-1">
-                <div className="bg-slate-50 border-2 border-black rounded p-1.5 shadow-sm text-[12px] font-bold w-52">
+                <div className="bg-slate-50 border-2 border-black rounded p-1.5 shadow-sm text-[13px] font-bold w-52">
                   <div className="text-center text-[10px] mb-1 border-b border-black/20 pb-0.5">
                     ژمارەی کۆمپانیا
                   </div>
                   <div className="flex justify-around items-center" dir="ltr">
                     <span>0751 201 8372</span>
-                    <span className="text-black/30">|</span>
+                    <span className="text-pink-600">-</span>
                     <span>0750 425 1338</span>
                   </div>
-                </div>
-                <div className="text-[10px] text-slate-500 font-bold mt-1 text-center font-mono">
-                  بەرواری چاپ: {printDate} {printTime}
                 </div>
               </div>
             </div>
 
             {/* Address Bar */}
-            <div className="text-center font-black text-sm mb-4 bg-gray-200 py-1.5 border-2 border-black rounded-lg print:bg-gray-200">
-              سۆران - شۆڕش - بەرامبەر مزگەوتی شۆڕش <span className="text-pink-600 text-[14px]">📍</span>
+            <div className="text-center font-extrabold text-sm mb-2 bg-gray-100 py-1 border border-black rounded">
+              سۆران - شۆڕش - بەرامبەر مزگەوتی شۆڕش{" "}
+              <span className="text-pink-600 text-[14px]">📍</span>
             </div>
 
-            {/* Customer Details Box */}
-            <div className="border-2 border-black rounded-xl p-3 bg-slate-100 flex justify-between items-center text-sm font-bold print:bg-slate-100 mb-6 shadow-sm">
-              <div>
-                بەرێز (اسم العميل): <span className="text-pink-600 text-base">{customer.name}</span>
-              </div>
-              <div>
-                تەلەفۆن (الهاتف): <span className="font-mono">{customer.phone || "..."}</span>
-              </div>
-              {(fromDate || toDate) && (
-                <div className="text-xs text-slate-700 bg-white border border-slate-200 py-1 px-3 rounded">
-                  {fromDate && (
-                    <span>
-                      له‌ بەرواری: <span className="font-mono">{fromDate.replace(/-/g, "/")}</span>
-                    </span>
-                  )}
-                  {toDate && (
-                    <span>
-                      {" "}تا بەرواری: <span className="font-mono">{toDate.replace(/-/g, "/")}</span>
-                    </span>
-                  )}
+            {/* Info Boxes Header */}
+            <div className="flex justify-between items-start mb-2 gap-2 text-[11px]">
+              {/* Left Side Info */}
+              <div className="flex-1 flex flex-col gap-1">
+                <div className="flex items-center">
+                  <div className="w-24 text-right font-bold ml-2 whitespace-nowrap">
+                    رقم العميل (ژمارەی کڕیار):
+                  </div>
+                  <div className="border-b border-black flex-1 px-2 font-bold font-mono text-sm leading-none text-center">
+                    {customer.id ? customer.id.slice(-6).toUpperCase() : "-"}
+                  </div>
                 </div>
-              )}
-            </div>
-          </div>
+                <div className="flex items-center">
+                  <div className="w-24 text-right font-bold ml-2">
+                    بەروار:
+                  </div>
+                  <div className="border-b border-black flex-1 px-2 font-bold font-mono text-sm text-center leading-none">
+                    {fromDate ? fromDate.replace(/-/g, "/") : "-"} تا {toDate ? toDate.replace(/-/g, "/") : "-"}
+                  </div>
+                </div>
+                <div className="flex items-center">
+                  <div className="w-24 text-right font-bold ml-2">
+                    بەرواری چاپ:
+                  </div>
+                  <div
+                    className="border-b border-black flex-1 px-2 font-bold font-mono text-sm text-center leading-none"
+                    dir="ltr"
+                  >
+                    {printDate} {printTime}
+                  </div>
+                </div>
+              </div>
 
-          {loading ? (
-            <div className="py-20 text-center font-bold text-slate-500 animate-pulse">
-              داتا ئامادە دەکرێت...
+              {/* Center Title */}
+              <div className="w-28 flex items-center justify-center font-black text-lg italic mt-1 border-b-4 border-double border-pink-600 pb-0.5">
+                کەشفی حیساب
+              </div>
+
+              {/* Right Side Info */}
+              <div className="flex-1 flex flex-col gap-1">
+                <div className="flex items-center">
+                  <div className="w-24 text-right font-bold ml-2">
+                    اسم المشتري (کڕیار):
+                  </div>
+                  <div className="border-b border-black flex-1 px-2 font-bold text-sm text-center leading-none">
+                    {customer.name}
+                  </div>
+                </div>
+                <div className="flex items-center">
+                  <div className="w-24 text-right font-bold ml-2">
+                    رقم الموبايل (مۆبایل):
+                  </div>
+                  <div
+                    className="border-b border-black flex-1 px-2 font-bold font-mono text-sm text-center leading-none"
+                    dir="ltr"
+                  >
+                    {customer.phone || "..."}
+                  </div>
+                </div>
+              </div>
             </div>
-          ) : (
-            <div className="overflow-x-auto print:overflow-visible border border-black rounded-lg print:rounded-none">
-              <table className="w-full text-sm text-center font-bold border-collapse print:text-black">
-                <thead className="bg-[#f8f9fa] print:bg-transparent">
-                  <tr>
-                    <th className="p-2 border-2 border-black whitespace-nowrap bg-gray-200 print:bg-gray-200 w-12 text-sm">
-                      ڕیزبەندی
-                    </th>
-                    <th className="p-2 border-2 border-black whitespace-nowrap bg-gray-200 print:bg-gray-200 w-20 text-sm">
-                      بەڵگە
-                    </th>
-                    <th className="p-2 border-2 border-black whitespace-nowrap bg-gray-200 print:bg-gray-200 w-28 text-sm">
-                      بەروار
-                    </th>
-                    <th className="p-2 border-2 border-black bg-gray-200 print:bg-gray-200 flex-1 min-w-[200px] text-sm">
-                      ڕوون کردنەوەی بەڵگە
-                    </th>
-                    <th className="p-2 border-2 border-black whitespace-nowrap bg-gray-200 print:bg-gray-200 w-20 text-sm">
-                      جۆری بەڵگە
-                    </th>
-                    <th className="p-1 border-2 border-black whitespace-nowrap bg-red-100 print:bg-red-100 w-24 text-red-700 text-xs">
-                      قەرزدار (-)
-                    </th>
-                    <th className="p-1 border-2 border-black whitespace-nowrap bg-emerald-100 print:bg-emerald-100 w-24 text-emerald-700 text-xs">
-                      قەرزدەر (+)
-                    </th>
-                    <th className="p-1 border-2 border-black whitespace-nowrap bg-slate-200 print:bg-slate-200 w-28 text-xs font-black">
-                      ماوە
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {/* Initial Balance (zero or previous balance) */}
-                  <tr>
-                    <td className="p-2 border-2 border-black font-mono font-medium text-sm">1</td>
-                    <td className="p-2 border-2 border-black font-mono font-medium text-sm">-</td>
-                    <td className="p-2 border-2 border-black font-mono font-medium text-sm">-</td>
-                    <td className="p-2 border-2 border-black text-right pr-4 font-extrabold text-sm">
-                      مانەوەی یەکەم دەورە
-                    </td>
-                    <td className="p-2 border-2 border-black text-sm">دۆلار</td>
-                    <td className="p-2 border-2 border-black font-mono text-slate-400 text-sm">
-                      -
-                    </td>
-                    <td className="p-2 border-2 border-black font-mono text-slate-400 text-sm">
-                      -
-                    </td>
-                    <td className="p-2 border-2 border-black font-mono font-extrabold text-sm" dir="ltr">
-                      {formatCurrency(previousBalance)}
-                    </td>
-                  </tr>
-                  {filteredEntries.map((entry, idx) => (
-                    <tr key={idx} className="hover:bg-slate-50 transition-colors">
-                      <td className="p-2 border-2 border-black font-mono font-medium text-sm">
-                        {idx + 2}
+
+            {loading ? (
+              <div className="py-20 text-center font-bold text-slate-500 animate-pulse">
+                داتا ئامادە دەکرێت...
+              </div>
+            ) : (
+              <div className="mt-1 text-xs">
+                <table className="w-full border-collapse border-2 border-black text-center font-bold">
+                  <thead>
+                    <tr className="bg-gray-100 border-b-2 border-black">
+                      <th className="border-l border-black px-1 py-1 w-8">ت</th>
+                      <th className="border-l border-black px-1 py-1 w-20">بەڵگە</th>
+                      <th className="border-l border-black px-1 py-1 w-24">بەروار</th>
+                      <th className="border-l border-black px-2 py-1 flex-1 min-w-[200px] text-right">
+                        ڕوون کردنەوەی بەڵگە
+                        <br />
+                        <span className="text-[10px] text-gray-600 font-normal">
+                          تفاصيل
+                        </span>
+                      </th>
+                      <th className="border-l border-black px-1 py-1 w-16">جۆر</th>
+                      <th className="border-l border-black px-1 py-1 w-20 text-red-700 bg-red-50 text-[10px]">
+                        قەرزدار
+                        <br />(لەسەریەتی)
+                      </th>
+                      <th className="border-l border-black px-1 py-1 w-20 text-emerald-700 bg-emerald-50 text-[10px]">
+                        قەرزدەر
+                        <br />(داویەتی)
+                      </th>
+                      <th className="px-1 py-1 w-24 bg-slate-200">کۆی ماوە</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {/* Initial Balance */}
+                    <tr className="border-b border-black">
+                      <td className="border-l border-black px-1 py-1 font-mono">1</td>
+                      <td className="border-l border-black px-1 py-1 font-mono">-</td>
+                      <td className="border-l border-black px-1 py-1 font-mono">-</td>
+                      <td className="border-l border-black px-2 py-1 text-right font-semibold">
+                        مانەوەی یەکەم دەورە
                       </td>
-                      <td className="p-2 border-2 border-black font-mono font-medium text-sm">
-                        {entry.docNo}
-                      </td>
-                      <td className="p-2 border-2 border-black font-mono font-medium text-sm">
-                        {entry.date
-                          .toLocaleDateString("en-CA", {
-                            year: "numeric",
-                            month: "2-digit",
-                            day: "2-digit",
-                          })
-                          .replace(/-/g, "/")}
-                      </td>
-                      <td className="p-2 border-2 border-black text-right pr-4 text-xs sm:text-sm font-semibold">
-                        {entry.details}
-                      </td>
-                      <td className="p-2 border-2 border-black text-sm">{entry.type}</td>
-                      <td className="p-1 border-2 border-black font-mono font-bold text-xs text-red-600 print:text-red-700">
-                        {entry.debit > 0 ? formatCurrency(entry.debit) : "0"}
-                      </td>
-                      <td className="p-1 border-2 border-black font-mono font-bold text-xs text-emerald-600 print:text-emerald-700">
-                        {entry.credit > 0 ? formatCurrency(entry.credit) : "0"}
-                      </td>
-                      <td
-                        className="p-1 border-2 border-black font-mono font-extrabold bg-slate-50 print:bg-slate-100 text-xs"
-                        dir="ltr"
-                      >
-                        {formatCurrency(entry.balance)}
+                      <td className="border-l border-black px-1 py-1">دۆلار</td>
+                      <td className="border-l border-black px-1 py-1 text-slate-400 font-mono">-</td>
+                      <td className="border-l border-black px-1 py-1 text-slate-400 font-mono">-</td>
+                      <td className="px-1 py-1 font-mono font-bold bg-slate-50" dir="ltr">
+                        {formatCurrency(previousBalance)}
                       </td>
                     </tr>
-                  ))}
-                  {/* Final Balance Row */}
-                  <tr className="bg-gray-200 print:bg-gray-200 border-t-[3px] border-black">
-                    <td
-                      colSpan={5}
-                      className="p-2 border-2 border-black font-extrabold text-left pl-4 text-sm"
-                    >
-                      کۆی گشتی حیساب:
-                    </td>
-                    <td className="p-2 border-2 border-black font-mono font-bold text-red-700 text-sm">
-                      {formatCurrency(
-                        filteredEntries.reduce((sum, e) => sum + e.debit, 0),
-                      )}
-                    </td>
-                    <td className="p-2 border-2 border-black font-mono font-bold text-emerald-700 text-sm">
-                      {formatCurrency(
-                        filteredEntries.reduce((sum, e) => sum + e.credit, 0),
-                      )}
-                    </td>
-                    <td
-                      className="p-2 border-2 border-black font-mono font-black text-base"
-                      dir="ltr"
-                    >
-                      {formatCurrency(runningBalance)}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          )}
+                    
+                    {/* Render rows */}
+                    {filteredEntries.map((entry, idx) => (
+                      <tr key={idx + 2} className="border-b border-black">
+                        <td className="border-l border-black px-1 py-1 font-mono">{idx + 2}</td>
+                        <td className="border-l border-black px-1 py-1 font-mono">{entry.docNo}</td>
+                        <td className="border-l border-black px-1 py-1 font-mono text-[10px]">
+                          {entry.date.toLocaleDateString("en-CA").replace(/-/g, "/")}
+                        </td>
+                        <td className="border-l border-black px-2 py-1 text-right text-[11px] font-semibold text-slate-800 leading-tight">
+                          {entry.details}
+                        </td>
+                        <td className="border-l border-black px-1 py-1 text-[11px]">{entry.type}</td>
+                        <td className="border-l border-black px-1 py-1 font-mono font-bold text-red-700 bg-red-50/30">
+                          {entry.debit > 0 ? formatCurrency(entry.debit) : ""}
+                        </td>
+                        <td className="border-l border-black px-1 py-1 font-mono font-bold text-emerald-700 bg-emerald-50/30">
+                          {entry.credit > 0 ? formatCurrency(entry.credit) : ""}
+                        </td>
+                        <td className="px-1 py-1 font-mono font-bold bg-slate-50" dir="ltr">
+                          {formatCurrency(entry.balance)}
+                        </td>
+                      </tr>
+                    ))}
 
-          {/* Sigs only on print */}
-          <div className="hidden print:flex justify-between items-center px-16 mt-12 mb-2 text-[11px] font-bold text-slate-800">
-            <div className="text-center flex flex-col items-center">
-              <div className="mb-6">ڕاستی و دروستی لایەنی یەکەم</div>
-              <div className="w-32 border-b-2 border-slate-400"></div>
-            </div>
-            <div className="text-center flex flex-col items-center">
-              <div className="mb-6">ڕاستی و دروستی لایەنی دووەم</div>
-              <div className="w-32 border-b-2 border-slate-400"></div>
-            </div>
-            <div className="text-center flex flex-col items-center">
-              <div className="mb-6">بەڕێوەبەری حسابات</div>
-              <div className="w-32 border-b-2 border-slate-400"></div>
+                    {/* Final Totals Row */}
+                    <tr className="bg-gray-200 border-t-[3px] border-black">
+                      <td colSpan={5} className="border-l border-black px-2 py-1 text-left font-black">
+                        کۆی گشتی حیساب:
+                      </td>
+                      <td className="border-l border-black px-1 py-1 font-mono font-bold text-red-700">
+                        {formatCurrency(filteredEntries.reduce((sum, e) => sum + e.debit, 0))}
+                      </td>
+                      <td className="border-l border-black px-1 py-1 font-mono font-bold text-emerald-700">
+                        {formatCurrency(filteredEntries.reduce((sum, e) => sum + e.credit, 0))}
+                      </td>
+                      <td className="px-1 py-1 font-mono font-black text-[13px]" dir="ltr">
+                        {formatCurrency(runningBalance)}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* Print Signatures Floor */}
+            <div className="hidden print:flex justify-between items-center px-12 mt-12 mb-2 text-[11px] font-bold text-slate-800">
+              <div className="text-center flex flex-col items-center">
+                <div className="mb-6">ڕاستی و دروستی لایەنی یەکەم</div>
+                <div className="w-32 border-b-2 border-slate-400"></div>
+              </div>
+              <div className="text-center flex flex-col items-center">
+                <div className="mb-6">ڕاستی و دروستی لایەنی دووەم</div>
+                <div className="w-32 border-b-2 border-slate-400"></div>
+              </div>
+              <div className="text-center flex flex-col items-center">
+                <div className="mb-6">بەڕێوەبەری حسابات</div>
+                <div className="w-32 border-b-2 border-slate-400"></div>
+              </div>
             </div>
           </div>
         </div>
