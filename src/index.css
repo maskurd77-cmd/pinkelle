@@ -21,7 +21,7 @@ body {
   html {
     background-color: white !important;
     width: 210mm;
-    height: 297mm;
+    height: auto !important;
   }
   /* Force exact A4 size rendering and hide any browser margins */
   * {

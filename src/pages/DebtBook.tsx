@@ -867,7 +867,7 @@ export default function DebtBook() {
                         </button>
                         <button
                           onClick={() =>
-                            setStatementCustomer({ name: debt.customerName })
+                            setStatementCustomer({ name: debt.customerName, phone: debt.phone })
                           }
                           className="text-emerald-700 text-xs font-bold px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors border border-emerald-200 flex items-center gap-1.5 shadow-sm"
                           title="ڕاپۆرتی کەشفی حیساب"
