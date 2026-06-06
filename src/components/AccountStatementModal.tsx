@@ -208,6 +208,8 @@ export default function AccountStatementModal({
                 body { 
                   visibility: hidden !important; 
                   background-color: white !important;
+                }
+                * {
                   -webkit-print-color-adjust: exact !important; 
                   print-color-adjust: exact !important; 
                 }
@@ -215,19 +217,14 @@ export default function AccountStatementModal({
                   visibility: visible !important;
                 }
                 .printable-statement-area {
-                  position: absolute !important;
-                  left: 0 !important;
-                  top: 0 !important;
-                  width: 210mm !important;
-                  min-height: 297mm !important;
+                  width: 100% !important;
                   margin: 0 !important;
                   padding: 10mm !important;
                   box-sizing: border-box !important;
                   background-color: white !important;
                   box-shadow: none !important;
-                  border: 2px solid black !important;
-                  display: flex !important;
-                  flex-direction: column !important;
+                  border: none !important;
+                  display: block !important;
                 }
                 .print\\:hidden {
                   display: none !important;
@@ -264,7 +261,7 @@ export default function AccountStatementModal({
                   <img
                     src="https://cheerful-pink-qakkchpr.edgeone.app/Pink%20Elle%20logo%20new-1_page-0001.jpg"
                     alt="Pink Elle Logo"
-                    className="w-full h-full object-contain mix-blend-multiply"
+                    className="w-full h-full object-contain"
                   />
                 </div>
               </div>
