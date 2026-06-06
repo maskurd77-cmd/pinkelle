@@ -936,21 +936,17 @@ export default function DebtBook() {
                           <Edit size={14} />
                         </button>
                         {debt.phone && (
-                          <button
-                            onClick={() => {
-                              const msg = encodeURIComponent(
-                                `سڵاو بەڕێز ${debt.customerName}،\nقەرزی ماوەتان لای (پینک ئێللێ) بریتییە لە: ${formatCurrency(debt.remainingAmount)}`,
-                              );
-                              window.open(
-                                `https://wa.me/${debt.phone.replace(/[^0-9]/g, "")}?text=${msg}`,
-                                "_blank",
-                              );
-                            }}
-                            className="text-emerald-600 text-xs font-bold px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors border border-emerald-200 shadow-sm"
+                          <a
+                            href={`https://wa.me/${debt.phone.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(
+                              `سڵاو بەڕێز ${debt.customerName}،\nقەرزی ماوەتان لای (پینک ئێللێ) بریتییە لە: ${formatCurrency(debt.remainingAmount)}`
+                            )}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-emerald-600 flex items-center justify-center text-xs font-bold px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors border border-emerald-200 shadow-sm"
                             title="ناردنی نامەی واتسئاپ"
                           >
                             <MessageCircle size={14} />
-                          </button>
+                          </a>
                         )}
                       </div>
                     </td>

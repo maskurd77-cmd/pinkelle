@@ -1,5 +1,4 @@
 import React, { useRef, useState, useEffect } from "react";
-import { useReactToPrint } from "react-to-print";
 import { Printer, X } from "lucide-react";
 import { formatCurrency } from "../data";
 import { collection, query, where, getDocs } from "firebase/firestore";
@@ -16,15 +15,13 @@ export function DebtReceiptModal({
   debt,
   onClose,
 }: DebtReceiptModalProps) {
-  const printRef = useRef<HTMLDivElement>(null);
   const [loadingHistory, setLoadingHistory] = useState(true);
   const [calculatedPrevDebt, setCalculatedPrevDebt] = useState(0);
   const [calculatedRemDebt, setCalculatedRemDebt] = useState(0);
 
-  const handlePrint = useReactToPrint({
-    contentRef: printRef,
-    documentTitle: `وەسڵی قەبز - ${debt.customerName}`,
-  });
+  const handlePrint = () => {
+    window.print();
+  };
 
   const formatDate = (ts: any) => {
     if (!ts) return "";
@@ -106,8 +103,8 @@ export function DebtReceiptModal({
   }, [debt.id, transaction.id, transaction.isGeneric, debt.remainingAmount]);
 
   return (
-    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-      <div className="bg-white rounded-[24px] shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col">
+    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 print:p-0 print:bg-white print:block print:z-[99999] overflow-y-auto">
+      <div className="bg-white rounded-[24px] shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col print:shadow-none print:w-full print:max-w-none print:rounded-none">
         {/* Header */}
         <div className="px-6 py-4 flex justify-between items-center bg-slate-50 border-b border-slate-100 print:hidden hidden md:flex">
           <h2 className="font-extrabold text-slate-800 text-lg flex items-center gap-2">
@@ -130,7 +127,7 @@ export function DebtReceiptModal({
         </div>
 
         {/* Mobile controls */}
-        <div className="md:hidden p-3 flex justify-between items-center bg-white border-b border-slate-100 pb-3">
+        <div className="md:hidden p-3 flex justify-between items-center bg-white border-b border-slate-100 pb-3 print:hidden">
           <button
             onClick={onClose}
             className="w-10 h-10 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center animate-hover"
@@ -146,10 +143,9 @@ export function DebtReceiptModal({
         </div>
 
         {/* Printable Area - Landscape layout */}
-        <div className="p-4 sm:p-8 overflow-auto bg-slate-100 flex-1 flex justify-center custom-scrollbar">
+        <div className="p-4 sm:p-8 overflow-auto bg-slate-100 flex-1 flex justify-center custom-scrollbar print:bg-white print:p-0 print:overflow-visible">
           <div
-            ref={printRef}
-            className="w-[210mm] min-h-[148mm] h-[148mm] max-h-[148mm] bg-white text-black p-[6mm] box-border relative shadow-sm mx-auto flex flex-col justify-between overflow-hidden"
+            className="w-[210mm] min-h-[148mm] h-[148mm] max-h-[148mm] bg-white text-black p-[6mm] box-border relative shadow-sm mx-auto flex flex-col justify-between overflow-hidden print:shadow-none print:w-[210mm] print:h-[148mm] print:m-0"
             dir="rtl"
             style={{ fontFamily: "Arial, sans-serif" }}
           >

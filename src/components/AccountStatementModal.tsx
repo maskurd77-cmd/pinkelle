@@ -141,9 +141,9 @@ export default function AccountStatementModal({
   });
 
   return (
-    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-[9999] print:p-0 print:bg-white print:block overflow-y-auto">
+    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-[9999] print:p-0 print:bg-white print:block print:z-[99999] overflow-y-auto">
       <div className="bg-white rounded-3xl w-full max-w-[95vw] lg:max-w-6xl my-auto shadow-2xl print:shadow-none print:w-full print:max-w-none print:rounded-none">
-        <div className="sticky top-0 bg-white/80 backdrop-blur-md p-6 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4 z-10 print:hidden">
+        <div className="sticky top-0 bg-white/80 backdrop-blur-md p-6 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4 z-[50] print:hidden">
           <div>
             <h2 className="text-2xl font-extrabold text-slate-800">
               ڕاپۆرتی کەشفی حیساب
@@ -193,8 +193,12 @@ export default function AccountStatementModal({
         </div>
 
         {/* Print Layout */}
-        <div className="p-8 print:p-[12mm] min-h-screen" dir="rtl">
-          <div className="mb-6 border border-pink-600/20 rounded-2xl p-6 bg-slate-50/40 shadow-sm print:shadow-none print:border-2 print:border-black print:rounded-lg print:p-6 print:bg-transparent">
+        <div className="p-4 sm:p-8 overflow-auto bg-slate-50 flex-1 flex justify-center custom-scrollbar print:bg-white print:p-0 print:overflow-visible">
+          <div 
+            className="w-full max-w-[210mm] min-h-[297mm] bg-white text-black p-[6mm] box-border relative shadow-sm mx-auto flex flex-col print:shadow-none print:w-full print:m-0"
+            dir="rtl"
+            style={{ fontFamily: "Arial, sans-serif" }}
+          >
             <style type="text/css" media="print">
               {`
                 @page { size: A4 portrait; margin: 0; }
@@ -301,13 +305,13 @@ export default function AccountStatementModal({
                     <th className="p-2 border-2 border-black whitespace-nowrap bg-gray-200 print:bg-gray-200 w-20 text-sm">
                       جۆری بەڵگە
                     </th>
-                    <th className="p-2 border-2 border-black whitespace-nowrap bg-red-100 print:bg-red-100 w-28 text-red-700 text-sm">
+                    <th className="p-1 border-2 border-black whitespace-nowrap bg-red-100 print:bg-red-100 w-24 text-red-700 text-xs">
                       قەرزدار (-)
                     </th>
-                    <th className="p-2 border-2 border-black whitespace-nowrap bg-emerald-100 print:bg-emerald-100 w-28 text-emerald-700 text-sm">
+                    <th className="p-1 border-2 border-black whitespace-nowrap bg-emerald-100 print:bg-emerald-100 w-24 text-emerald-700 text-xs">
                       قەرزدەر (+)
                     </th>
-                    <th className="p-2 border-2 border-black whitespace-nowrap bg-slate-200 print:bg-slate-200 w-32 text-sm font-black">
+                    <th className="p-1 border-2 border-black whitespace-nowrap bg-slate-200 print:bg-slate-200 w-28 text-xs font-black">
                       ماوە
                     </th>
                   </tr>
@@ -353,14 +357,14 @@ export default function AccountStatementModal({
                         {entry.details}
                       </td>
                       <td className="p-2 border-2 border-black text-sm">{entry.type}</td>
-                      <td className="p-2 border-2 border-black font-mono font-bold text-sm text-red-600 print:text-red-700">
+                      <td className="p-1 border-2 border-black font-mono font-bold text-xs text-red-600 print:text-red-700">
                         {entry.debit > 0 ? formatCurrency(entry.debit) : "0"}
                       </td>
-                      <td className="p-2 border-2 border-black font-mono font-bold text-sm text-emerald-600 print:text-emerald-700">
+                      <td className="p-1 border-2 border-black font-mono font-bold text-xs text-emerald-600 print:text-emerald-700">
                         {entry.credit > 0 ? formatCurrency(entry.credit) : "0"}
                       </td>
                       <td
-                        className="p-2 border-2 border-black font-mono font-extrabold bg-slate-50 print:bg-slate-100 text-sm"
+                        className="p-1 border-2 border-black font-mono font-extrabold bg-slate-50 print:bg-slate-100 text-xs"
                         dir="ltr"
                       >
                         {formatCurrency(entry.balance)}
