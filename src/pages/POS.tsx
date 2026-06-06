@@ -35,6 +35,7 @@ import {
   where,
   limit,
   getDoc,
+  orderBy,
 } from "firebase/firestore";
 import { db, auth } from "../firebase";
 import LocationPickerModal from "../components/LocationPickerModal";
@@ -245,7 +246,26 @@ export default function POS() {
 
       const isPending = userRole !== "admin" && userRole !== "accountant";
 
+      let nextInvoiceNo = 1;
+      const receiptsSnap = await getDocs(
+        query(collection(db, "receipts"), orderBy("invoiceNo", "desc"), limit(1))
+      );
+      if (!receiptsSnap.empty) {
+        const lastRec = receiptsSnap.docs[0].data();
+        if (lastRec && typeof lastRec.invoiceNo === "number") {
+          nextInvoiceNo = lastRec.invoiceNo + 1;
+        } else {
+          const allRecs = await getDocs(collection(db, "receipts"));
+          nextInvoiceNo = allRecs.size + 1;
+        }
+      } else {
+        const allRecs = await getDocs(collection(db, "receipts"));
+        nextInvoiceNo = allRecs.size + 1;
+      }
+
       const receiptRef = doc(collection(db, "receipts"));
+      const invoiceLabel = nextInvoiceNo.toString();
+
       batch.set(receiptRef, {
         customerName: customerDetails.shopName || "کڕیاری گشتی",
         phone: customerDetails.phone || "",
@@ -256,6 +276,7 @@ export default function POS() {
         exchangeRate,
         isWholesale,
         status: isPending ? "pending" : "completed",
+        invoiceNo: nextInvoiceNo,
         items: cart.map((c) => {
           let applicablePrice;
           if (c.editedPrice !== undefined) {
@@ -337,7 +358,7 @@ export default function POS() {
               timestamp: Timestamp.now(),
               notes:
                 "زیادبوونی قەرز لە وەسڵی ژمارە: " +
-                receiptRef.id.slice(-8).toUpperCase(),
+                invoiceLabel,
             });
           } else {
             const debtRef = doc(collection(db, "debts"));
@@ -347,7 +368,7 @@ export default function POS() {
               amount: debtAmount,
               remainingAmount: debtAmount,
               status: "active",
-              notes: "پاشماوەی وەسڵ: " + receiptRef.id.slice(-8).toUpperCase(),
+              notes: "پاشماوەی وەسڵ: " + invoiceLabel,
               timestamp: Timestamp.now(),
             });
 
@@ -359,7 +380,7 @@ export default function POS() {
               timestamp: Timestamp.now(),
               notes:
                 "قەرزی نوێ لە وەسڵی ژمارە: " +
-                receiptRef.id.slice(-8).toUpperCase(),
+                invoiceLabel,
             });
           }
         }
@@ -478,7 +499,7 @@ export default function POS() {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-3 lg:p-5 custom-scrollbar bg-slate-50/50 pb-28 lg:pb-5">
+        <div className="flex-1 overflow-y-auto p-3 lg:p-5 custom-scrollbar bg-slate-50/50 pb-36 lg:pb-5">
           <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 lg:gap-4">
             {filteredProducts.map((product) => {
               const inCart =
@@ -819,7 +840,7 @@ export default function POS() {
             </div>
           </div>
 
-          <div className="flex gap-3 pb-[max(calc(env(safe-area-inset-bottom)+1rem),1.5rem)] lg:pb-0">
+          <div className="flex gap-3 pb-[max(calc(env(safe-area-inset-bottom)+5rem),2rem)] lg:pb-0">
             <button
               disabled={cart.length === 0}
               onClick={() => setCheckoutModalOpen(true)}
@@ -1146,7 +1167,7 @@ export default function POS() {
                   </div>
                 </div>
 
-                <div className="p-4 sm:p-6 border-t border-slate-100 bg-white shrink-0 pb-[max(calc(env(safe-area-inset-bottom)+1rem),1rem)] sm:pb-6">
+                <div className="p-4 sm:p-6 border-t border-slate-100 bg-white shrink-0 pb-[max(calc(env(safe-area-inset-bottom)+2rem),1.5rem)] sm:pb-6">
                   <button
                     disabled={isProcessing}
                     type="submit"

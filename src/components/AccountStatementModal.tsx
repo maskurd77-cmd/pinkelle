@@ -261,9 +261,6 @@ export default function AccountStatementModal({
                   style={{ fontFamily: "Impact, sans-serif" }}
                 >
                   گروپی PINK ELLE
-                  <div className="text-sm font-bold text-slate-800 mt-1">
-                    تاکە بریکاری PINK ELLE
-                  </div>
                 </div>
               </div>
               <div className="text-center font-black text-2xl border-2 border-black px-6 py-2 rounded-xl">

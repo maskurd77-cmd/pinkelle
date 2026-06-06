@@ -206,9 +206,7 @@ export default function MenuPage() {
             <h2 className="text-3xl font-black text-slate-800 tracking-wider">گرووپی PINK ELLE</h2>
             
             <div className="space-y-1">
-               <p className="text-xl font-extrabold text-pink-600">تاکە بریکاری PINK ELLE</p>
-               <p className="text-lg font-bold text-slate-600">بۆ دابینکردنی کەلوپەلی پاککەرەوە</p>
-               <p className="text-base font-bold text-slate-500">بۆ بازرگانی گشتی - سنووردار</p>
+               <p className="text-xl font-extrabold text-pink-600">بۆ بازرگانی گشتی - سنووردار</p>
             </div>
 
             <div className="pt-6 border-t border-slate-100 flex flex-col items-center justify-center">

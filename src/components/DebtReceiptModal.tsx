@@ -96,9 +96,6 @@ export function DebtReceiptModal({
                   >
                     گروپی PINK ELLE
                   </h1>
-                  <h2 className="text-lg font-bold text-slate-800">
-                    تاکە بریکاری PINK ELLE
-                  </h2>
                   <div
                     className="text-[11px] font-bold text-slate-600 mt-1 flex items-center justify-end gap-1"
                     dir="rtl"

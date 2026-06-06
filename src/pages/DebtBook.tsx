@@ -679,7 +679,7 @@ export default function DebtBook() {
                     <div>
                       <div className="font-bold text-slate-800">
                         وەسڵی ژمارە:{" "}
-                        {tx.receiptData?.id?.slice(-8).toUpperCase()} -{" "}
+                        {tx.receiptData?.invoiceNo || tx.receiptData?.id?.slice(-8).toUpperCase()} -{" "}
                         {tx.receiptData?.customerName || "کڕیارێکی نەناسراو"}
                       </div>
                       <div className="text-xs text-slate-500 mt-1">

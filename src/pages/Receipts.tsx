@@ -25,10 +25,18 @@ import { formatCurrency } from "../data";
 
 export default function Receipts() {
   const [receipts, setReceipts] = useState<any[]>([]);
+  const [debts, setDebts] = useState<any[]>([]);
   const [search, setSearch] = useState("");
   const [selectedReceipt, setSelectedReceipt] = useState<any | null>(null);
   const [userRole, setUserRole] = useState("");
   const [isProcessingId, setIsProcessingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const unsubDebts = onSnapshot(collection(db, "debts"), (snap) => {
+      setDebts(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+    });
+    return () => unsubDebts();
+  }, []);
 
   useEffect(() => {
     if (auth.currentUser) {
@@ -352,7 +360,7 @@ export default function Receipts() {
             <div className="flex-1 overflow-auto bg-slate-100/50 p-4 sm:p-8 flex items-start justify-center custom-scrollbar pb-[max(calc(env(safe-area-inset-bottom)+1rem),1rem)] sm:pb-8">
               {/* A4 Paper Scaled Down slightly for preview */}
               <div className="bg-white shadow-lg w-[210mm] min-h-[297mm] p-0 relative">
-                <ReceiptPrintLayout receipt={selectedReceipt} />
+                <ReceiptPrintLayout receipt={selectedReceipt} debts={debts} />
               </div>
             </div>
           </div>
@@ -361,16 +369,28 @@ export default function Receipts() {
 
       {/* Actual Print Layout (Only visible during print) */}
       <div className="hidden print:block w-full">
-        {selectedReceipt && <ReceiptPrintLayout receipt={selectedReceipt} />}
+        {selectedReceipt && <ReceiptPrintLayout receipt={selectedReceipt} debts={debts} />}
       </div>
     </div>
   );
 }
 
-export function ReceiptPrintLayout({ receipt }: { receipt: any }) {
+export function ReceiptPrintLayout({ receipt, debts = [] }: { receipt: any; debts?: any[] }) {
   const ts = receipt.timestamp?.toDate
     ? receipt.timestamp.toDate()
     : new Date();
+
+  const customerDebt = debts.find(
+    (d) => d.customerName === receipt.customerName && d.status === "active"
+  );
+  let prevDebt = 0;
+  let overallDebt = 0;
+  if (customerDebt) {
+    overallDebt = customerDebt.remainingAmount || 0;
+    const currentIsDebt = receipt.paymentType === "قەرز" || receipt.paymentType === "debt";
+    const addedAmount = currentIsDebt ? (receipt.totalAmount || receipt.total || 0) : 0;
+    prevDebt = Math.max(0, overallDebt - addedAmount);
+  }
 
   return (
     <div
@@ -397,18 +417,6 @@ export function ReceiptPrintLayout({ receipt }: { receipt: any }) {
           >
             گروپی PINK ELLE
           </h1>
-          <h2 className="text-xl font-extrabold text-slate-800 mb-1">
-            تاکە بریکاری{" "}
-            <span
-              className="text-pink-600 font-extrabold tracking-wide"
-              style={{ fontFamily: "Impact, sans-serif" }}
-            >
-              PINK ELLE
-            </span>
-          </h2>
-          <h3 className="text-lg font-bold text-slate-800 mb-1">
-            بۆ دابینکردنی کەلوپەلی پاککەرەوە
-          </h3>
           <h4 className="text-sm font-bold text-slate-600 mb-2">
             بۆ بازرگانی گشتی - سنووردار
           </h4>
@@ -444,7 +452,7 @@ export function ReceiptPrintLayout({ receipt }: { receipt: any }) {
               رقم القائمة (ژمارەی پسووڵە):
             </div>
             <div className="border-b border-black flex-1 text-center font-bold font-mono text-sm">
-              {receipt.id?.slice(-8).toUpperCase() || "N/A"}
+              {receipt.invoiceNo || receipt.id?.slice(-8).toUpperCase() || "N/A"}
             </div>
           </div>
           <div className="flex items-center">
@@ -711,6 +719,26 @@ export function ReceiptPrintLayout({ receipt }: { receipt: any }) {
                     المجموع (کۆی گشتی)
                   </td>
                 </tr>
+                {customerDebt && overallDebt > 0 && (
+                  <>
+                    <tr>
+                      <td className="border border-black p-2 w-32 font-mono text-sm text-cyan-800 bg-cyan-50/40">
+                        {formatCurrency(prevDebt)}
+                      </td>
+                      <td className="border border-black p-2 bg-slate-50 text-slate-800 font-bold">
+                        کۆی قەرزی پێشوو (الديون السابقة)
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="border border-black p-2 w-32 font-mono text-sm text-pink-700 bg-pink-50/30">
+                        {formatCurrency(overallDebt)}
+                      </td>
+                      <td className="border border-black p-2 bg-pink-50 text-pink-950 font-black">
+                        کۆی گشتی قەرزی ماوەی کڕیار (إجمالي الدين المتبقي)
+                      </td>
+                    </tr>
+                  </>
+                )}
               </tbody>
             </table>
           </div>

@@ -133,7 +133,7 @@ export default function Layout({
   );
 
   return (
-    <div className="h-screen bg-slate-50 flex text-slate-800 overflow-hidden">
+    <div className="h-[100dvh] bg-slate-50 flex text-slate-800 overflow-hidden">
       {/* Desktop Sidebar */}
       <aside className="hidden lg:flex w-64 h-full border-l border-slate-200 bg-white flex-col shadow-sm shrink-0 print:hidden">
         <NavContent />
@@ -158,7 +158,7 @@ export default function Layout({
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col min-w-0 h-[100dvh] lg:h-screen overflow-hidden relative print:overflow-visible bg-slate-50 lg:bg-transparent">
-        <div className="flex-1 pt-[max(env(safe-area-inset-top),0.5rem)] p-2 sm:p-4 lg:p-8 overflow-hidden flex flex-col relative z-0 print:overflow-visible print:p-0">
+        <div className="flex-1 pt-[max(env(safe-area-inset-top),0.5rem)] p-2 sm:p-4 lg:p-8 overflow-hidden flex flex-col relative z-auto print:overflow-visible print:p-0">
           <div className="max-w-7xl mx-auto w-full h-full flex flex-col overflow-hidden print:overflow-visible lg:bg-transparent">
             {children}
           </div>
