@@ -195,7 +195,7 @@ export default function AccountStatementModal({
         {/* Print Layout */}
         <div className="p-4 sm:p-8 shrink-0 bg-slate-50 print:bg-white print:p-0 print:overflow-visible flex justify-center">
           <div 
-            className="printable-statement-area w-[210mm] min-h-[297mm] bg-white text-black p-[7mm] box-border relative shadow-sm mx-auto flex flex-col print:shadow-none print:w-[210mm] print:m-0"
+            className="printable-statement-area w-[210mm] min-h-[297mm] bg-white text-black p-[7mm] box-border relative shadow-sm mx-auto flex flex-col border-2 border-black print:shadow-none print:w-[210mm] print:m-0"
             dir="rtl"
             style={{ fontFamily: "Arial, sans-serif" }}
           >
@@ -205,11 +205,47 @@ export default function AccountStatementModal({
                   size: A4 portrait; 
                   margin: 0; 
                 }
-                body { 
-                  visibility: hidden !important;
+                html, body {
+                  margin: 0 !important;
+                  padding: 0 !important;
+                  height: 100% !important;
+                  overflow: hidden !important;
                   background-color: white !important;
                   -webkit-print-color-adjust: exact !important; 
-                  print-color-adjust: exact !important; 
+                  print-color-adjust: exact !important;
+                }
+                body > *:not(.fixed) {
+                  display: none !important;
+                }
+                .fixed {
+                  position: absolute !important;
+                  top: 0 !important;
+                  left: 0 !important;
+                  right: 0 !important;
+                  bottom: 0 !important;
+                  width: 100% !important;
+                  height: 100% !important;
+                  margin: 0 !important;
+                  padding: 0 !important;
+                  background: transparent !important;
+                  backdrop-filter: none !important;
+                  overflow: visible !important;
+                  display: block !important;
+                  box-shadow: none !important;
+                }
+                .fixed > div {
+                  background: transparent !important;
+                  box-shadow: none !important;
+                  margin: 0 !important;
+                  padding: 0 !important;
+                  width: 100% !important;
+                  max-width: none !important;
+                  height: auto !important;
+                  border-radius: 0 !important;
+                  overflow: visible !important;
+                }
+                .print\:hidden {
+                  display: none !important;
                 }
                 .printable-statement-area, .printable-statement-area * {
                   visibility: visible !important;
@@ -219,51 +255,78 @@ export default function AccountStatementModal({
                   left: 0 !important;
                   top: 0 !important;
                   width: 210mm !important;
-                  min-height: 297mm !important;
-                  height: auto !important;
+                  height: 297mm !important;
+                  max-height: 297mm !important;
                   margin: 0 !important;
                   padding: 10mm !important;
                   box-sizing: border-box !important;
                   background-color: white !important;
                   box-shadow: none !important;
-                  border: none !important;
+                  border: 2px solid black !important;
+                  overflow: hidden !important;
+                  display: flex !important;
+                  flex-direction: column !important;
+                }
+                /* Maintain exact backgrounds of header cells upon PDF generation */
+                th {
+                  background-color: #f3f4f6 !important;
+                  -webkit-print-color-adjust: exact !important; 
+                  print-color-adjust: exact !important;
+                }
+                th.bg-red-50 {
+                  background-color: #fef2f2 !important;
+                }
+                th.bg-emerald-50 {
+                  background-color: #ecfdf5 !important;
+                }
+                th.bg-slate-200, td.bg-slate-200 {
+                  background-color: #e2e8f0 !important;
+                }
+                td.bg-slate-50 {
+                  background-color: #f8fafc !important;
+                }
+                tr.bg-gray-200 {
+                  background-color: #e5e7eb !important;
                 }
               `}
             </style>
             
-            {/* Top Header - Compact Row Layout */}
-            <div className="flex justify-between items-center mb-2 border-b-[3px] border-black pb-2 relative">
-              {/* Right Side - Logo */}
-              <div className="flex items-center justify-center shrink-0 w-24 h-24">
-                <img
-                  src="https://cheerful-pink-qakkchpr.edgeone.app/Pink%20Elle%20logo%20new-1_page-0001.jpg"
-                  alt="Pink Elle Logo"
-                  className="w-full h-full object-contain mix-blend-multiply drop-shadow-sm"
-                />
+            {/* Top Header - Exact Match of the Uploaded Reference Image */}
+            <div className="flex justify-between items-stretch mb-2 border-b-[3px] border-black pb-2 relative gap-4">
+              {/* Right Side - Logo Box (aligned to right inside RTL) */}
+              <div className="shrink-0 flex items-center justify-center">
+                <div className="border-[2px] border-black rounded p-1 w-28 h-20 flex items-center justify-center bg-white shadow-sm">
+                  <img
+                    src="https://cheerful-pink-qakkchpr.edgeone.app/Pink%20Elle%20logo%20new-1_page-0001.jpg"
+                    alt="Pink Elle Logo"
+                    className="w-full h-full object-contain mix-blend-multiply"
+                  />
+                </div>
               </div>
 
               {/* Center - Company Info */}
-              <div className="flex-1 text-center px-4">
+              <div className="flex-1 flex flex-col justify-center items-center text-center px-2">
                 <h1
-                  className="text-3xl font-extrabold text-pink-600 tracking-widest mb-1 leading-none"
-                  style={{ fontFamily: "Impact, sans-serif" }}
+                  className="text-3xl font-extrabold text-pink-600 tracking-wider mb-0.5 flex items-center gap-1.5 justify-center"
+                  style={{ fontFamily: "'Cairo', 'Arial', sans-serif" }}
                 >
-                  گروپی PINK ELLE
+                  <span className="text-black font-extrabold text-2xl">گروپی</span>
+                  <span>PINK ELLE</span>
                 </h1>
-                <h4 className="text-xs font-bold text-slate-600 mb-1">
+                <h4 className="text-[11px] font-black text-slate-800 leading-tight">
                   بۆ بازرگانی گشتی - سنووردار
                 </h4>
               </div>
 
-              {/* Left Side - Contacts */}
-              <div className="shrink-0 text-right flex flex-col gap-1">
-                <div className="bg-slate-50 border-2 border-black rounded p-1.5 shadow-sm text-[13px] font-bold w-52">
-                  <div className="text-center text-[10px] mb-1 border-b border-black/20 pb-0.5">
+              {/* Left Side - Contacts Box */}
+              <div className="shrink-0 flex items-center justify-center">
+                <div className="border-[2px] border-black rounded p-1.5 text-center font-black w-60 bg-white shadow-sm">
+                  <div className="text-[11px] text-zinc-900 font-extrabold mb-1 border-b-[1.5px] border-black pb-0.5">
                     ژمارەی کۆمپانیا
                   </div>
-                  <div className="flex justify-around items-center" dir="ltr">
+                  <div className="flex justify-center items-center gap-1 text-[13px] font-extrabold" dir="ltr">
                     <span>0751 201 8372</span>
-                    <span className="text-pink-600">-</span>
+                    <span className="text-black">-</span>
                     <span>0750 425 1338</span>
                   </div>
                 </div>
@@ -271,37 +334,37 @@ export default function AccountStatementModal({
             </div>
 
             {/* Address Bar */}
-            <div className="text-center font-extrabold text-sm mb-2 bg-gray-100 py-1 border border-black rounded">
+            <div className="text-center font-extrabold text-xs mb-3 bg-gray-100 py-1.5 border border-black rounded shadow-sm">
               سۆران - شۆڕش - بەرامبەر مزگەوتی شۆڕش{" "}
-              <span className="text-pink-600 text-[14px]">📍</span>
+              <span className="text-pink-600 text-[13px] inline-block align-middle">📍</span>
             </div>
 
-            {/* Info Boxes Header */}
-            <div className="flex justify-between items-start mb-2 gap-2 text-[11px]">
-              {/* Left Side Info */}
-              <div className="flex-1 flex flex-col gap-1">
+            {/* Info Boxes Header - Perfect Two-Column Layout with Clean Underlines */}
+            <div className="flex justify-between items-start mb-3 gap-6 text-[11px] px-1">
+              {/* Right Side Info - Customer ID, Date Range, Print Date */}
+              <div className="w-[320px] flex flex-col gap-1.5">
                 <div className="flex items-center">
-                  <div className="w-24 text-right font-bold ml-2 whitespace-nowrap">
+                  <div className="w-40 text-right font-black text-zinc-950">
                     رقم العميل (ژمارەی کڕیار):
                   </div>
-                  <div className="border-b border-black flex-1 px-2 font-bold font-mono text-sm leading-none text-center">
+                  <div className="border-b border-black flex-1 px-1 font-bold font-mono text-[13px] leading-none text-center pb-0.5">
                     {customer.id ? customer.id.slice(-6).toUpperCase() : "-"}
                   </div>
                 </div>
                 <div className="flex items-center">
-                  <div className="w-24 text-right font-bold ml-2">
+                  <div className="w-16 text-right font-black text-zinc-950">
                     بەروار:
                   </div>
-                  <div className="border-b border-black flex-1 px-2 font-bold font-mono text-sm text-center leading-none">
-                    {fromDate ? fromDate.replace(/-/g, "/") : "-"} تا {toDate ? toDate.replace(/-/g, "/") : "-"}
+                  <div className="border-b border-black flex-1 px-1 font-bold font-mono text-[11px] text-center leading-none pb-0.5">
+                    {fromDate ? fromDate.replace(/-/g, "/") : "-"} - تا - {toDate ? toDate.replace(/-/g, "/") : "-"}
                   </div>
                 </div>
                 <div className="flex items-center">
-                  <div className="w-24 text-right font-bold ml-2">
+                  <div className="w-24 text-right font-black text-zinc-950">
                     بەرواری چاپ:
                   </div>
                   <div
-                    className="border-b border-black flex-1 px-2 font-bold font-mono text-sm text-center leading-none"
+                    className="border-b border-black flex-1 px-1 font-bold font-mono text-[11px] text-center leading-none pb-0.5"
                     dir="ltr"
                   >
                     {printDate} {printTime}
@@ -309,27 +372,29 @@ export default function AccountStatementModal({
                 </div>
               </div>
 
-              {/* Center Title */}
-              <div className="w-28 flex items-center justify-center font-black text-lg italic mt-1 border-b-4 border-double border-pink-600 pb-0.5">
-                کەشفی حیساب
+              {/* Center Document Title */}
+              <div className="flex-1 flex flex-col justify-center items-center pt-1.5">
+                <div className="text-xl font-black italic relative px-3 pb-1 border-b-4 border-double border-pink-500">
+                  کەشفی حیساب
+                </div>
               </div>
 
-              {/* Right Side Info */}
-              <div className="flex-1 flex flex-col gap-1">
+              {/* Left Side Info - Customer Name and Mobile */}
+              <div className="w-[320px] flex flex-col gap-1.5">
                 <div className="flex items-center">
-                  <div className="w-24 text-right font-bold ml-2">
+                  <div className="w-28 text-right font-black text-zinc-950">
                     اسم المشتري (کڕیار):
                   </div>
-                  <div className="border-b border-black flex-1 px-2 font-bold text-sm text-center leading-none">
+                  <div className="border-b border-black flex-1 px-1 font-bold text-[13px] text-center leading-none pb-0.5">
                     {customer.name}
                   </div>
                 </div>
                 <div className="flex items-center">
-                  <div className="w-24 text-right font-bold ml-2">
+                  <div className="w-32 text-right font-black text-zinc-950">
                     رقم الموبايل (مۆبایل):
                   </div>
                   <div
-                    className="border-b border-black flex-1 px-2 font-bold font-mono text-sm text-center leading-none"
+                    className="border-b border-black flex-1 px-1 font-bold font-mono text-[12px] text-center leading-none pb-0.5"
                     dir="ltr"
                   >
                     {customer.phone || "..."}
