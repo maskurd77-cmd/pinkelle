@@ -217,7 +217,11 @@ export default function AccountStatementModal({
                   visibility: visible !important;
                 }
                 .printable-statement-area {
-                  width: 100% !important;
+                  position: absolute !important;
+                  left: 0 !important;
+                  top: 0 !important;
+                  width: 210mm !important;
+                  min-height: 297mm !important;
                   margin: 0 !important;
                   padding: 10mm !important;
                   box-sizing: border-box !important;
