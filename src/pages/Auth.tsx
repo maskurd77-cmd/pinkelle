@@ -27,7 +27,7 @@ export default function AuthPage() {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8" dir="rtl">
       <div className="sm:mx-auto sm:w-full sm:max-w-md flex flex-col items-center">
-        <img src="https://skilled-pink-cux52hz9.edgeone.app/Pink%20Elle%20logo%20new-1_page-0001.jpg" alt="Pink Elle Logo" className="w-24 h-24 object-contain rounded-2xl shadow-lg" />
+        <img src="https://cheerful-pink-qakkchpr.edgeone.app/Pink%20Elle%20logo%20new-1_page-0001.jpg" alt="Pink Elle Logo" className="w-24 h-24 object-contain rounded-2xl shadow-lg" />
         <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
           چوونە ژوورەوە
         </h2>

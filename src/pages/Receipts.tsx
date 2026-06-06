@@ -359,7 +359,7 @@ export default function Receipts() {
             </div>
             <div className="flex-1 overflow-auto bg-slate-100/50 p-4 sm:p-8 flex items-start justify-center custom-scrollbar pb-[max(calc(env(safe-area-inset-bottom)+1rem),1rem)] sm:pb-8">
               {/* A4 Paper Scaled Down slightly for preview */}
-              <div className="bg-white shadow-lg w-[210mm] min-h-[297mm] p-0 relative">
+              <div className="bg-white shadow-lg w-[210mm] h-[297mm] p-0 relative">
                 <ReceiptPrintLayout receipt={selectedReceipt} debts={debts} />
               </div>
             </div>
@@ -394,7 +394,7 @@ export function ReceiptPrintLayout({ receipt, debts = [] }: { receipt: any; debt
 
   return (
     <div
-      className="w-[210mm] min-h-[297mm] bg-white text-black p-[10mm] mx-auto box-border flex flex-col relative"
+      className="w-[210mm] h-[297mm] max-h-[297mm] overflow-hidden bg-white text-black p-[10mm] mx-auto box-border flex flex-col relative"
       dir="rtl"
       style={{ fontFamily: "Arial, sans-serif" }}
     >
@@ -403,7 +403,7 @@ export function ReceiptPrintLayout({ receipt, debts = [] }: { receipt: any; debt
         {/* Right Side - Logo */}
         <div className="flex items-center justify-center shrink-0 w-32 h-32">
           <img
-            src="https://skilled-pink-cux52hz9.edgeone.app/Pink%20Elle%20logo%20new-1_page-0001.jpg"
+            src="https://cheerful-pink-qakkchpr.edgeone.app/Pink%20Elle%20logo%20new-1_page-0001.jpg"
             alt="Pink Elle Logo"
             className="w-full h-full object-contain mix-blend-multiply drop-shadow-sm"
           />
@@ -608,7 +608,7 @@ export function ReceiptPrintLayout({ receipt, debts = [] }: { receipt: any; debt
             })}
             {/* Fill empty rows to make table look complete */}
             {Array.from({
-              length: Math.max(0, 15 - (receipt.items?.length || 0)),
+              length: Math.max(0, 10 - (receipt.items?.length || 0)),
             }).map((_, i) => (
               <tr
                 key={`empty-${i}`}

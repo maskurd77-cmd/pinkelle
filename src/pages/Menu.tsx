@@ -49,7 +49,7 @@ export default function MenuPage() {
          <div className="max-w-7xl mx-auto px-6 py-12 relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
             <div className="flex items-center gap-6">
                 <div className="bg-white p-2 rounded-2xl shadow-xl w-32 h-32 flex items-center justify-center shrink-0 shrink-0 transform transition-transform hover:scale-105 duration-300">
-                    <img src="https://skilled-pink-cux52hz9.edgeone.app/Pink%20Elle%20logo%20new-1_page-0001.jpg" alt="Pink Elle Logo" className="w-full h-full object-contain rounded-xl" />
+                    <img src="https://cheerful-pink-qakkchpr.edgeone.app/Pink%20Elle%20logo%20new-1_page-0001.jpg" alt="Pink Elle Logo" className="w-full h-full object-contain rounded-xl" />
                 </div>
                 <div>
                    <h1 className="text-4xl md:text-5xl font-black tracking-tight mb-2 text-white drop-shadow-md">PINK ELLE CATALOGUE</h1>
