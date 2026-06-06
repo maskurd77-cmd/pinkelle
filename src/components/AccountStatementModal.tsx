@@ -200,7 +200,7 @@ export default function AccountStatementModal({
             style={{ fontFamily: "Arial, sans-serif" }}
           >
             <style type="text/css" media="print">
-              {`
+               {`
                 @page { 
                   size: A4 portrait; 
                   margin: 0; 
@@ -214,44 +214,17 @@ export default function AccountStatementModal({
                   -webkit-print-color-adjust: exact !important; 
                   print-color-adjust: exact !important;
                 }
-                body > *:not(.fixed) {
-                  display: none !important;
+                /* Hide everything in the body by default in print mode */
+                body {
+                  visibility: hidden !important;
                 }
-                .fixed {
-                  position: absolute !important;
-                  top: 0 !important;
-                  left: 0 !important;
-                  right: 0 !important;
-                  bottom: 0 !important;
-                  width: 100% !important;
-                  height: 100% !important;
-                  margin: 0 !important;
-                  padding: 0 !important;
-                  background: transparent !important;
-                  backdrop-filter: none !important;
-                  overflow: visible !important;
-                  display: block !important;
-                  box-shadow: none !important;
-                }
-                .fixed > div {
-                  background: transparent !important;
-                  box-shadow: none !important;
-                  margin: 0 !important;
-                  padding: 0 !important;
-                  width: 100% !important;
-                  max-width: none !important;
-                  height: auto !important;
-                  border-radius: 0 !important;
-                  overflow: visible !important;
-                }
-                .print\:hidden {
-                  display: none !important;
-                }
+                /* Make only the statements container and its children visible */
                 .printable-statement-area, .printable-statement-area * {
                   visibility: visible !important;
                 }
+                /* Place the statement perfectly on the screen/printed page */
                 .printable-statement-area {
-                  position: absolute !important;
+                  position: fixed !important;
                   left: 0 !important;
                   top: 0 !important;
                   width: 210mm !important;
@@ -266,6 +239,10 @@ export default function AccountStatementModal({
                   overflow: hidden !important;
                   display: flex !important;
                   flex-direction: column !important;
+                  z-index: 9999999 !important;
+                }
+                .print\:hidden {
+                  display: none !important;
                 }
                 /* Maintain exact backgrounds of header cells upon PDF generation */
                 th {
