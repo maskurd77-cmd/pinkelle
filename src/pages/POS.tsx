@@ -489,14 +489,15 @@ export default function POS() {
            }
 
            if (debtDiff !== 0) {
-               const existingDebt = debts.find(
-                 (d) => d.customerName === customerName && d.status === "active"
-               );
+               const existingDebt = debts.find((d) => d.customerName === customerName && d.status === "active") || debts.find((d) => d.customerName === customerName);
                
                if (existingDebt) {
+                  const newRemaining = (existingDebt.remainingAmount || 0) + debtDiff;
+                  const finalRemaining = newRemaining < 0 ? 0 : newRemaining;
                   batch.update(doc(db, "debts", existingDebt.id), {
                      amount: (existingDebt.amount || 0) + debtDiff,
-                     remainingAmount: (existingDebt.remainingAmount || 0) + debtDiff,
+                     remainingAmount: finalRemaining,
+                     status: finalRemaining === 0 ? "paid" : "active",
                      updatedAt: Timestamp.now()
                   });
                   batch.set(doc(collection(db, "debt_transactions")), {

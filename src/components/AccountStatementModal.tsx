@@ -220,9 +220,9 @@ export default function AccountStatementModal({
         credit: 0,
         rawTx: tx,
       });
-    } else if (tx.type === "pay") {
-      // Payment (Credit)
-      let detailDesc = tx.notes || tx.note || "دانەوەی قەرز";
+    } else if (tx.type === "pay" || tx.type === "sub") {
+      // Payment (Credit) or subtraction
+      let detailDesc = tx.notes || tx.note || (tx.type === "sub" ? "کەمکردنی قەرز" : "دانەوەی قەرز");
       if (tx.safeId && safesMap[tx.safeId]) {
          detailDesc += ` (قاسە: ${safesMap[tx.safeId]})`;
       }
@@ -300,6 +300,43 @@ export default function AccountStatementModal({
     runningBalance += entry.debit - entry.credit;
     return { ...entry, balance: runningBalance };
   });
+
+  const fixDebtBookMismatch = async () => {
+    const totalCalculatedBalance = ledgerEntries.reduce((sum, e) => sum + e.debit - e.credit, 0);
+    if (!confirm(`ئایا دڵنیایت دەتەوێت دەفتەر قەرز نوێ بکەیتەوە بۆ ئەوەی ببێتە ${totalCalculatedBalance} دۆلار؟`)) return;
+
+    try {
+      const batch = writeBatch(db);
+      const activeDebt = customerDebts.find((d: any) => d.status === "active") || customerDebts[0];
+      
+      if (!activeDebt) {
+         if (totalCalculatedBalance > 0) {
+            const newDebtRef = doc(collection(db, "debts"));
+            batch.set(newDebtRef, {
+               customerName: customer.name,
+               phone: customer.phone || "",
+               amount: totalCalculatedBalance,
+               remainingAmount: totalCalculatedBalance,
+               status: "active",
+               timestamp: Timestamp.now(),
+               notes: "چاککردنەوەی کەشف حساب"
+            });
+         }
+      } else {
+         const finalRemaining = totalCalculatedBalance < 0 ? 0 : totalCalculatedBalance;
+         batch.update(doc(db, "debts", activeDebt.id), {
+            remainingAmount: finalRemaining,
+            status: finalRemaining === 0 ? "paid" : "active",
+            updatedAt: Timestamp.now()
+         });
+      }
+
+      await batch.commit();
+      alert("دەفتەر قەرز چاککرا بە سەرکەوتوویی. تکایە پەڕەکە ڕیفرێش بکە.");
+    } catch (e: any) {
+      alert("هەڵە: " + e.message);
+    }
+  };
 
   const handlePrint = () => {
     window.print();
@@ -659,6 +696,15 @@ export default function AccountStatementModal({
                   >
                     <RefreshCcw size={18} /> ناردن قاسە
                   </button>
+                  {customerDebts.length > 0 && Math.abs(totalDebtAmount - ledgerEntries.reduce((sum, e) => sum + e.debit - e.credit, 0)) > 0.01 && (
+                     <button
+                       onClick={fixDebtBookMismatch}
+                       className="flex-1 sm:flex-none justify-center bg-orange-500 hover:bg-orange-400 text-white px-5 py-3 rounded-xl flex items-center gap-2 font-bold transition-all shadow-lg shadow-orange-500/30"
+                       title="گونجاندنی دەفتەر قەرز بەپێی کەشف حساب"
+                     >
+                       <RefreshCcw size={18} /> چاککردنی دەفتەر
+                     </button>
+                  )}
                   <button
                     onClick={onClose}
                     className="w-12 h-12 rounded-xl bg-slate-800 hover:bg-rose-500 text-slate-300 hover:text-white flex items-center justify-center shrink-0 border border-slate-700 hover:border-rose-400 transition-all shadow-sm"

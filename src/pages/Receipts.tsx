@@ -163,12 +163,16 @@ export default function Receipts() {
       }
 
       if (selectedReceipt.paymentType === "debt" && selectedReceipt.customerName) {
-         const dSnap = debts.find(d => d.customerName === selectedReceipt.customerName && d.status === "active");
+         // Find the closest matching debt document, preferably active, or just the first match
+         const dSnap = debts.find(d => d.customerName === selectedReceipt.customerName && d.status === "active") || debts.find(d => d.customerName === selectedReceipt.customerName);
          const debtAmount = selectedReceipt.finalTotal || selectedReceipt.totalAmount || selectedReceipt.total || 0;
          if (dSnap && debtAmount > 0) {
+            const newRemaining = (dSnap.remainingAmount || 0) - debtAmount;
+            const finalRemaining = newRemaining < 0 ? 0 : newRemaining;
             batch.update(doc(db, "debts", dSnap.id), {
                amount: (dSnap.amount || 0) - debtAmount,
-               remainingAmount: (dSnap.remainingAmount || 0) - debtAmount,
+               remainingAmount: finalRemaining,
+               status: finalRemaining === 0 ? "paid" : "active",
                updatedAt: Timestamp.now()
             });
             const dtRef = doc(collection(db, "debt_transactions"));
