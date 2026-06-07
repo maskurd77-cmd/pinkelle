@@ -58,7 +58,13 @@ export default function App() {
         setCurrentRoute(perms[0]);
       }
     }
-  }, [userData]);
+  }, [userData, currentRoute]);
+
+  useEffect(() => {
+    const handleNav = (e: any) => setCurrentRoute(e.detail);
+    window.addEventListener("navigate", handleNav);
+    return () => window.removeEventListener("navigate", handleNav);
+  }, []);
 
   if (loading) {
     return (

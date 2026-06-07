@@ -7,6 +7,7 @@ import {
   X,
   CheckCircle2,
   Edit,
+  Trash2,
 } from "lucide-react";
 import {
   collection,
@@ -134,6 +135,83 @@ export default function Receipts() {
       console.error(e);
     } finally {
       setIsProcessingId(null);
+    }
+  };
+
+  const handleCancelReceipt = async () => {
+    if(!selectedReceipt) return;
+    const confirmInput = window.prompt("بۆ سڕینەوەی ئەم وەسڵە تکایە بنووسە 'سڕینەوە' یان 'delete'");
+    if(confirmInput !== "سڕینەوە" && confirmInput !== "delete") return;
+
+    try {
+      const batch = writeBatch(db);
+      
+      batch.update(doc(db, "receipts", selectedReceipt.id), { status: "canceled" });
+
+      if (selectedReceipt.items && Array.isArray(selectedReceipt.items)) {
+         for (const item of selectedReceipt.items) {
+             const prodId = item.productId || item.id;
+             const qty = item.unitType === "carton" ? (item.quantity * (item.cartonSize || 1)) : item.quantity;
+             if (prodId) {
+                const pRef = doc(db, "products", prodId);
+                const pSnap = await getDoc(pRef);
+                if (pSnap.exists()) {
+                   batch.update(pRef, { stock: (pSnap.data().stock || 0) + qty });
+                }
+             }
+         }
+      }
+
+      if (selectedReceipt.paymentType === "debt" && selectedReceipt.customerName) {
+         const dSnap = debts.find(d => d.customerName === selectedReceipt.customerName && d.status === "active");
+         const debtAmount = selectedReceipt.finalTotal || selectedReceipt.totalAmount || selectedReceipt.total || 0;
+         if (dSnap && debtAmount > 0) {
+            batch.update(doc(db, "debts", dSnap.id), {
+               amount: (dSnap.amount || 0) - debtAmount,
+               remainingAmount: (dSnap.remainingAmount || 0) - debtAmount,
+               updatedAt: Timestamp.now()
+            });
+            const dtRef = doc(collection(db, "debt_transactions"));
+            batch.set(dtRef, {
+               debtId: dSnap.id,
+               receiptId: selectedReceipt.id,
+               type: "sub",
+               amount: debtAmount,
+               timestamp: Timestamp.now(),
+               notes: "سڕینەوەی وەسڵی ژمارە: " + (selectedReceipt.invoiceNo || "")
+            });
+         }
+      }
+
+      if ((selectedReceipt.paymentType === "cash" || selectedReceipt.paymentType === "نەقد") && selectedReceipt.status !== "pending") {
+         const cashAmount = selectedReceipt.finalTotal || selectedReceipt.totalAmount || selectedReceipt.total || 0;
+         if (cashAmount > 0) {
+            const settingsSnap = await getDoc(doc(db, "system", "settings"));
+            const sData = settingsSnap.exists() ? settingsSnap.data() : {};
+            const defSafe = sData.defaultSafeForDebt;
+            if (defSafe) {
+               const safeSnap = await getDoc(doc(db, "safes", defSafe));
+               if (safeSnap.exists()) {
+                  batch.update(doc(db, "safes", defSafe), { balance: (safeSnap.data().balance || 0) - cashAmount });
+                  batch.set(doc(collection(db, "safe_transactions")), {
+                     safeId: defSafe,
+                     amount: cashAmount,
+                     type: "out",
+                     origin: "سڕینەوەی وەسڵی نەقد ئەژمارە: " + (selectedReceipt.invoiceNo || ""),
+                     timestamp: Timestamp.now(),
+                     notes: "گەڕانەوە لەبەر سڕینەوە",
+                     handlerName: auth.currentUser?.email || "کاشێر"
+                  });
+               }
+            }
+         }
+      }
+
+      await batch.commit();
+      alert("وەسڵەکە هەڵوەشێنرایەوە / سڕایەوە بە سەرکەوتوویی");
+      setSelectedReceipt(null);
+    } catch(e: any) {
+      alert("هەڵە ڕوویدا: " + e.message);
     }
   };
 
@@ -344,30 +422,34 @@ export default function Receipts() {
                 </h2>
               </div>
               <div className="flex gap-2">
+                {selectedReceipt.status !== "canceled" && (
                 <button
                   onClick={() => {
                     if(!confirm("دڵنیایت دەتەوێت دەستکاری ئەم وەسڵە بکەیت؟ داتاکە دەچێتە بەشی فرۆشتن.")) return;
                     window.dispatchEvent(
                        new CustomEvent("edit_receipt", { detail: selectedReceipt })
                     );
-                    // Also dispatch an event to navigate if routing handles it, 
-                    // or just click the POS tab button.
-                    // Wait, App.tsx doesn't listen to anything. If I just trigger click on POS tab?
-                    const posTab = document.querySelector('[data-id="pos"]') || document.querySelector('[data-id="mobile-pos"]');
-                    if (posTab) {
-                      (posTab as HTMLButtonElement).click();
-                    }
+                    window.dispatchEvent(new CustomEvent("navigate", { detail: "pos" }));
                   }}
                   className="px-4 py-2.5 bg-sky-600 text-white rounded-xl flex items-center gap-2 hover:bg-sky-700 hover:shadow-lg hover:shadow-sky-500/20 font-bold text-sm transition-all"
                 >
                   <Edit size={16} /> دەستکاری
                 </button>
+                )}
                 <button
                   onClick={handlePrint}
                   className="px-5 py-2.5 bg-pink-600 text-white rounded-xl flex items-center gap-2 hover:bg-pink-700 hover:shadow-lg hover:shadow-pink-500/20 font-bold text-sm transition-all"
                 >
                   <Printer size={16} /> چاپکردن
                 </button>
+                {selectedReceipt.status !== "canceled" && (
+                <button
+                  onClick={handleCancelReceipt}
+                  className="px-5 py-2.5 bg-red-600 text-white rounded-xl flex items-center gap-2 hover:bg-red-700 hover:shadow-lg hover:shadow-red-500/20 font-bold text-sm transition-all"
+                >
+                  <Trash2 size={16} /> سڕینەوە
+                </button>
+                )}
                 <button
                   onClick={() => setSelectedReceipt(null)}
                   className="w-10 h-10 flex items-center justify-center text-slate-400 bg-slate-100 hover:bg-slate-200 hover:text-slate-600 rounded-xl transition-all"
@@ -621,7 +703,12 @@ export function ReceiptPrintLayout({ receipt, debts = [] }: { receipt: any; debt
                          <span className="text-[9px] font-normal text-slate-600">({item.cartonSize} دانە ناو کارتۆن)</span>
                       </div>
                     ) : (
-                      item.quantity + (item.unitType === 'piece' ? ' دانە' : '')
+                      <div className="flex flex-col items-center justify-center">
+                         <span>{item.quantity} <span className="text-[10px] font-normal">دانە</span></span>
+                         {item.cartonSize && item.cartonSize > 1 && (
+                            <span className="text-[9px] font-normal text-slate-600">({item.cartonSize} دانە ناو کارتۆن)</span>
+                         )}
+                      </div>
                     )}
                   </td>
                   <td className="border-l border-black p-1 font-mono text-sm leading-tight align-middle text-center">
@@ -631,7 +718,7 @@ export function ReceiptPrintLayout({ receipt, debts = [] }: { receipt: any; debt
                         itemCurrency,
                       ).replace(itemCurrency, "")}
                     </div>
-                    {(item.originalQuantity && item.unitType === 'carton') ? (
+                    {item.cartonSize && item.cartonSize > 1 ? (
                        <div className="text-[9px] font-normal text-slate-600">نرخی ۱ دانە</div>
                     ) : null}
                   </td>

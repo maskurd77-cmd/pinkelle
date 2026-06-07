@@ -113,8 +113,13 @@ export default function POS() {
       const receipt = e.detail;
       setEditingReceiptId(receipt.id);
       
-      setOriginalCart(receipt.items || []);
-      setCart(receipt.items || []);
+      const mappedItems = (receipt.items || []).map((item: any) => ({
+         ...item,
+         id: item.productId || item.id,
+         quantity: item.originalQuantity || item.quantity
+      }));
+      setOriginalCart(mappedItems);
+      setCart(mappedItems);
       setIsWholesale(receipt.isWholesale || false);
       setDiscountType(receipt.discount?.type || "amount");
       setDiscountValue(receipt.discount?.value || "");
@@ -443,7 +448,7 @@ export default function POS() {
         const stockDiffs: Record<string, number> = {};
         if (isEditing) {
            originalCart.forEach(item => {
-              stockDiffs[item.productId || item.id] = (stockDiffs[item.productId || item.id] || 0) + (item.quantity || 0);
+              stockDiffs[item.productId || item.id] = (stockDiffs[item.productId || item.id] || 0) + getActualPieceQuantity(item);
            });
         }
         cart.forEach(item => {
@@ -555,21 +560,40 @@ export default function POS() {
         }
       }
 
-      if (customerDetails.paymentType === "cash" && settings?.defaultSafeForDebt) {
+      let safeDiff = 0;
+      if (isEditing) {
+         if (customerDetails.paymentType === "cash" || customerDetails.paymentType === "نەقد") {
+             if (editingOriginalPaymentType === "cash" || editingOriginalPaymentType === "نەقد") {
+                 safeDiff = total - editingOriginalTotal;
+             } else {
+                 safeDiff = total;
+             }
+         } else {
+             if (editingOriginalPaymentType === "cash" || editingOriginalPaymentType === "نەقد") {
+                 safeDiff = -editingOriginalTotal;
+             }
+         }
+      } else {
+         if (customerDetails.paymentType === "cash" || customerDetails.paymentType === "نەقد") {
+             safeDiff = total;
+         }
+      }
+
+      if (safeDiff !== 0 && settings?.defaultSafeForDebt) {
          const targetSafe = settings.defaultSafeForDebt;
          const safeSnap = safes.find((s: any) => s.id === targetSafe);
          if (safeSnap) {
             batch.update(doc(db, "safes", targetSafe), {
-               balance: (safeSnap.balance || 0) + total
+               balance: (safeSnap.balance || 0) + safeDiff
             });
             batch.set(doc(collection(db, "safe_transactions")), {
                safeId: targetSafe,
-               amount: total,
-               type: "in",
-               origin: "فرۆشتنی کاش ژمارە: " + invoiceLabel,
+               amount: Math.abs(safeDiff),
+               type: safeDiff > 0 ? "in" : "out",
+               origin: (isEditing ? "دەستکاری وەسڵ: " : "فرۆشتنی کاش ژمارە: ") + invoiceLabel,
                timestamp: Timestamp.now(),
-               notes: "",
-               handlerName: userName
+               notes: isEditing ? "جیاوازی دەستکاری" : "",
+               handlerName: auth.currentUser?.email || "pos"
             });
          }
       }

@@ -60,6 +60,7 @@ export default function Dashboard() {
     let itemsSold = 0;
 
     receipts.forEach((r) => {
+      if (r.status === "pending" || r.status === "canceled") return;
       const ts = r.timestamp?.toDate
         ? r.timestamp.toDate()
         : new Date(r.timestamp);

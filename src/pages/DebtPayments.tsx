@@ -78,19 +78,29 @@ export default function DebtPayments({ userRole, userName }: any) {
          updatedAt: Timestamp.now(),
       });
       
-      if (editingTx.syncedToSafe && editingTx.safeId && amountDiff !== 0) {
-         const safeSnap = safes.find(s => s.id === editingTx.safeId);
+      const fallbackSafe = safes.find(s => s.name === "نەقدی")?.id || safes[0]?.id;
+      const safeId = editingTx.safeId || settings?.defaultSafeForDebt || fallbackSafe;
+      let shouldSyncNow = false;
+      let syncAmountDiff = amountDiff;
+      if (!editingTx.syncedToSafe && safeId) {
+         shouldSyncNow = true;
+         syncAmountDiff = newAmount;
+         batch.update(doc(db, "debt_transactions", editingTx.id), { syncedToSafe: true, safeId });
+      }
+
+      if ((shouldSyncNow || editingTx.syncedToSafe) && safeId && syncAmountDiff !== 0) {
+         const safeSnap = safes.find(s => s.id === safeId);
          if (safeSnap) {
-            batch.update(doc(db, "safes", editingTx.safeId), {
-               balance: (safeSnap.balance || 0) + amountDiff
+            batch.update(doc(db, "safes", safeId), {
+               balance: (safeSnap.balance || 0) + syncAmountDiff
             });
             batch.set(doc(collection(db, "safe_transactions")), {
-               safeId: editingTx.safeId,
-               amount: Math.abs(amountDiff),
-               type: amountDiff > 0 ? "in" : "out",
-               origin: "دەستکاری کردنی وەرگرتنی قەرز",
+               safeId: safeId,
+               amount: Math.abs(syncAmountDiff),
+               type: syncAmountDiff > 0 ? "in" : "out",
+               origin: "دەستکاری و گواستنەوەی پارەی قەرز",
                timestamp: Timestamp.now(),
-               notes: "جیاوازی دەستکاری پێشوو",
+               notes: "جیاوازی دەستکاری / نەگواستراوە",
             });
          }
       }

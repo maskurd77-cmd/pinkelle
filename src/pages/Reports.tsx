@@ -127,6 +127,7 @@ export default function Reports() {
     const categoryCount: Record<string, number> = {};
 
     filteredData.filteredReceipts.forEach((r) => {
+      if (r.status === "pending" || r.status === "canceled") return;
             let cAmount = r.totalAmount || 0;
             let dAmount = r.discountAmount || 0;
             

@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from "react";
-import { X, Printer } from "lucide-react";
+import { X, Printer, Edit, RefreshCcw } from "lucide-react";
 import { formatCurrency } from "../data";
-import { collection, query, where, getDocs } from "firebase/firestore";
+import { collection, query, where, getDocs, doc, writeBatch, Timestamp, onSnapshot } from "firebase/firestore";
 import { db } from "../firebase";
 
 export default function AccountStatementModal({
   customer,
   debts,
+  receipts,
   onClose,
 }: any) {
   const [debtTransactions, setDebtTransactions] = useState<any[]>([]);
@@ -14,6 +15,142 @@ export default function AccountStatementModal({
   const [fromDate, setFromDate] = useState<string>("");
   const [toDate, setToDate] = useState<string>("");
   const [safesMap, setSafesMap] = useState<Record<string, string>>({});
+  const [systemSafes, setSystemSafes] = useState<any[]>([]);
+  const [settings, setSettings] = useState<any>(null);
+
+  const [editingTx, setEditingTx] = useState<any>(null);
+  const [editPaymentAmount, setEditPaymentAmount] = useState("");
+  const [editPaymentReduction, setEditPaymentReduction] = useState("");
+  const [editPaymentNote, setEditPaymentNote] = useState("");
+
+  const handleOpenEditTx = (tx: any) => {
+    setEditingTx(tx);
+    setEditPaymentAmount(tx.credit?.toString() || "");
+    setEditPaymentReduction(tx.reductionAmount?.toString() || "0");
+    setEditPaymentNote(tx.details || "");
+  };
+
+  const handleSaveEditTx = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingTx || !editingTx.rawTx) return;
+    try {
+      const newAmount = parseFloat(editPaymentAmount) || 0;
+      const newReduction = parseFloat(editPaymentReduction) || 0;
+      const oldAmount = editingTx.rawTx.amount || 0;
+      const oldReduction = editingTx.rawTx.reductionAmount || 0;
+      
+      const amountDiff = newAmount - oldAmount;
+      const reductionDiff = newReduction - oldReduction;
+      
+      const batch = writeBatch(db);
+      
+      batch.update(doc(db, "debt_transactions", editingTx.rawTx.id), {
+        amount: newAmount,
+        reductionAmount: newReduction,
+        notes: editPaymentNote,
+        updatedAt: Timestamp.now()
+      });
+      
+      if (editingTx.rawTx.debtId) {
+         const debtToUpdate = debts.find((d: any) => d.id === editingTx.rawTx.debtId);
+         if (debtToUpdate) {
+            batch.update(doc(db, "debts", debtToUpdate.id), {
+               remainingAmount: (debtToUpdate.remainingAmount || 0) - amountDiff - reductionDiff,
+               updatedAt: Timestamp.now(),
+            });
+         }
+      }
+      
+      const safeId = editingTx.rawTx.safeId || settings?.defaultSafeForDebt;
+      let shouldSyncNow = false;
+      let syncAmountDiff = amountDiff;
+      if (!editingTx.rawTx.syncedToSafe && safeId) {
+         shouldSyncNow = true;
+         syncAmountDiff = newAmount;
+         batch.update(doc(db, "debt_transactions", editingTx.rawTx.id), { syncedToSafe: true, safeId });
+      }
+
+      if ((shouldSyncNow || editingTx.rawTx.syncedToSafe) && safeId && syncAmountDiff !== 0) {
+         const safeSnap = systemSafes.find((s: any) => s.id === safeId);
+         if (safeSnap) {
+            batch.update(doc(db, "safes", safeId), {
+               balance: (safeSnap.balance || 0) + syncAmountDiff
+            });
+            batch.set(doc(collection(db, "safe_transactions")), {
+               safeId: safeId,
+               amount: Math.abs(syncAmountDiff),
+               type: syncAmountDiff > 0 ? "in" : "out",
+               origin: "دەستکاری و گواستنەوەی پارەی قەرز",
+               timestamp: Timestamp.now(),
+               notes: "دەستکاری پێشوو / نەگواستراوە",
+            });
+         }
+      }
+      
+      await batch.commit();
+      setEditingTx(null);
+      
+      setDebtTransactions(prev => prev.map(t => {
+         if (t.id === editingTx.rawTx.id) {
+            return { ...t, amount: newAmount, reductionAmount: newReduction, notes: editPaymentNote };
+         }
+         return t;
+      }));
+    } catch (err: any) {
+      alert("Error: " + err.message);
+    }
+  };
+
+  const syncAllUnsyncedToSafe = async () => {
+    if (!settings?.defaultSafeForDebt) {
+       alert("قاسەی بنەڕەتی دیارینەکراوە لە سێتینگەکان!");
+       return;
+    }
+    const unsynced = debtTransactions.filter(t => t.type === "pay" && !t.syncedToSafe);
+    if (unsynced.length === 0) {
+       alert("هیچ پارەیەکی نەگواستراوە نییە.");
+       return;
+    }
+    
+    if (!confirm(`دڵنیایت لە گواستنەوەی ${unsynced.length} وەسڵ بۆ قاسە؟`)) return;
+    
+    try {
+       const batch = writeBatch(db);
+       let totalAmount = 0;
+       
+       unsynced.forEach(tx => {
+          batch.update(doc(db, "debt_transactions", tx.id), { syncedToSafe: true, safeId: settings.defaultSafeForDebt });
+          totalAmount += (tx.amount || 0);
+       });
+       
+       const safeSnap = systemSafes.find(s => s.id === settings.defaultSafeForDebt);
+       if (safeSnap) {
+          batch.update(doc(db, "safes", settings.defaultSafeForDebt), {
+             balance: (safeSnap.balance || 0) + totalAmount
+          });
+          batch.set(doc(collection(db, "safe_transactions")), {
+             safeId: settings.defaultSafeForDebt,
+             amount: totalAmount,
+             type: "in",
+             origin: "گواستنەوەی پارەی قەرزە کۆنەکان",
+             timestamp: Timestamp.now(),
+             notes: `کۆی ${unsynced.length} وەسڵ`,
+          });
+       }
+       
+       await batch.commit();
+       alert("بە سەرکەوتوویی گواسترانەوە.");
+       
+       setDebtTransactions(prev => prev.map(t => {
+          if (!t.syncedToSafe && t.type === "pay") {
+             return { ...t, syncedToSafe: true, safeId: settings.defaultSafeForDebt };
+          }
+          return t;
+       }));
+    } catch (e: any) {
+       alert("هەڵە: " + e.message);
+    }
+  };
 
   const customerDebts = debts.filter(
     (d: any) => d.customerName === customer.name,
@@ -28,12 +165,19 @@ export default function AccountStatementModal({
       setLoading(true);
 
       // Fetch safes for names reference
-      const safeSnap = await getDocs(collection(db, "safes"));
-      const sMap: Record<string, string> = {};
-      safeSnap.docs.forEach(doc => {
-         sMap[doc.id] = doc.data().name;
+      const unsubSafes = onSnapshot(collection(db, "safes"), (safeSnap) => {
+         const sMap: Record<string, string> = {};
+         const sArr: any[] = [];
+         safeSnap.docs.forEach(doc => {
+            sMap[doc.id] = doc.data().name;
+            sArr.push({ id: doc.id, ...doc.data() });
+         });
+         setSafesMap(sMap);
+         setSystemSafes(sArr);
       });
-      setSafesMap(sMap);
+      const unsubSettings = onSnapshot(doc(db, "system", "settings"), (snap) => {
+         if (snap.exists()) setSettings(snap.data());
+      });
 
       const debtIds = customerDebts.map((d: any) => d.id);
       let trans: any[] = [];
@@ -74,6 +218,7 @@ export default function AccountStatementModal({
         type: "دۆلار",
         debit: tx.originalAmount || tx.amount,
         credit: 0,
+        rawTx: tx,
       });
     } else if (tx.type === "pay") {
       // Payment (Credit)
@@ -91,9 +236,27 @@ export default function AccountStatementModal({
         type: "دۆلار",
         debit: 0,
         credit: tx.originalAmount || tx.amount || tx.paidAmount || 0,
+        rawTx: tx,
       });
     }
   });
+
+  // Add Cash Receipts
+  if (receipts) {
+    const cashReceipts = receipts.filter((r: any) => r.customerName === customer.name && r.status === "completed" && (r.paymentType === "cash" || r.paymentType === "نەقد"));
+    cashReceipts.forEach((r: any) => {
+       const ts = r.timestamp?.toDate ? r.timestamp.toDate() : new Date(r.timestamp);
+       ledgerEntries.push({
+          date: ts,
+          docNo: r.id.slice(-6).toUpperCase(),
+          details: `وەسڵی نەقد - ჟمارە: ${r.invoiceNo}`,
+          type: "دۆلار",
+          debit: r.totalAmount || r.total || 0,
+          credit: r.totalAmount || r.total || 0,
+          rawTx: null,
+       });
+    });
+  }
 
   // Sort by date (oldest to newest)
   ledgerEntries.sort((a, b) => a.date.getTime() - b.date.getTime());
@@ -490,6 +653,13 @@ export default function AccountStatementModal({
                     <Printer size={18} /> چاپکردن
                   </button>
                   <button
+                    onClick={syncAllUnsyncedToSafe}
+                    className="flex-1 sm:flex-none justify-center bg-emerald-500 hover:bg-emerald-400 text-white px-5 py-3 rounded-xl flex items-center gap-2 font-bold transition-all shadow-lg shadow-emerald-500/30"
+                    title="ناردنی بڕە قەرزە نەگواستراوەکان بۆ قاسە"
+                  >
+                    <RefreshCcw size={18} /> ناردن قاسە
+                  </button>
+                  <button
                     onClick={onClose}
                     className="w-12 h-12 rounded-xl bg-slate-800 hover:bg-rose-500 text-slate-300 hover:text-white flex items-center justify-center shrink-0 border border-slate-700 hover:border-rose-400 transition-all shadow-sm"
                   >
@@ -547,6 +717,7 @@ export default function AccountStatementModal({
                               <th className="px-6 py-4 text-xs font-bold uppercase text-slate-500 whitespace-nowrap">قەرزدار</th>
                               <th className="px-6 py-4 text-xs font-bold uppercase text-slate-500 whitespace-nowrap">قەرزدەر</th>
                               <th className="px-6 py-4 text-xs font-bold uppercase text-slate-500 whitespace-nowrap font-mono bg-sky-50/50">ماوە</th>
+                              <th className="px-6 py-4 text-xs font-bold uppercase text-slate-500 whitespace-nowrap print:hidden">کردارەکان</th>
                             </tr>
                          </thead>
                          <tbody className="divide-y divide-slate-100">
@@ -558,6 +729,7 @@ export default function AccountStatementModal({
                               <td className="px-6 py-4 text-slate-400 font-mono text-sm">-</td>
                               <td className="px-6 py-4 text-slate-400 font-mono text-sm">-</td>
                               <td className="px-6 py-4 font-mono font-black text-slate-700 bg-sky-50/50" dir="ltr">{formatCurrency(previousBalance)}</td>
+                              <td className="px-6 py-4 print:hidden"></td>
                             </tr>
                             {filteredEntries.map((entry, idx) => (
                                <tr key={idx} className="hover:bg-white transition-colors">
@@ -577,6 +749,16 @@ export default function AccountStatementModal({
                                   </td>
                                   <td className="px-6 py-4 font-mono font-black text-sky-700 bg-sky-50/50" dir="ltr">
                                      {formatCurrency(entry.balance)}
+                                  </td>
+                                  <td className="px-6 py-4 print:hidden">
+                                     {entry.rawTx && entry.rawTx.type === "pay" && (
+                                        <button onClick={() => handleOpenEditTx(entry)} className="p-2 text-sky-600 bg-sky-50 hover:bg-sky-100 rounded-lg transition-colors">
+                                           <Edit size={16} />
+                                        </button>
+                                     )}
+                                     {entry.rawTx && entry.rawTx.type === "pay" && !entry.rawTx.syncedToSafe && (
+                                        <div className="text-[9px] text-rose-500 font-bold mt-1">نەچووەتە قاسە</div>
+                                     )}
                                   </td>
                                </tr>
                             ))}
@@ -646,6 +828,53 @@ export default function AccountStatementModal({
       <div className="hidden print:block w-full text-black bg-white">
         {renderStatementContent()}
       </div>
+
+      {editingTx && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex justify-center items-center p-4 z-[10000]">
+           <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden" dir="rtl">
+              <div className="bg-gradient-to-l from-slate-900 to-slate-800 p-5 flex justify-between items-center text-white">
+                 <h2 className="text-lg font-black">دەستکاری پارەدان</h2>
+                 <button onClick={() => setEditingTx(null)} className="p-2 hover:bg-white/10 rounded-xl transition-colors">
+                    <X size={20} />
+                 </button>
+              </div>
+              <form onSubmit={handleSaveEditTx} className="p-6 space-y-4">
+                 <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-2">بڕی دراوە</label>
+                    <input
+                       type="number"
+                       step="any"
+                       value={editPaymentAmount}
+                       onChange={e => setEditPaymentAmount(e.target.value)}
+                       className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 font-mono font-bold text-lg"
+                       required
+                    />
+                 </div>
+                 <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-2">بڕی لێخۆشبوون (داشکاندن)</label>
+                    <input
+                       type="number"
+                       step="any"
+                       value={editPaymentReduction}
+                       onChange={e => setEditPaymentReduction(e.target.value)}
+                       className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 font-mono font-bold text-lg"
+                    />
+                 </div>
+                 <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-2">تێبینی</label>
+                    <textarea
+                       value={editPaymentNote}
+                       onChange={e => setEditPaymentNote(e.target.value)}
+                       className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm resize-none h-24"
+                    />
+                 </div>
+                 <button type="submit" className="w-full bg-rose-500 hover:bg-rose-600 text-white font-bold py-3.5 rounded-xl shadow-lg transition-colors">
+                    پاشەکەوتکردن
+                 </button>
+              </form>
+           </div>
+        </div>
+      )}
     </>
   );
 }
