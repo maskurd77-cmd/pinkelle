@@ -20,6 +20,7 @@ import {
   Tags,
   MapPin,
   Store,
+  ScrollText,
 } from "lucide-react";
 import { auth } from "../firebase";
 import { signOut } from "firebase/auth";
@@ -43,6 +44,7 @@ const navItems = [
   { id: "companies", label: "شەریکەکان", icon: Users },
   { id: "safes", label: "قاسەکان", icon: Banknote },
   { id: "debt", label: "دەفتەری قەرز", icon: FileText },
+  { id: "debt_payments", label: "کەشف حساب", icon: ScrollText },
   { id: "receipts", label: "وەسڵەکان", icon: ReceiptText },
   { id: "expenses", label: "خەرجییەکان", icon: Banknote },
   { id: "reports", label: "راپۆرتەکان", icon: LineChart },
@@ -93,6 +95,7 @@ export default function Layout({
             return (
               <button
                 key={item.id}
+                data-id={item.id}
                 onClick={() => {
                   onNavigate(item.id);
                   setIsMobileMenuOpen(false);
@@ -186,6 +189,7 @@ export default function Layout({
               return (
                 <button
                   key={item.id}
+                  data-id={`mobile-${item.id}`}
                   onClick={() => onNavigate(item.id)}
                   className="flex flex-col items-center justify-center py-1.5 flex-1 gap-1 relative"
                 >

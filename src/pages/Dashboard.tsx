@@ -83,8 +83,9 @@ export default function Dashboard() {
             rItems += qty;
           });
         }
-
-        profit += rProfit;
+        
+        const invoiceDiscount = r.discountAmount || 0;
+        profit += (rProfit - invoiceDiscount);
         itemsSold += rItems;
       }
     });

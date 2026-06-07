@@ -26,6 +26,7 @@ import {
   Calculator,
   Send,
   FileClock,
+  Edit,
 } from "lucide-react";
 import { formatCurrency } from "../data";
 
@@ -36,6 +37,7 @@ export default function SafesPage({ settings }: any) {
   const [isAddingSafe, setIsAddingSafe] = useState(false);
   const [newSafeName, setNewSafeName] = useState("");
     const [newSafeUSD, setNewSafeUSD] = useState("");
+  const [editingSafe, setEditingSafe] = useState<{id: string, name: string} | null>(null);
 
   const [isTransferring, setIsTransferring] = useState(false);
   const [transferFrom, setTransferFrom] = useState("");
@@ -101,6 +103,15 @@ export default function SafesPage({ settings }: any) {
     setIsAddingSafe(false);
     setNewSafeName("");
         setNewSafeUSD("");
+  };
+
+  const handleUpdateSafe = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingSafe || !editingSafe.name.trim()) return;
+    await updateDoc(doc(db, "safes", editingSafe.id), {
+      name: editingSafe.name,
+    });
+    setEditingSafe(null);
   };
 
   const handleDeleteSafe = async (id: string, name: string) => {
@@ -355,12 +366,20 @@ export default function SafesPage({ settings }: any) {
             key={safe.id}
             className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 relative group"
           >
-            <button
-              onClick={() => handleDeleteSafe(safe.id, safe.name)}
-              className="absolute top-4 left-4 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
-            >
-              <X size={18} />
-            </button>
+            <div className="absolute top-4 left-4 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+               <button
+                 onClick={() => setEditingSafe({id: safe.id, name: safe.name})}
+                 className="p-1.5 text-slate-300 hover:text-sky-500 hover:bg-sky-50 rounded-lg transition-colors"
+               >
+                 <Edit size={16} />
+               </button>
+               <button
+                 onClick={() => handleDeleteSafe(safe.id, safe.name)}
+                 className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+               >
+                 <X size={16} />
+               </button>
+            </div>
             <div className="flex items-center gap-3 mb-4 border-b border-slate-100 pb-4">
               <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center text-slate-600 shrink-0">
                 <Banknote size={20} />
@@ -724,6 +743,53 @@ export default function SafesPage({ settings }: any) {
       )}
 
       
+      {/* Editing Modal */}
+      {editingSafe && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex justify-center items-center p-4 z-50">
+          <form
+            onSubmit={handleUpdateSafe}
+            className="bg-white rounded-3xl w-full max-w-md shadow-2xl p-6 relative overflow-hidden"
+          >
+            <h2 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-3">
+              <div className="w-10 h-10 bg-sky-100 text-sky-600 rounded-xl flex items-center justify-center">
+                <Edit size={20} />
+              </div>
+              دەستکاری کردنی قاسە
+            </h2>
+            <div className="space-y-4 mb-8">
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">
+                  ناوی قاسە
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editingSafe.name}
+                  onChange={(e) => setEditingSafe({ ...editingSafe, name: e.target.value })}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-sky-500 outline-none font-bold text-slate-700 text-right"
+                />
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <button
+                type="submit"
+                className="flex-1 bg-sky-600 hover:bg-sky-700 text-white py-3 rounded-xl font-bold transition-all hover:shadow-lg hover:shadow-sky-500/30"
+              >
+                پاشەکەوتکردن
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditingSafe(null)}
+                className="w-24 bg-slate-100 hover:bg-slate-200 text-slate-600 py-3 rounded-xl font-bold transition-colors"
+              >
+                پاشگەزبوونەوە
+              </button>
+            </div>
+            <div className="absolute top-0 right-0 w-32 h-32 bg-sky-50 rounded-bl-[100px] -z-10 transition-all group-hover:scale-110" />
+          </form>
+        </div>
+      )}
+
       {/* Transfer Modal */}
       {isTransferring && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex justify-center items-center p-4 z-50 overflow-y-auto">

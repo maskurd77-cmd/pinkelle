@@ -6,6 +6,7 @@ import {
   Eye,
   X,
   CheckCircle2,
+  Edit,
 } from "lucide-react";
 import {
   collection,
@@ -344,6 +345,24 @@ export default function Receipts() {
               </div>
               <div className="flex gap-2">
                 <button
+                  onClick={() => {
+                    if(!confirm("دڵنیایت دەتەوێت دەستکاری ئەم وەسڵە بکەیت؟ داتاکە دەچێتە بەشی فرۆشتن.")) return;
+                    window.dispatchEvent(
+                       new CustomEvent("edit_receipt", { detail: selectedReceipt })
+                    );
+                    // Also dispatch an event to navigate if routing handles it, 
+                    // or just click the POS tab button.
+                    // Wait, App.tsx doesn't listen to anything. If I just trigger click on POS tab?
+                    const posTab = document.querySelector('[data-id="pos"]') || document.querySelector('[data-id="mobile-pos"]');
+                    if (posTab) {
+                      (posTab as HTMLButtonElement).click();
+                    }
+                  }}
+                  className="px-4 py-2.5 bg-sky-600 text-white rounded-xl flex items-center gap-2 hover:bg-sky-700 hover:shadow-lg hover:shadow-sky-500/20 font-bold text-sm transition-all"
+                >
+                  <Edit size={16} /> دەستکاری
+                </button>
+                <button
                   onClick={handlePrint}
                   className="px-5 py-2.5 bg-pink-600 text-white rounded-xl flex items-center gap-2 hover:bg-pink-700 hover:shadow-lg hover:shadow-pink-500/20 font-bold text-sm transition-all"
                 >
@@ -386,10 +405,16 @@ export function ReceiptPrintLayout({ receipt, debts = [] }: { receipt: any; debt
   let prevDebt = 0;
   let overallDebt = 0;
   if (customerDebt) {
-    overallDebt = customerDebt.remainingAmount || 0;
     const currentIsDebt = receipt.paymentType === "قەرز" || receipt.paymentType === "debt";
     const addedAmount = currentIsDebt ? (receipt.totalAmount || receipt.total || 0) : 0;
-    prevDebt = Math.max(0, overallDebt - addedAmount);
+    
+    if (receipt.status === 'pending') {
+       prevDebt = customerDebt.remainingAmount || 0;
+       overallDebt = prevDebt + addedAmount;
+    } else {
+       overallDebt = customerDebt.remainingAmount || 0;
+       prevDebt = Math.max(0, overallDebt - addedAmount);
+    }
   }
 
   const hasDebtRows = !!customerDebt && overallDebt > 0;
@@ -409,7 +434,7 @@ export function ReceiptPrintLayout({ receipt, debts = [] }: { receipt: any; debt
           <img
             src="https://cheerful-pink-qakkchpr.edgeone.app/Pink%20Elle%20logo%20new-1_page-0001.jpg"
             alt="Pink Elle Logo"
-            className="w-full h-full object-contain mix-blend-multiply drop-shadow-sm"
+            className="w-full h-full object-contain drop-shadow-sm"
           />
         </div>
 
@@ -589,14 +614,26 @@ export function ReceiptPrintLayout({ receipt, debts = [] }: { receipt: any; debt
                   <td className="border-l border-black p-1 text-right font-bold pr-2">
                     {item.name} {item.isWholesale ? "(جوملە)" : ""}
                   </td>
-                  <td className="border-l border-black p-1 font-mono text-sm leading-none">
-                    {item.quantity}
+                  <td className="border-l border-black p-1 font-mono text-sm leading-tight align-middle text-center">
+                    {item.originalQuantity && item.unitType === 'carton' ? (
+                      <div className="flex flex-col items-center justify-center">
+                         <span>{item.originalQuantity} <span className="text-[10px] font-normal">کارتۆن</span></span>
+                         <span className="text-[9px] font-normal text-slate-600">({item.cartonSize} دانە ناو کارتۆن)</span>
+                      </div>
+                    ) : (
+                      item.quantity + (item.unitType === 'piece' ? ' دانە' : '')
+                    )}
                   </td>
-                  <td className="border-l border-black p-1 font-mono text-sm leading-none">
-                    {formatCurrency(
-                      item.originalUnitPrice || item.unitPrice,
-                      itemCurrency,
-                    ).replace(itemCurrency, "")}
+                  <td className="border-l border-black p-1 font-mono text-sm leading-tight align-middle text-center">
+                    <div>
+                      {formatCurrency(
+                        item.originalUnitPrice || item.unitPrice,
+                        itemCurrency,
+                      ).replace(itemCurrency, "")}
+                    </div>
+                    {(item.originalQuantity && item.unitType === 'carton') ? (
+                       <div className="text-[9px] font-normal text-slate-600">نرخی ۱ دانە</div>
+                    ) : null}
                   </td>
                   <td className="border-l border-black p-1 font-mono text-sm text-red-600 leading-none">
                     {diff > 0 ? diff.toLocaleString() : "0"}

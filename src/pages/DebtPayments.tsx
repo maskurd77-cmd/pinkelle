@@ -19,6 +19,7 @@ import {
   TrendingDown,
   TrendingUp,
   ScrollText,
+  Edit,
 } from "lucide-react";
 
 import { DebtReceiptModal } from "../components/DebtReceiptModal";
@@ -38,6 +39,68 @@ export default function DebtPayments({ userRole, userName }: any) {
   
   const [printTx, setPrintTx] = useState<any>(null);
   const [statementCustomer, setStatementCustomer] = useState<any>(null);
+  
+  const [editingTx, setEditingTx] = useState<any>(null);
+  const [editPaymentAmount, setEditPaymentAmount] = useState("");
+  const [editPaymentReduction, setEditPaymentReduction] = useState("");
+  const [editPaymentNote, setEditPaymentNote] = useState("");
+
+  const handleOpenEditTx = (tx: any) => {
+    setEditingTx(tx);
+    setEditPaymentAmount(tx.amount?.toString() || "");
+    setEditPaymentReduction(tx.reductionAmount?.toString() || "");
+    setEditPaymentNote(tx.notes || "");
+  };
+
+  const handleSaveEditTx = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingTx || !selectedDebt) return;
+    try {
+      const newAmount = parseFloat(editPaymentAmount) || 0;
+      const newReduction = parseFloat(editPaymentReduction) || 0;
+      const oldAmount = editingTx.amount || 0;
+      const oldReduction = editingTx.reductionAmount || 0;
+      
+      const amountDiff = newAmount - oldAmount;
+      const reductionDiff = newReduction - oldReduction;
+      
+      const batch = writeBatch(db);
+      
+      batch.update(doc(db, "debt_transactions", editingTx.id), {
+        amount: newAmount,
+        reductionAmount: newReduction,
+        notes: editPaymentNote,
+        updatedAt: Timestamp.now()
+      });
+      
+      batch.update(doc(db, "debts", selectedDebt.id), {
+         remainingAmount: (selectedDebt.remainingAmount || 0) - amountDiff - reductionDiff,
+         updatedAt: Timestamp.now(),
+      });
+      
+      if (editingTx.syncedToSafe && editingTx.safeId && amountDiff !== 0) {
+         const safeSnap = safes.find(s => s.id === editingTx.safeId);
+         if (safeSnap) {
+            batch.update(doc(db, "safes", editingTx.safeId), {
+               balance: (safeSnap.balance || 0) + amountDiff
+            });
+            batch.set(doc(collection(db, "safe_transactions")), {
+               safeId: editingTx.safeId,
+               amount: Math.abs(amountDiff),
+               type: amountDiff > 0 ? "in" : "out",
+               origin: "دەستکاری کردنی وەرگرتنی قەرز",
+               timestamp: Timestamp.now(),
+               notes: "جیاوازی دەستکاری پێشوو",
+            });
+         }
+      }
+      
+      await batch.commit();
+      setEditingTx(null);
+    } catch (err: any) {
+      alert("Error: " + err.message);
+    }
+  };
 
   useEffect(() => {
     // defaults from settings
@@ -92,7 +155,6 @@ export default function DebtPayments({ userRole, userName }: any) {
 
   const filteredDebts = debts.filter(
     (d) =>
-      d.status === "active" &&
       !!d.customerName &&
       d.customerName.includes(search)
   );
@@ -381,9 +443,16 @@ export default function DebtPayments({ userRole, userName }: any) {
                             )}
                         </td>
                         <td className="px-8 py-6 text-center">
-                           {h.type === "pay" && <button onClick={() => handlePrintParams(h)} className="p-2.5 text-slate-400 hover:text-sky-600 hover:bg-sky-50 rounded-xl transition-all inline-flex shadow-sm border border-transparent hover:border-sky-100">
-                              <Printer size={18} />
-                           </button>}
+                           {h.type === "pay" && (
+                              <div className="flex gap-2 justify-center">
+                                 <button onClick={() => handleOpenEditTx(h)} className="p-2.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-xl transition-all inline-flex shadow-sm border border-transparent hover:border-amber-100" title="دەستکاری">
+                                    <Edit size={18} />
+                                 </button>
+                                 <button onClick={() => handlePrintParams(h)} className="p-2.5 text-slate-400 hover:text-sky-600 hover:bg-sky-50 rounded-xl transition-all inline-flex shadow-sm border border-transparent hover:border-sky-100" title="چاپ">
+                                   <Printer size={18} />
+                                 </button>
+                              </div>
+                           )}
                         </td>
                       </tr>
                     ))}
@@ -416,9 +485,14 @@ export default function DebtPayments({ userRole, userName }: any) {
                            </div>
                         </div>
                         {h.type === "pay" && (
-                           <button onClick={() => handlePrintParams(h)} className="p-2 text-slate-400 hover:text-sky-600 bg-slate-50 rounded-xl transition-all border border-slate-100 shadow-sm active:scale-95">
-                              <Printer size={20} />
-                           </button>
+                           <div className="flex gap-2">
+                             <button onClick={() => handleOpenEditTx(h)} className="p-2 text-slate-400 hover:text-amber-600 bg-slate-50 rounded-xl transition-all border border-slate-100 shadow-sm flex-1 flex justify-center active:scale-95">
+                                <Edit size={20} />
+                             </button>
+                             <button onClick={() => handlePrintParams(h)} className="p-2 text-slate-400 hover:text-sky-600 bg-slate-50 rounded-xl transition-all border border-slate-100 shadow-sm flex-1 flex justify-center active:scale-95">
+                                <Printer size={20} />
+                             </button>
+                           </div>
                         )}
                      </div>
                      <div className="bg-slate-50 rounded-[16px] p-4 flex flex-col border border-slate-100">
@@ -473,6 +547,55 @@ export default function DebtPayments({ userRole, userName }: any) {
            debts={debts}
            onClose={() => setStatementCustomer(null)}
          />
+       )}
+
+       {/* Edit Transaction Modal */}
+       {editingTx && (
+         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+           <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl">
+             <h2 className="text-xl font-bold text-slate-800 mb-6 font-primary text-center">دەستکاری کردنی بڕی وەرگیراو</h2>
+             <form onSubmit={handleSaveEditTx} className="space-y-4">
+               <div>
+                  <label className="block text-sm font-bold text-slate-600 mb-2">پێشتر وەرگیراوە</label>
+                  <input
+                    type="number"
+                    value={editPaymentAmount}
+                    onChange={(e) => setEditPaymentAmount(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-amber-500 font-mono text-left"
+                    dir="ltr"
+                    required
+                  />
+               </div>
+               <div>
+                  <label className="block text-sm font-bold text-slate-600 mb-2">لێخۆشبوونی پێشوو</label>
+                  <input
+                    type="number"
+                    value={editPaymentReduction}
+                    onChange={(e) => setEditPaymentReduction(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-amber-500 font-mono text-left"
+                    dir="ltr"
+                  />
+               </div>
+               <div>
+                  <label className="block text-sm font-bold text-slate-600 mb-2">تێبینی پێشوو</label>
+                  <input
+                    type="text"
+                    value={editPaymentNote}
+                    onChange={(e) => setEditPaymentNote(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+               </div>
+               <div className="flex gap-3 pt-2">
+                 <button type="button" onClick={() => setEditingTx(null)} className="flex-1 px-4 py-3 font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors">
+                   پاشگەزبوونەوە
+                 </button>
+                 <button type="submit" className="flex-1 px-4 py-3 font-bold text-white bg-amber-600 hover:bg-amber-700 rounded-xl transition-colors">
+                   هەڵگرتن
+                 </button>
+               </div>
+             </form>
+           </div>
+         </div>
        )}
     </div>
   );
