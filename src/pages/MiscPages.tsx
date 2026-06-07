@@ -1190,7 +1190,6 @@ export function SettingsPage() {
     telegramChatId: "",
   });
   const [isSaving, setIsSaving] = useState(false);
-  const [safes, setSafes] = useState<any[]>([]);
 
   useEffect(() => {
     const unsub = onSnapshot(doc(db, "system", "settings"), (docSnap) => {
@@ -1198,15 +1197,7 @@ export function SettingsPage() {
         setSettings(docSnap.data());
       }
     });
-    
-    const unsubSafes = onSnapshot(collection(db, "safes"), (snap) => {
-      setSafes(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    });
-    
-    return () => {
-       unsub();
-       unsubSafes();
-    };
+    return () => unsub();
   }, []);
 
   const handleSave = async () => {
@@ -1439,33 +1430,13 @@ export function SettingsPage() {
                   />
                 </div>
 
+                {/* Currency Converter */}
                 <div className="mt-6 bg-slate-50 rounded-xl border border-slate-200 p-5">
                   <h4 className="font-bold text-slate-700 mb-4 flex items-center gap-2">
                     حاسیبەی گۆڕینەوەی دراو
                   </h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   </div>
-                </div>
-
-                <div className="mt-6 pt-4 border-t border-slate-100">
-                  <label className="text-sm font-bold text-slate-600 mb-1.5 block">
-                    قاسەی بنەڕەتی بۆ وەرگرتنەوەی قەرز
-                  </label>
-                  <select
-                    value={settings.defaultSafeForDebt || ""}
-                    onChange={(e) =>
-                      setSettings({ ...settings, defaultSafeForDebt: e.target.value })
-                    }
-                    className="w-full md:w-1/2 bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 focus:ring-2 focus:ring-pink-500 focus:outline-none transition-all font-medium text-slate-800"
-                  >
-                    <option value="">-- هیچ قاسەیەک دیارینەکراوە --</option>
-                    {safes.map(s => (
-                       <option key={s.id} value={s.id}>{s.name} ({formatCurrency(s.balance || 0, "USD")})</option>
-                    ))}
-                  </select>
-                  <p className="text-xs text-slate-400 mt-2">
-                    ئەم قاسەیە بەشێوەیەکی ئۆتۆماتیکی هەڵدەبژێردرێت کاتێک لە تابی 'وەرگرتنی قەرز' پارە وەردەگریت.
-                  </p>
                 </div>
               </div>
             </div>
@@ -1705,190 +1676,6 @@ export function SettingsPage() {
               <ArrowLeftRight size={18} />
               گۆڕینی هەموو نرخەکان بۆ دۆلار
            </button>
-        </div>
-      </div>
-
-      <div className="bg-yellow-50 p-6 md:p-8 rounded-2xl border border-yellow-200 shadow-sm space-y-6">
-        <div className="flex items-start gap-4">
-          <div className="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center text-yellow-600 shrink-0">
-            <AlertTriangle size={24} />
-          </div>
-          <div>
-            <h3 className="font-bold text-xl text-yellow-800">چاکسازی سیستەم (مایگرەیشنی قەرزەکان)</h3>
-            <p className="text-sm text-yellow-600 mt-1 font-medium">
-              گۆڕینی هەموو ئەو وەسڵانەی کە پێشتر بە نەقد (کاش) فرۆشراون بۆ قەرز، وە دروستکردنی مامەڵەی قەرز بۆیان. ئەگەر نیازی لابردنی نەقدت هەیە لە فرۆشتن، ئەمە بکە.
-            </p>
-          </div>
-        </div>
-        <div className="flex justify-start">
-           <button
-             onClick={async () => {
-                if(!confirm('دڵنیایت؟ ئەمە هەموو وەسڵە نەقدەکان دەکات بە قەرز و دەیانخاتە سەر حیسابی کڕیارەکان.')) return;
-                try {
-                  const rSnap = await getDocs(collection(db, 'receipts'));
-                  let count = 0;
-                  for (let r of rSnap.docs) {
-                    const data = r.data();
-                    if (data.paymentType === 'cash') {
-                       await updateDoc(doc(db, 'receipts', r.id), { paymentType: 'debt' });
-                       
-                       const debtAmount = data.finalTotal || data.total || 0;
-                       if(debtAmount > 0) {
-                         const customerName = data.customerName || "کڕیاری گشتی";
-                         const debtsRef = collection(db, "debts");
-                         const debtsSnap = await getDocs(debtsRef);
-                         let existingDebt = null;
-                         for (const d of debtsSnap.docs) {
-                            if (d.data().customerName === customerName) {
-                               existingDebt = d; break;
-                            }
-                         }
-                         if (existingDebt) {
-                           await updateDoc(doc(db, "debts", existingDebt.id), {
-                             amount: (existingDebt.data().amount || 0) + debtAmount,
-                             remainingAmount: (existingDebt.data().remainingAmount || 0) + debtAmount
-                           });
-                           await addDoc(collection(db, "debt_transactions"), {
-                             debtId: existingDebt.id,
-                             receiptId: r.id,
-                             type: "add",
-                             amount: debtAmount,
-                             customerName: customerName,
-                             sellerName: data.sellerName || "",
-                             timestamp: data.timestamp || Timestamp.now(),
-                             status: "completed",
-                             notes: `گۆڕانکاری لە نەقد بۆ قەرز (وەسڵی ژمارە ${data.invoiceNo || ''})`
-                           });
-                         } else {
-                           const newDebtRef = await addDoc(collection(db, "debts"), {
-                             customerName: customerName,
-                             phone: data.phone || "",
-                             address: data.address || "",
-                             amount: debtAmount,
-                             remainingAmount: debtAmount,
-                             status: "active",
-                             timestamp: data.timestamp || Timestamp.now(),
-                             sellerName: data.sellerName || ""
-                           });
-                           await addDoc(collection(db, "debt_transactions"), {
-                             debtId: newDebtRef.id,
-                             receiptId: r.id,
-                             type: "add",
-                             amount: debtAmount,
-                             customerName: customerName,
-                             sellerName: data.sellerName || "",
-                             timestamp: data.timestamp || Timestamp.now(),
-                             status: "completed",
-                             notes: `گۆڕانکاری لە نەقد بۆ قەرز (وەسڵی ژمارە ${data.invoiceNo || ''})`
-                           });
-                         }
-                       }
-                       count++;
-                    }
-                  }
-                  alert(`سەرکەوتوو بوو! ${count} وەسڵ گۆڕدران بۆ قەرز.`);
-                } catch(e) {
-                   console.error(e);
-                   alert('هەڵەیەک ڕوویدا');
-                }
-             }}
-             className="bg-yellow-500 text-white px-6 py-3 rounded-xl font-bold hover:bg-yellow-600 transition-colors flex items-center gap-2 shadow-sm"
-           >
-              گۆڕینی وەسڵە نەقدەکان بۆ قەرز
-           </button>
-        </div>
-
-        <div className="flex flex-col gap-4 border-t border-yellow-200 pt-6 mt-6">
-           <h3 className="font-bold text-lg text-yellow-800">مایگرەیشنی قەرزە وەرگیراوەکان بۆ قاسە</h3>
-           <p className="text-sm text-yellow-600 font-medium">ئەمە ئەو قەرزانەی پێشتر وەرگیراونەتەوە و نەچوونەتە ناو قاسە، دەیانخاتە ناو قاسەیەکی دیاریکراوەوە. تکایە قاسەیەک هەڵبژێرە و پاشان مایگرەیشنەکە بکە.</p>
-           
-           <div className="flex flex-col sm:flex-row items-center gap-3">
-             <select
-               id="migrationSafeSelector"
-               className="w-full sm:w-1/2 bg-white border border-yellow-300 rounded-xl py-3 px-4 focus:ring-2 focus:ring-yellow-500 focus:outline-none transition-all font-medium text-slate-800"
-             >
-               <option value="">-- هەڵبژاردنی قاسە --</option>
-               {safes.map((s) => (
-                 <option key={s.id} value={s.id}>
-                   {s.name} ({formatCurrency(s.balance || 0, "USD")})
-                 </option>
-               ))}
-             </select>
-             
-             <button
-               onClick={async () => {
-                  const sel = document.getElementById("migrationSafeSelector") as HTMLSelectElement;
-                  const safeId = sel?.value;
-                  if (!safeId) {
-                    alert("تکایە قاسەیەکی دیاری بکە");
-                    return;
-                  }
-                  if(!confirm('دڵنیایت دەتەوێت قەرزە کۆنەکان بخەیتە ناو ئەم قاسەیە؟ ئەمە باڵانسی قاسەکە زیاد دەکات!')) return;
-                  
-                  try {
-                    const [safeSnap, txSnap] = await Promise.all([
-                       getDoc(doc(db, "safes", safeId)),
-                       getDocs(collection(db, "debt_transactions"))
-                    ]);
-                    
-                    if (!safeSnap.exists()) return;
-                    
-                    let totalAdded = 0;
-                    let count = 0;
-                    
-                    // We need to look for transactions where type === "sub" and NOT type === "add" 
-                    // AND where status === "completed" and it does NOT have safeId
-                    
-                    const batch = writeBatch(db);
-                    let currentSafeBalance = safeSnap.data().balance || 0;
-                    
-                    // We must group them in batches of 500 if too many, but typically < 500.
-                    for (let t of txSnap.docs) {
-                       const tData = t.data();
-                       if (tData.type === "sub" && tData.status === "completed" && !tData.safeId && !tData.syncedToSafe) {
-                          const amt = tData.amount || 0;
-                          if (amt > 0) {
-                             totalAdded += amt;
-                             count++;
-                             
-                             batch.update(doc(db, "debt_transactions", t.id), {
-                                safeId: safeId,
-                                syncedToSafe: true
-                             });
-                             
-                             const stRef = doc(collection(db, "safe_transactions"));
-                             batch.set(stRef, {
-                                safeId: safeId,
-                                amount: amt,
-                                type: "in",
-                                origin: "دەرەکی",
-                                timestamp: tData.timestamp || Timestamp.now(),
-                                notes: "مایگرەیشنی قەرزی وەرگیراو (کۆن) - " + (tData.customerName || tData.notes || ""),
-                             });
-                          }
-                       }
-                    }
-                    
-                    if (count > 0) {
-                       batch.update(doc(db, "safes", safeId), {
-                          balance: currentSafeBalance + totalAdded
-                       });
-                       await batch.commit();
-                       alert(`سەرکەوتوو بوو! ${count} پارەدان (بە بڕی ${totalAdded}$) زیادکران بۆ قاسەکە.`);
-                    } else {
-                       alert('هیچ پارەدانێکی کۆن نەدۆزرایەوە کە نەچووبێتە قاسە.');
-                    }
-                    
-                  } catch(e) {
-                    console.error(e);
-                    alert("هەڵەیەک ڕوویدا لە کاتی مایگرەیشن");
-                  }
-               }}
-               className="bg-yellow-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-yellow-700 transition-colors shadow-sm w-full sm:w-auto"
-             >
-                مایگرەیشنی قەرز
-             </button>
-           </div>
         </div>
       </div>
 

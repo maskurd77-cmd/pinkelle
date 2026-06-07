@@ -73,8 +73,6 @@ export default function DebtBook() {
   const [activeTab, setActiveTab] = useState<
     "debts" | "pending_tx" | "pending_returns"
   >("debts");
-  const [safes, setSafes] = useState<any[]>([]);
-  const [selectedSafeId, setSelectedSafeId] = useState("");
 
   useEffect(() => {
     if (auth.currentUser) {
@@ -123,30 +121,12 @@ export default function DebtBook() {
     const unsubSettings = onSnapshot(doc(db, "settings", "globals"), (snap) => {
     });
 
-    const unsubSystemSettings = onSnapshot(doc(db, "system", "settings"), (snap) => {
-      const data = snap.data();
-      if (data && data.defaultSafeForDebt) {
-        setSelectedSafeId(data.defaultSafeForDebt);
-      }
-    });
-
-    const unsubSafes = onSnapshot(collection(db, "safes"), (snap) => {
-      const allSafes = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      setSafes(allSafes);
-      if (allSafes.length > 0) {
-        // Fallback to first if selectedSafeId is empty and no setting yet (it will be overridden if setting arrives)
-        setSelectedSafeId(prev => prev || allSafes[0].id);
-      }
-    });
-
     return () => {
       unsub();
       unsubCus();
       unsubPending();
       unsubReturns();
       unsubSettings();
-      unsubSystemSettings();
-      unsubSafes();
     };
   }, []);
 
@@ -367,29 +347,6 @@ export default function DebtBook() {
     if (!isPending) {
       if (actionType === "pay") {
         newRemaining -= amountInputRaw;
-        
-        // Add to Safe
-        if (selectedSafeId) {
-          const safeRef = doc(db, "safes", selectedSafeId);
-          const safeSnap = await getDoc(safeRef);
-          if (safeSnap.exists()) {
-             const safeData = safeSnap.data();
-             await updateDoc(safeRef, {
-               balance: (safeData.balance || 0) + amountInputRaw,
-             });
-             
-             await addDoc(collection(db, "safe_transactions"), {
-               safeId: selectedSafeId,
-               type: "in",
-               amount: amountInputRaw,
-               note: `وەرگرتنەوەی قەرز لە کڕیار: ${selectedDebt.customerName} - ${paymentNote}`,
-               timestamp: Timestamp.now(),
-               status: "completed",
-               createdBy: userName || "نەزانراو",
-             });
-          }
-        }
-        
       } else {
         newRemaining += amountInputRaw;
         newTotalAmount += amountInputRaw;
@@ -608,9 +565,9 @@ export default function DebtBook() {
   };
 
   return (
-    <div className="flex flex-col h-[100dvh] lg:h-full space-y-4 print:h-auto print:space-y-0 print:bg-white print:block">
+    <div className="flex flex-col h-full space-y-4">
       {/* Metrics */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 print:hidden">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         <div className="bg-gradient-to-br from-red-50 to-red-100 p-6 rounded-[24px] border border-red-200 shadow-sm flex items-center justify-between relative overflow-hidden">
           <div className="absolute -right-6 -top-6 text-red-500/10">
             <FileClock size={120} />
@@ -632,7 +589,7 @@ export default function DebtBook() {
       </div>
 
       {/* Table Container */}
-      <div className="flex-1 bg-white rounded-[24px] border border-slate-200 shadow-sm flex flex-col overflow-hidden print:hidden">
+      <div className="flex-1 bg-white rounded-[24px] border border-slate-200 shadow-sm flex flex-col overflow-hidden">
         {/* Table Header */}
         <div className="px-6 py-5 border-b border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between bg-white gap-4">
           <div className="flex items-center gap-3">
@@ -909,6 +866,20 @@ export default function DebtBook() {
                     </td>
                     <td className="px-6 py-4 print:hidden">
                       <div className="flex items-center justify-center gap-2 flex-wrap min-w-[280px]">
+                        {debt.status !== "paid" && (
+                          <button
+                            onClick={() => {
+                              setActionType("pay");
+                              setSelectedDebt(debt);
+                              setPaymentAmount(debt.remainingAmount.toString());
+                              setPaymentNote("");
+                              setPaymentModalOpen(true);
+                            }}
+                            className="text-emerald-700 text-xs font-bold px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors border border-emerald-200 flex items-center gap-1.5 shadow-sm"
+                          >
+                            <DollarSign size={14} /> پارە وەرگرتن
+                          </button>
+                        )}
                         <button
                           onClick={() => {
                             setActionType("add");
@@ -920,6 +891,12 @@ export default function DebtBook() {
                           className="text-red-700 text-xs font-bold px-2.5 py-1.5 bg-red-50 hover:bg-red-100 rounded-lg transition-colors border border-red-200 flex items-center gap-1.5 shadow-sm"
                         >
                           <PlusCircle size={14} /> قەرزی نوێ
+                        </button>
+                        <button
+                          onClick={() => handleViewHistory(debt)}
+                          className="text-pink-700 text-xs font-bold px-2.5 py-1.5 bg-pink-50 hover:bg-pink-100 rounded-lg transition-colors border border-pink-200 flex items-center gap-1.5 shadow-sm"
+                        >
+                          <FileClock size={14} /> مێژوو
                         </button>
                         <button
                           onClick={() => {
@@ -1097,26 +1074,6 @@ export default function DebtBook() {
                   placeholder="بۆ نموونە: حەواڵەی بانکی، هتد..."
                 />
               </div>
-              
-              {actionType === "pay" && safes.length > 0 && (
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-2 text-right">
-                    هەڵبژاردنی قاسە
-                  </label>
-                  <select
-                    required
-                    value={selectedSafeId}
-                    onChange={(e) => setSelectedSafeId(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 focus:outline-none focus:border-slate-400 transition-colors text-right"
-                  >
-                    {safes.map(safe => (
-                      <option key={safe.id} value={safe.id}>
-                        {safe.name} 
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
             </div>
             <div className="px-6 py-5 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
               <button

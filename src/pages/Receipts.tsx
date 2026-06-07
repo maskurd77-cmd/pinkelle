@@ -6,7 +6,6 @@ import {
   Eye,
   X,
   CheckCircle2,
-  Edit,
 } from "lucide-react";
 import {
   collection,
@@ -345,24 +344,6 @@ export default function Receipts() {
               </div>
               <div className="flex gap-2">
                 <button
-                  onClick={() => {
-                    if(!confirm("دڵنیایت دەتەوێت دەستکاری ئەم وەسڵە بکەیت؟ داتاکە دەچێتە بەشی فرۆشتن.")) return;
-                    window.dispatchEvent(
-                       new CustomEvent("edit_receipt", { detail: selectedReceipt })
-                    );
-                    // Also dispatch an event to navigate if routing handles it, 
-                    // or just click the POS tab button.
-                    // Wait, App.tsx doesn't listen to anything. If I just trigger click on POS tab?
-                    const posTab = document.querySelector('[data-id="pos"]') || document.querySelector('[data-id="mobile-pos"]');
-                    if (posTab) {
-                      (posTab as HTMLButtonElement).click();
-                    }
-                  }}
-                  className="px-4 py-2.5 bg-sky-600 text-white rounded-xl flex items-center gap-2 hover:bg-sky-700 hover:shadow-lg hover:shadow-sky-500/20 font-bold text-sm transition-all"
-                >
-                  <Edit size={16} /> دەستکاری
-                </button>
-                <button
                   onClick={handlePrint}
                   className="px-5 py-2.5 bg-pink-600 text-white rounded-xl flex items-center gap-2 hover:bg-pink-700 hover:shadow-lg hover:shadow-pink-500/20 font-bold text-sm transition-all"
                 >
@@ -428,7 +409,7 @@ export function ReceiptPrintLayout({ receipt, debts = [] }: { receipt: any; debt
           <img
             src="https://cheerful-pink-qakkchpr.edgeone.app/Pink%20Elle%20logo%20new-1_page-0001.jpg"
             alt="Pink Elle Logo"
-            className="w-full h-full object-contain drop-shadow-sm"
+            className="w-full h-full object-contain mix-blend-multiply drop-shadow-sm"
           />
         </div>
 

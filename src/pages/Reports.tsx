@@ -5,7 +5,6 @@ import {
   TrendingUp,
   Calendar,
   Filter,
-  DollarSign,
 } from "lucide-react";
 import { collection, onSnapshot } from "firebase/firestore";
 import { db } from "../firebase";
@@ -29,7 +28,6 @@ import {
 export default function Reports() {
   const [receipts, setReceipts] = useState<any[]>([]);
   const [expenses, setExpenses] = useState<any[]>([]);
-  const [debts, setDebts] = useState<any[]>([]);
 
   const [filterType, setFilterType] = useState<"all" | "month" | "day">("all");
   const [selectedMonth, setSelectedMonth] = useState<string>(
@@ -46,13 +44,9 @@ export default function Reports() {
     const unsubExpenses = onSnapshot(collection(db, "expenses"), (snap) => {
       setExpenses(snap.docs.map((d) => d.data()));
     });
-    const unsubDebts = onSnapshot(collection(db, "debts"), (snap) => {
-      setDebts(snap.docs.map((d) => d.data()));
-    });
     return () => {
       unsubReceipts();
       unsubExpenses();
-      unsubDebts();
     };
   }, []);
 
@@ -115,13 +109,6 @@ export default function Reports() {
     let wholesaleItemsSold = 0;
     let totalExpense = 0;
     let totalDiscounts = 0;
-    let totalDebts = 0;
-
-    debts.forEach((d) => {
-      if (d.status === "active") {
-        totalDebts += d.remainingAmount || 0;
-      }
-    });
 
     const salesByDate: Record<string, number> = {};
     const categoryCount: Record<string, number> = {};
@@ -205,7 +192,6 @@ export default function Reports() {
         retailItemsSold,
         wholesaleItemsSold,
         totalDiscounts,
-        totalDebts,
       },
       chartData: cData,
       categoryData: pData,
@@ -278,24 +264,8 @@ export default function Reports() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {[
-          {
-            title: "قەرزە کۆکراوەکان (کۆی گشتی)",
-            value: (
-              <div className="flex flex-col">
-                <span className="text-2xl text-rose-600">
-                  {formatCurrency(stats.totalDebts)}
-                </span>
-                <span className="text-xs text-slate-400 mt-1">قەرزی هەرە گشتی</span>
-              </div>
-            ),
-            trend: "کۆی گشتی قەرزەکان",
-            color: "rose",
-            gradient: "from-rose-500 to-pink-600",
-            shadow: "shadow-rose-500/20",
-            icon: DollarSign,
-          },
           {
             title: "کۆی فرۆشتنی تاک",
             value: (
@@ -336,15 +306,15 @@ export default function Reports() {
               <div className="flex flex-col">
                 <span className="text-2xl text-green-600">
                   {formatCurrency(
-                    stats.profit - stats.totalExpense - stats.totalDiscounts,
+                    stats.profit - stats.totalExpense,
                   )}
                 </span>
                 <span className="text-xs text-slate-400 mt-1">
-                  پێش خەرجی: {formatCurrency(stats.profit - stats.totalDiscounts)}
+                  پێش خەرجی: {formatCurrency(stats.profit)}
                 </span>
               </div>
             ),
-            trend: "دوای دەرکردنی خەرجی و داشکاندن",
+            trend: "دوای دەرکردنی خەرجی",
             color: "emerald",
             gradient: "from-emerald-500 to-pink-600",
             shadow: "shadow-emerald-500/20",
