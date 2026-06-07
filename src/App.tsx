@@ -12,6 +12,7 @@ import Companies from './pages/Companies';
 import Categories from './pages/Categories';
 import Customers from './pages/Customers';
 import DebtBook from './pages/DebtBook';
+import DebtPayments from './pages/DebtPayments';
 import Receipts from './pages/Receipts';
 import Expenses from './pages/Expenses';
 import Reports from './pages/Reports';
@@ -93,6 +94,7 @@ export default function App() {
       case 'safes': return <SafesPage />;
       case 'categories': return <Categories />;
       case 'debt': return <DebtBook />;
+      case 'debt_payments': return <DebtPayments userRole={userData?.role} userName={userData?.name} />;
       case 'receipts': return <Receipts />;
       case 'expenses': return <Expenses />;
       case 'reports': return <Reports />;

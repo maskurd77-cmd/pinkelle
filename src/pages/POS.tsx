@@ -67,7 +67,7 @@ export default function POS() {
     lat: null as number | null,
     lng: null as number | null,
     notes: "",
-    paymentType: "cash",
+    paymentType: "debt",
   });
   const [saleCompleted, setSaleCompleted] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -98,6 +98,53 @@ export default function POS() {
     "amount",
   );
   const [discountValue, setDiscountValue] = useState<number | "">("");
+
+  const [editingReceiptId, setEditingReceiptId] = useState<string | null>(null);
+  const [originalCart, setOriginalCart] = useState<CartItem[]>([]);
+  const [editingOriginalTotal, setEditingOriginalTotal] = useState<number>(0);
+  const [editingInvoiceNo, setEditingInvoiceNo] = useState<number>(0);
+  const [editingOriginalPaymentType, setEditingOriginalPaymentType] = useState<string>("debt");
+  const [editingDate, setEditingDate] = useState<string>("");
+
+  useEffect(() => {
+    const handleEditEvent = (e: any) => {
+      const receipt = e.detail;
+      setEditingReceiptId(receipt.id);
+      
+      setOriginalCart(receipt.items || []);
+      setCart(receipt.items || []);
+      setIsWholesale(receipt.isWholesale || false);
+      setDiscountType(receipt.discount?.type || "amount");
+      setDiscountValue(receipt.discount?.value || "");
+      if (receipt.timestamp) {
+         try {
+           const d = receipt.timestamp.toDate(); 
+           setEditingDate(new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16));
+         } catch(e) {}
+      } else {
+         setEditingDate("");
+      }
+      setEditingOriginalPaymentType(receipt.paymentType || "debt");
+      setCustomerDetails({
+        shopName: receipt.customerName || "",
+        phone: receipt.phone || "",
+        address: receipt.address || "",
+        locationUrl: "",
+        lat: null,
+        lng: null,
+        notes: receipt.notes || "",
+        paymentType: receipt.paymentType || "debt",
+      });
+      setEditingOriginalTotal(receipt.finalTotal || receipt.total || 0);
+      setEditingInvoiceNo(receipt.invoiceNo || 0);
+      setCheckoutModalOpen(false);
+      setSaleCompleted(false);
+      setCurrentReceiptId(null);
+    };
+
+    window.addEventListener("edit_receipt", handleEditEvent);
+    return () => window.removeEventListener("edit_receipt", handleEditEvent);
+  }, []);
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, "products"), (snap) => {
@@ -245,28 +292,33 @@ export default function POS() {
       const batch = writeBatch(db);
 
       const isPending = userRole !== "admin" && userRole !== "accountant";
+      const isEditing = !!editingReceiptId;
 
       let nextInvoiceNo = 1;
-      const receiptsSnap = await getDocs(
-        query(collection(db, "receipts"), orderBy("invoiceNo", "desc"), limit(1))
-      );
-      if (!receiptsSnap.empty) {
-        const lastRec = receiptsSnap.docs[0].data();
-        if (lastRec && typeof lastRec.invoiceNo === "number") {
-          nextInvoiceNo = lastRec.invoiceNo + 1;
+      if (isEditing) {
+         nextInvoiceNo = editingInvoiceNo;
+      } else {
+        const receiptsSnap = await getDocs(
+          query(collection(db, "receipts"), orderBy("invoiceNo", "desc"), limit(1))
+        );
+        if (!receiptsSnap.empty) {
+          const lastRec = receiptsSnap.docs[0].data();
+          if (lastRec && typeof lastRec.invoiceNo === "number") {
+            nextInvoiceNo = lastRec.invoiceNo + 1;
+          } else {
+            const allRecs = await getDocs(collection(db, "receipts"));
+            nextInvoiceNo = allRecs.size + 1;
+          }
         } else {
           const allRecs = await getDocs(collection(db, "receipts"));
           nextInvoiceNo = allRecs.size + 1;
         }
-      } else {
-        const allRecs = await getDocs(collection(db, "receipts"));
-        nextInvoiceNo = allRecs.size + 1;
       }
 
-      const receiptRef = doc(collection(db, "receipts"));
+      const receiptRef = isEditing ? doc(db, "receipts", editingReceiptId) : doc(collection(db, "receipts"));
       const invoiceLabel = nextInvoiceNo.toString();
 
-      batch.set(receiptRef, {
+      if(isEditing) { batch.update(receiptRef, {
         customerName: customerDetails.shopName || "کڕیاری گشتی",
         phone: customerDetails.phone || "",
         address: customerDetails.address || "",
@@ -275,7 +327,7 @@ export default function POS() {
         sellerName: mandubName,
         exchangeRate,
         isWholesale,
-        status: isPending ? "pending" : "completed",
+        status: isPending && !isEditing ? "pending" : "completed",
         invoiceNo: nextInvoiceNo,
         items: cart.map((c) => {
           let applicablePrice;
@@ -318,71 +370,143 @@ export default function POS() {
         discountAmount: discountAmount,
         totalAmount: total, // In invoiceCurrency
         invoiceCurrency: "USD",
-        timestamp: Timestamp.now(),
+        updatedAt: Timestamp.now(),
+        ...(isEditing && editingDate ? { timestamp: Timestamp.fromDate(new Date(editingDate)) } : isEditing ? {} : { timestamp: Timestamp.now() })
       });
+      } else {
+        batch.set(receiptRef, {
+        customerName: customerDetails.shopName || "کڕیاری گشتی",
+        phone: customerDetails.phone || "",
+        address: customerDetails.address || "",
+        notes: customerDetails.notes || "",
+        paymentType: customerDetails.paymentType,
+        sellerName: mandubName,
+        exchangeRate,
+        isWholesale,
+        status: isPending && !isEditing ? "pending" : "completed",
+        invoiceNo: nextInvoiceNo,
+        items: cart.map((c) => {
+          let applicablePrice;
+          if (c.editedPrice !== undefined) {
+            applicablePrice = c.editedPrice;
+          } else {
+            applicablePrice = isWholesale ? c.wholesalePrice || c.unitPrice : c.unitPrice;
+          }
+          const priceInFinal = applicablePrice;
+          const originalBasePrice = isWholesale ? c.wholesalePrice || c.unitPrice : c.unitPrice;
+          const originalPriceInFinal = originalBasePrice;
+          const originalBaseCost = isWholesale ? (c.wholesaleCost || c.unitCost) : c.unitCost;
+          const costInFinal = originalBaseCost || 0;
+          const actualQty = c.unitType === "carton" ? c.quantity * (c.cartonSize || 1) : c.quantity;
+          return {
+            productId: c.id,
+            name: c.name,
+            quantity: actualQty,
+            currency: "USD",
+            originalUnitPrice: originalPriceInFinal,
+            originalUnitCost: originalBaseCost || 0,
+            unitPrice: priceInFinal,
+            isWholesale: isWholesale && Boolean(c.wholesalePrice),
+            unitCost: costInFinal,
+            category: c.category || "گشتی",
+            stock: c.stock,
+            total: priceInFinal * actualQty,
+          };
+        }),
+        totalItems: cartItemCount,
+        subtotal: subtotal,
+        discountAmount: discountAmount,
+        totalAmount: total,
+        invoiceCurrency: "USD",
+        timestamp: Timestamp.now(),
+        updatedAt: Timestamp.now(),
+      });
+      }
 
-      if (!isPending) {
-        // Update stocks
-        cart.forEach((item) => {
-          const ref = doc(db, "products", item.id);
-          batch.update(ref, { stock: item.stock - getActualPieceQuantity(item) });
+      if (!isPending || isEditing) {
+        // Stock logic via diffs
+        const stockDiffs: Record<string, number> = {};
+        if (isEditing) {
+           originalCart.forEach(item => {
+              stockDiffs[item.productId || item.id] = (stockDiffs[item.productId || item.id] || 0) + (item.quantity || 0);
+           });
+        }
+        cart.forEach(item => {
+           stockDiffs[item.id] = (stockDiffs[item.id] || 0) - getActualPieceQuantity(item);
         });
 
-        // Handle Debt if paymentType is 'debt' (قەرز)
-        if (
-          customerDetails.paymentType === "debt" &&
-          total > 0 &&
-          customerDetails.shopName
-        ) {
-          const debtAmount = total;
+        Object.keys(stockDiffs).forEach(id => {
+           if (stockDiffs[id] !== 0) {
+              const prod = products.find(p => p.id === id);
+              if (prod) {
+                 batch.update(doc(db, "products", id), {
+                    stock: (prod.stock || 0) + stockDiffs[id]
+                 });
+              }
+           }
+        });
 
-          const existingDebt = debts.find(
-            (d) =>
-              d.customerName === customerDetails.shopName &&
-              d.status === "active",
-          );
-          if (existingDebt) {
-            const debtRef = doc(db, "debts", existingDebt.id);
-            batch.update(debtRef, {
-              amount: (existingDebt.amount || 0) + debtAmount,
-              remainingAmount:
-                (existingDebt.remainingAmount || 0) + debtAmount,
-              updatedAt: Timestamp.now(),
-            });
+        if (customerDetails.shopName) {
+           const customerName = customerDetails.shopName;
+           let debtDiff = 0;
 
-            const debtTxRef = doc(collection(db, "debt_transactions"));
-            batch.set(debtTxRef, {
-              debtId: existingDebt.id,
-              amount: debtAmount,
-              type: "add",
-              timestamp: Timestamp.now(),
-              notes:
-                "زیادبوونی قەرز لە وەسڵی ژمارە: " +
-                invoiceLabel,
-            });
-          } else {
-            const debtRef = doc(collection(db, "debts"));
-            batch.set(debtRef, {
-              customerName: customerDetails.shopName,
-              phone: customerDetails.phone,
-              amount: debtAmount,
-              remainingAmount: debtAmount,
-              status: "active",
-              notes: "پاشماوەی وەسڵ: " + invoiceLabel,
-              timestamp: Timestamp.now(),
-            });
+           if (isEditing) {
+              if (customerDetails.paymentType === "debt") {
+                 if (editingOriginalPaymentType === "debt") {
+                    debtDiff = total - editingOriginalTotal;
+                 } else {
+                    debtDiff = total;
+                 }
+              } else {
+                 if (editingOriginalPaymentType === "debt") {
+                    debtDiff = -editingOriginalTotal;
+                 }
+              }
+           } else {
+              if (customerDetails.paymentType === "debt") {
+                 debtDiff = total;
+              }
+           }
 
-            const debtTxRef = doc(collection(db, "debt_transactions"));
-            batch.set(debtTxRef, {
-              debtId: debtRef.id,
-              amount: debtAmount,
-              type: "add",
-              timestamp: Timestamp.now(),
-              notes:
-                "قەرزی نوێ لە وەسڵی ژمارە: " +
-                invoiceLabel,
-            });
-          }
+           if (debtDiff !== 0) {
+               const existingDebt = debts.find(
+                 (d) => d.customerName === customerName && d.status === "active"
+               );
+               
+               if (existingDebt) {
+                  batch.update(doc(db, "debts", existingDebt.id), {
+                     amount: (existingDebt.amount || 0) + debtDiff,
+                     remainingAmount: (existingDebt.remainingAmount || 0) + debtDiff,
+                     updatedAt: Timestamp.now()
+                  });
+                  batch.set(doc(collection(db, "debt_transactions")), {
+                     debtId: existingDebt.id,
+                     receiptId: receiptRef.id,
+                     type: debtDiff > 0 ? "add" : "sub",
+                     amount: Math.abs(debtDiff),
+                     timestamp: Timestamp.now(),
+                     notes: (isEditing ? "دەستکاری کردنی وەسڵ: " : "قەرزی نوێ لە وەسڵی ژمارە: ") + invoiceLabel
+                  });
+               } else if (debtDiff > 0) {
+                  const newDebtRef = doc(collection(db, "debts"));
+                  batch.set(newDebtRef, {
+                    customerName: customerName,
+                    phone: customerDetails.phone || "",
+                    amount: debtDiff,
+                    remainingAmount: debtDiff,
+                    status: "active",
+                    notes: "پاشماوەی وەسڵ: " + invoiceLabel,
+                    timestamp: Timestamp.now(),
+                  });
+                  batch.set(doc(collection(db, "debt_transactions")), {
+                    debtId: newDebtRef.id,
+                    amount: debtDiff,
+                    type: "add",
+                    timestamp: Timestamp.now(),
+                    notes: "قەرزی نوێ لە وەسڵی ژمارە: " + invoiceLabel,
+                  });
+               }
+           }
         }
       }
 
@@ -435,7 +559,7 @@ export default function POS() {
       phone: "",
       address: "",
       notes: "",
-      paymentType: "cash",
+      paymentType: "debt",
     });
     setSaleCompleted(false);
     setCheckoutModalOpen(false);
@@ -909,40 +1033,16 @@ export default function POS() {
                     onSubmit={handleCheckoutSubmit}
                     className="space-y-4"
                   >
-                    <div className="grid grid-cols-2 gap-3 mb-6">
+                    <div className="grid grid-cols-1 gap-3 mb-6 hidden">
                       <label
-                        className={`cursor-pointer flex flex-col items-center justify-center gap-2 py-4 rounded-xl border-2 transition-all ${customerDetails.paymentType === "cash" ? "border-pink-500 bg-pink-50 text-pink-700" : "border-slate-200 bg-white text-slate-500 hover:border-pink-200"}`}
-                      >
-                        <input
-                          type="radio"
-                          name="paymentType"
-                          value="cash"
-                          checked={customerDetails.paymentType === "cash"}
-                          onChange={(e) =>
-                            setCustomerDetails({
-                              ...customerDetails,
-                              paymentType: e.target.value,
-                            })
-                          }
-                          className="sr-only"
-                        />
-                        <Banknote size={24} />
-                        <span className="font-bold text-sm">نەقد (کاش)</span>
-                      </label>
-                      <label
-                        className={`cursor-pointer flex flex-col items-center justify-center gap-2 py-4 rounded-xl border-2 transition-all ${customerDetails.paymentType === "debt" ? "border-pink-500 bg-pink-50 text-pink-700" : "border-slate-200 bg-white text-slate-500 hover:border-pink-200"}`}
+                        className={`cursor-pointer flex flex-col items-center justify-center gap-2 py-4 rounded-xl border-2 transition-all border-pink-500 bg-pink-50 text-pink-700`}
                       >
                         <input
                           type="radio"
                           name="paymentType"
                           value="debt"
-                          checked={customerDetails.paymentType === "debt"}
-                          onChange={(e) =>
-                            setCustomerDetails({
-                              ...customerDetails,
-                              paymentType: e.target.value,
-                            })
-                          }
+                          checked={true}
+                          readOnly
                           className="sr-only"
                         />
                         <History size={24} />
@@ -1149,6 +1249,21 @@ export default function POS() {
                         placeholder="هەر تێبینییەکی تایبەت بەم وەسڵە..."
                       ></textarea>
                     </div>
+
+                    {!!editingReceiptId && (
+                      <div className="space-y-1.5 border-t border-slate-100 pt-3">
+                        <label className="text-sm font-bold text-slate-700 flex items-center gap-1.5">
+                          <FileText size={16} className="text-slate-400" /> کاتی وەسڵ
+                        </label>
+                        <input
+                          type="datetime-local"
+                          value={editingDate}
+                          onChange={(e) => setEditingDate(e.target.value)}
+                          className="w-full bg-orange-50 border border-orange-200 rounded-xl py-3 px-4 focus:outline-none focus:ring-2 focus:ring-orange-500/20 font-medium text-slate-800 text-left"
+                          dir="ltr"
+                        />
+                      </div>
+                    )}
                   </form>
 
                   {/* Summary Box */}
@@ -1177,7 +1292,7 @@ export default function POS() {
                     <CheckCircle2 size={20} />
                     {isProcessing
                       ? "چاوەڕێبە..."
-                      : `فرۆشتن (${customerDetails.paymentType === "cash" ? "نەقد" : "قەرز"})`}
+                      : (editingReceiptId ? "نوێکردنەوەی وەسڵ" : `فرۆشتن (قەرز)`)}
                   </button>
                 </div>
               </>
