@@ -109,48 +109,61 @@ export default function POS() {
   const [editingDate, setEditingDate] = useState<string>("");
 
   useEffect(() => {
-    const handleEditEvent = (e: any) => {
-      const receipt = e.detail;
-      setEditingReceiptId(receipt.id);
-      
-      const mappedItems = (receipt.items || []).map((item: any) => ({
-         ...item,
-         id: item.productId || item.id,
-         quantity: item.originalQuantity || item.quantity
-      }));
-      setOriginalCart(mappedItems);
-      setCart(mappedItems);
-      setIsWholesale(receipt.isWholesale || false);
-      setDiscountType(receipt.discount?.type || "amount");
-      setDiscountValue(receipt.discount?.value || "");
-      if (receipt.timestamp) {
-         try {
-           const d = receipt.timestamp.toDate(); 
-           setEditingDate(new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16));
-         } catch(e) {}
-      } else {
-         setEditingDate("");
+    const checkPendingEdit = () => {
+      const pendingEdit = localStorage.getItem("pendingEditReceipt");
+      if (pendingEdit) {
+        try {
+          const receipt = JSON.parse(pendingEdit);
+          setEditingReceiptId(receipt.id);
+          
+          const mappedItems = (receipt.items || []).map((item: any) => ({
+             ...item,
+             id: item.productId || item.id,
+             quantity: item.originalQuantity || item.quantity
+          }));
+          setOriginalCart(mappedItems);
+          setCart(mappedItems);
+          setIsWholesale(receipt.isWholesale || false);
+          setDiscountType(receipt.discount?.type || "amount");
+          setDiscountValue(receipt.discount?.value || "");
+          if (receipt.timestamp) {
+             try {
+               let d;
+               if (receipt.timestamp.seconds) {
+                 d = new Date(receipt.timestamp.seconds * 1000);
+               } else {
+                 d = new Date(receipt.timestamp);
+               }
+               setEditingDate(new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16));
+             } catch(e) {}
+          } else {
+             setEditingDate("");
+          }
+          setEditingOriginalPaymentType(receipt.paymentType || "debt");
+          setCustomerDetails({
+            shopName: receipt.customerName || "",
+            phone: receipt.phone || "",
+            address: receipt.address || "",
+            locationUrl: "",
+            lat: null,
+            lng: null,
+            notes: receipt.notes || "",
+            paymentType: receipt.paymentType || "debt",
+          });
+          setEditingOriginalTotal(receipt.finalTotal || receipt.total || 0);
+          setEditingInvoiceNo(receipt.invoiceNo || 0);
+          setCheckoutModalOpen(false);
+          setSaleCompleted(false);
+          setCurrentReceiptId(null);
+          
+          localStorage.removeItem("pendingEditReceipt");
+        } catch(e) {
+          console.error(e);
+        }
       }
-      setEditingOriginalPaymentType(receipt.paymentType || "debt");
-      setCustomerDetails({
-        shopName: receipt.customerName || "",
-        phone: receipt.phone || "",
-        address: receipt.address || "",
-        locationUrl: "",
-        lat: null,
-        lng: null,
-        notes: receipt.notes || "",
-        paymentType: receipt.paymentType || "debt",
-      });
-      setEditingOriginalTotal(receipt.finalTotal || receipt.total || 0);
-      setEditingInvoiceNo(receipt.invoiceNo || 0);
-      setCheckoutModalOpen(false);
-      setSaleCompleted(false);
-      setCurrentReceiptId(null);
     };
 
-    window.addEventListener("edit_receipt", handleEditEvent);
-    return () => window.removeEventListener("edit_receipt", handleEditEvent);
+    checkPendingEdit();
   }, []);
 
   useEffect(() => {

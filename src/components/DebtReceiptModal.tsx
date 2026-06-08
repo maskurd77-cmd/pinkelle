@@ -106,7 +106,7 @@ export function DebtReceiptModal({
     <div
       className="printable-receipt-area w-full bg-white text-black p-[6mm] box-border relative flex flex-col justify-between"
       dir="rtl"
-      style={{ fontFamily: "Cairo, Arial, sans-serif" }}
+      style={{ fontFamily: "'Rudaw', 'Noto Sans Arabic', Tahoma, Arial, sans-serif" }}
     >
       <style type="text/css" media="print">
         {`
@@ -121,11 +121,11 @@ export function DebtReceiptModal({
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
           }
-          .printable-receipt-area {
+          .printable-receipt-area, .printable-receipt-area * {
             width: 100% !important;
             height: 100% !important;
-            padding: 10mm !important;
             box-sizing: border-box !important;
+            font-family: 'Rudaw', 'Noto Sans Arabic', Tahoma, Arial, sans-serif !important;
           }
         `}
       </style>
@@ -147,12 +147,12 @@ export function DebtReceiptModal({
             </div>
             <div>
               <h1
-                className="text-xl font-extrabold text-pink-600 tracking-widest leading-none"
-                style={{ fontFamily: "Impact, sans-serif" }}
+                className="text-2xl font-extrabold text-pink-600 tracking-wider leading-none flex items-center gap-1.5"
               >
-                گروپی PINK ELLE
+                <span className="text-black font-extrabold text-xl">گروپی</span>
+                <span className="font-sans">PINK ELLE</span>
               </h1>
-              <h4 className="text-[9px] font-bold text-slate-500 mt-1">
+              <h4 className="text-[10px] font-black text-slate-800 mt-1">
                 بۆ بازرگانی گشتی - سنووردار
               </h4>
             </div>
@@ -160,9 +160,9 @@ export function DebtReceiptModal({
 
           {/* Title Center */}
           <div className="flex flex-col items-center justify-center">
-            <div className="border-[2px] border-pink-600 px-5 py-1 rounded-full bg-pink-50/20">
-              <h2 className="text-lg font-black text-pink-700 tracking-wider">
-                وەسڵـــی قەبـــز
+            <div className="border-[2px] border-pink-600 px-6 py-1.5 rounded-full bg-pink-50/20 shadow-sm">
+              <h2 className="text-xl font-black text-pink-700 tracking-wide">
+                وەسڵی قەبز
               </h2>
               <span className="text-[9px] text-pink-600 font-bold opacity-80 uppercase flex justify-center leading-none">
                 Receipt
@@ -304,8 +304,7 @@ export function DebtReceiptModal({
       {/* Watermark in background */}
       <div className="absolute inset-0 flex items-center justify-center opacity-[0.02] pointer-events-none select-none overflow-hidden">
         <h1
-          className="text-[90px] font-black text-rose-900 transform -rotate-[15deg] whitespace-nowrap"
-          style={{ fontFamily: "Impact, sans-serif" }}
+          className="text-[90px] font-black text-rose-900 transform -rotate-[15deg] whitespace-nowrap font-sans"
         >
           PINK ELLE
         </h1>

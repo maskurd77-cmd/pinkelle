@@ -430,9 +430,7 @@ export default function Receipts() {
                 <button
                   onClick={() => {
                     if(!confirm("دڵنیایت دەتەوێت دەستکاری ئەم وەسڵە بکەیت؟ داتاکە دەچێتە بەشی فرۆشتن.")) return;
-                    window.dispatchEvent(
-                       new CustomEvent("edit_receipt", { detail: selectedReceipt })
-                    );
+                    localStorage.setItem("pendingEditReceipt", JSON.stringify(selectedReceipt));
                     window.dispatchEvent(new CustomEvent("navigate", { detail: "pos" }));
                   }}
                   className="px-4 py-2.5 bg-sky-600 text-white rounded-xl flex items-center gap-2 hover:bg-sky-700 hover:shadow-lg hover:shadow-sky-500/20 font-bold text-sm transition-all"
@@ -509,10 +507,26 @@ export function ReceiptPrintLayout({ receipt, debts = [] }: { receipt: any; debt
 
   return (
     <div
-      className="w-[210mm] h-[297mm] max-h-[297mm] overflow-hidden bg-white text-black p-[7mm] mx-auto box-border flex flex-col relative"
+      className="w-[210mm] h-[297mm] max-h-[297mm] overflow-hidden bg-white text-black p-[7mm] mx-auto box-border flex flex-col relative receipt-print-area"
       dir="rtl"
-      style={{ fontFamily: "Arial, sans-serif" }}
+      style={{ fontFamily: "'Rudaw', Tahoma, 'Noto Sans Arabic', Arial, sans-serif" }}
     >
+      <style type="text/css" media="print">
+        {`
+          @page { 
+            size: A4 portrait;
+            margin: 0;
+          }
+          body {
+            margin: 0;
+            padding: 0;
+            background: white;
+          }
+          .receipt-print-area, .receipt-print-area * {
+            font-family: 'Rudaw', 'Noto Sans Arabic', Tahoma, Arial, sans-serif !important;
+          }
+        `}
+      </style>
       {/* Top Header - Compact Row Layout */}
       <div className="flex justify-between items-center mb-2 border-b-[3px] border-black pb-2 relative">
         {/* Right Side - Logo */}
@@ -527,12 +541,12 @@ export function ReceiptPrintLayout({ receipt, debts = [] }: { receipt: any; debt
         {/* Center - Company Info */}
         <div className="flex-1 text-center px-4">
           <h1
-            className="text-3xl font-extrabold text-pink-600 tracking-widest mb-1 leading-none"
-            style={{ fontFamily: "Impact, sans-serif" }}
+            className="text-3xl font-extrabold text-pink-600 tracking-wider mb-0.5 flex items-center justify-center gap-1.5"
           >
-            گروپی PINK ELLE
+            <span className="text-black font-extrabold text-2xl">گروپی</span>
+            <span className="font-sans">PINK ELLE</span>
           </h1>
-          <h4 className="text-xs font-bold text-slate-600 mb-1">
+          <h4 className="text-[11px] font-black text-slate-800 leading-tight">
             بۆ بازرگانی گشتی - سنووردار
           </h4>
         </div>
@@ -562,35 +576,40 @@ export function ReceiptPrintLayout({ receipt, debts = [] }: { receipt: any; debt
       <div className="flex justify-between items-start mb-2 gap-2 text-[11px]">
         {/* Left Side Info */}
         <div className="flex-1 flex flex-col gap-1">
-          <div className="flex items-center">
-            <div className="w-24 text-right font-bold ml-2">
-              رقم القائمة (ژمارەی پسووڵە):
+          <div className="flex items-end">
+            <div className="w-36 text-right font-bold ml-2 flex flex-col justify-between items-start">
+              <span>ژمارەی پسووڵە :</span>
+              <span className="text-[10px] text-gray-600 font-normal">رقم القائمة</span>
             </div>
-            <div className="border-b border-black flex-1 text-center font-bold font-mono text-sm leading-none">
+            <div className="border-b-2 border-slate-800 border-dotted flex-1 text-center font-bold font-mono text-sm leading-none pb-0.5">
               {receipt.invoiceNo || receipt.id?.slice(-8).toUpperCase() || "N/A"}
             </div>
           </div>
-          <div className="flex items-center">
-            <div className="w-24 text-right font-bold ml-2">
-              التاريخ (بەروار):
+          <div className="flex items-end">
+            <div className="w-36 text-right font-bold ml-2 flex flex-col justify-between items-start">
+              <span>بەروار :</span>
+              <span className="text-[10px] text-gray-600 font-normal">التاريخ</span>
             </div>
-            <div className="border-b border-black flex-1 text-center font-bold font-mono text-sm leading-none">
+            <div className="border-b-2 border-slate-800 border-dotted flex-1 text-center font-bold font-mono text-sm leading-none pb-0.5">
               {ts.getFullYear()}/{String(ts.getMonth() + 1).padStart(2, "0")}/
               {String(ts.getDate()).padStart(2, "0")}
             </div>
           </div>
-          <div className="flex items-center">
-            <div className="whitespace-nowrap text-right font-bold ml-2">
-              طريقة الدفع (جۆری پێدان):
+          <div className="flex items-end">
+            <div className="w-36 text-right font-bold ml-2 flex flex-col justify-between items-start">
+              <span>جۆری پێدان :</span>
+              <span className="text-[10px] text-gray-600 font-normal">طريقة الدفع</span>
             </div>
-            <div className="border-b-2 border-dashed border-black flex-1 text-center font-bold font-mono text-sm min-h-[16px] mx-2 leading-none">
+            <div className="border-b-2 border-slate-800 border-dotted flex-1 text-center font-bold text-xs leading-none pb-0.5">
+              {receipt.paymentType === "cash" || receipt.paymentType === "نەقد" ? "نەقد (نقدي)" : "قەرز (آجل)"}
             </div>
           </div>
-          <div className="flex items-center mt-0.5">
-            <div className="w-24 text-right font-bold ml-2">
-              المندوب (مەندوب):
+          <div className="flex items-end">
+            <div className="w-36 text-right font-bold ml-2 flex flex-col justify-between items-start">
+               <span>مەندوب :</span>
+              <span className="text-[10px] text-gray-600 font-normal">المندوب</span>
             </div>
-            <div className="border-b border-black flex-1 px-2 font-bold text-sm text-center leading-none">
+            <div className="border-b-2 border-slate-800 border-dotted flex-1 px-2 font-bold text-sm text-center leading-none pb-0.5">
               {receipt.sellerName || "نەزانراو"}
             </div>
           </div>
@@ -603,28 +622,31 @@ export function ReceiptPrintLayout({ receipt, debts = [] }: { receipt: any; debt
 
         {/* Right Side Info */}
         <div className="flex-1 flex flex-col gap-1">
-          <div className="flex items-center">
-            <div className="w-24 text-right font-bold ml-2">
-              اسم المشتري (کڕیار):
+          <div className="flex items-end">
+            <div className="w-32 text-right font-bold ml-2 flex flex-col justify-between items-start">
+              <span>کڕیار :</span>
+              <span className="text-[10px] text-gray-600 font-normal">اسم المشتري</span>
             </div>
-            <div className="border-b border-black flex-1 px-2 font-bold text-sm text-center leading-none">
+            <div className="border-b-2 border-slate-800 border-dotted flex-1 px-2 font-bold text-sm text-center leading-none pb-0.5">
               {receipt.customerName}
             </div>
           </div>
-          <div className="flex items-center">
-            <div className="w-24 text-right font-bold ml-2">
-              العنوان (ناونیشان):
+          <div className="flex items-end">
+            <div className="w-32 text-right font-bold ml-2 flex flex-col justify-between items-start">
+              <span>ناونیشان :</span>
+              <span className="text-[10px] text-gray-600 font-normal">العنوان</span>
             </div>
-            <div className="border-b border-black flex-1 px-2 font-bold text-sm text-center leading-none">
+            <div className="border-b-2 border-slate-800 border-dotted flex-1 px-2 font-bold text-sm text-center leading-none pb-0.5">
               {receipt.address || "..."}
             </div>
           </div>
-          <div className="flex items-center">
-            <div className="w-24 text-right font-bold ml-2">
-              رقم الموبايل (مۆبایل):
+          <div className="flex items-end">
+            <div className="w-32 text-right font-bold ml-2 flex flex-col justify-between items-start">
+              <span>مۆبایل :</span>
+              <span className="text-[10px] text-gray-600 font-normal">رقم الموبايل</span>
             </div>
             <div
-              className="border-b border-black flex-1 px-2 font-bold font-mono text-sm text-center leading-none"
+              className="border-b-2 border-slate-800 border-dotted flex-1 px-2 font-bold font-mono text-sm text-center leading-none pb-0.5"
               dir="ltr"
             >
               {receipt.phone || "..."}
@@ -640,39 +662,34 @@ export function ReceiptPrintLayout({ receipt, debts = [] }: { receipt: any; debt
             <tr className="bg-gray-100 border-b-2 border-black">
               <th className="border-l border-black px-1 py-1 w-8">ت</th>
               <th className="border-l border-black px-2 py-1 flex-1 min-w-[200px] text-right">
-                ناوی ماددە
-                <br />
-                <span className="text-[10px] text-gray-600 font-normal">
-                  اسم المادة
-                </span>
+                <div className="flex justify-between items-center">
+                  <span>ناوی ماددە</span>
+                  <span className="text-[10px] text-gray-600 font-normal">اسم المادة</span>
+                </div>
               </th>
               <th className="border-l border-black px-1 py-1 w-12">
-                بڕ
-                <br />
-                <span className="text-[10px] text-gray-600 font-normal">
-                  الكمية
-                </span>
+                <div className="flex flex-col items-center">
+                  <span>بڕ</span>
+                  <span className="text-[9px] text-gray-600 font-normal">الكمية</span>
+                </div>
               </th>
               <th className="border-l border-black px-1 py-1 w-20">
-                نرخ
-                <br />
-                <span className="text-[10px] text-gray-600 font-normal">
-                  السعر
-                </span>
+                <div className="flex flex-col items-center">
+                  <span>نرخ</span>
+                  <span className="text-[9px] text-gray-600 font-normal">السعر</span>
+                </div>
               </th>
               <th className="border-l border-black px-1 py-1 w-16">
-                داشکاندن
-                <br />
-                <span className="text-[10px] text-gray-600 font-normal">
-                  الخصم
-                </span>
+                <div className="flex flex-col items-center">
+                  <span>داشکاندن</span>
+                  <span className="text-[9px] text-gray-600 font-normal">الخصم</span>
+                </div>
               </th>
               <th className="px-1 py-1 w-24">
-                کۆی گشتی
-                <br />
-                <span className="text-[10px] text-gray-600 font-normal">
-                  المجموع
-                </span>
+                <div className="flex flex-col items-center">
+                  <span>کۆی گشتی</span>
+                  <span className="text-[9px] text-gray-600 font-normal">المجموع</span>
+                </div>
               </th>
             </tr>
           </thead>
@@ -757,16 +774,19 @@ export function ReceiptPrintLayout({ receipt, debts = [] }: { receipt: any; debt
             <tr className="border-t-2 border-black">
               <td
                 colSpan={3}
-                className="border-l border-black p-1.5 text-right pr-2 text-xs text-gray-500 font-bold tracking-wide"
+                className="border-l border-black p-1.5 pr-2 text-[10px] text-gray-500 font-bold tracking-wide flex-col items-start text-right"
               >
-                هیچ موادێک بەسەرچوو وەرناگیرێتەوە
+                <div>هیچ کاڵایەکی بەسەرچوو وەرناگیرێتەوە</div>
+                <div className="font-normal text-[9px] mt-0.5">البضاعة التالفة لا ترد ولا تستبدل</div>
               </td>
               <td
                 colSpan={2}
                 className="border-l border-black p-1.5 text-center font-bold bg-gray-100"
               >
-                مجموع القائمة /{" "}
-                {receipt.invoiceCurrency === "USD" ? "دۆلار $" : "د.ع"}
+                <div className="leading-tight">
+                  کۆی گشتی <span className="font-normal text-slate-500">({receipt.invoiceCurrency === "USD" ? "دۆلار $" : "د.ع"})</span>
+                  <div className="text-[9px] text-gray-600 font-normal">مجموع القائمة</div>
+                </div>
               </td>
               <td className="p-1.5 font-bold bg-pink-50 text-base font-mono">
                 {formatCurrency(
@@ -781,8 +801,9 @@ export function ReceiptPrintLayout({ receipt, debts = [] }: { receipt: any; debt
         <div className="flex gap-2 mt-2 text-xs font-bold w-full">
           {/* Notes */}
           <div className="flex-1 border-2 border-black bg-slate-50 p-2 rounded text-right min-h-[50px]">
-            <div className="border-b border-black/20 pb-0.5 mb-1 text-[11px]">
-              تێبینی پسووڵە (ملاحظات) :
+            <div className="border-b border-black/20 pb-0.5 mb-1 text-[11px] flex gap-2">
+              <span>تێبینی پسووڵە:</span>
+              <span className="text-[10px] text-gray-500 font-normal">ملاحظات</span>
             </div>
             <p className="font-bold text-xs text-slate-705">
               {receipt.notes || "..."}
@@ -802,7 +823,10 @@ export function ReceiptPrintLayout({ receipt, debts = [] }: { receipt: any; debt
                       : "0"}
                   </td>
                   <td className="border border-black p-1 bg-gray-100">
-                    بڕی دراو (الواصل)
+                    <div className="flex justify-between items-center px-1">
+                      <span>بڕی دراو</span>
+                      <span className="text-[9px] text-gray-500 font-normal">الواصل</span>
+                    </div>
                   </td>
                 </tr>
                 <tr>
@@ -814,7 +838,10 @@ export function ReceiptPrintLayout({ receipt, debts = [] }: { receipt: any; debt
                       : "0"}
                   </td>
                   <td className="border border-black p-1 bg-gray-100">
-                    بڕی ماوە (المتبقي)
+                    <div className="flex justify-between items-center px-1">
+                      <span>بڕی ماوە</span>
+                      <span className="text-[9px] text-gray-500 font-normal">المتبقي</span>
+                    </div>
                   </td>
                 </tr>
                 {(receipt.discount || receipt.discountAmount) > 0 && (
@@ -826,7 +853,10 @@ export function ReceiptPrintLayout({ receipt, debts = [] }: { receipt: any; debt
                         )}
                       </td>
                       <td className="border border-black p-1 bg-gray-100">
-                        بڕی بێ داشکاندن
+                        <div className="flex justify-between items-center px-1">
+                          <span>بڕی بێ داشکاندن</span>
+                          <span className="text-[9px] text-gray-500 font-normal">الإجمالي</span>
+                        </div>
                       </td>
                     </tr>
                     <tr>
@@ -836,7 +866,10 @@ export function ReceiptPrintLayout({ receipt, debts = [] }: { receipt: any; debt
                         )}
                       </td>
                       <td className="border border-black p-1 bg-gray-100">
-                        داشکاندن (الخصم)
+                        <div className="flex justify-between items-center px-1">
+                          <span>داشکاندن</span>
+                          <span className="text-[9px] text-gray-500 font-normal">الخصم</span>
+                        </div>
                       </td>
                     </tr>
                   </>
@@ -848,7 +881,10 @@ export function ReceiptPrintLayout({ receipt, debts = [] }: { receipt: any; debt
                     )}
                   </td>
                   <td className="border border-black p-1 bg-pink-100 text-sm font-black">
-                    المجموع (کۆی گشتی)
+                    <div className="flex justify-between items-center px-1">
+                      <span>کۆی گشتی</span>
+                      <span className="text-[9px] text-pink-700 font-normal">المجموع</span>
+                    </div>
                   </td>
                 </tr>
                 {customerDebt && overallDebt > 0 && (
@@ -858,7 +894,10 @@ export function ReceiptPrintLayout({ receipt, debts = [] }: { receipt: any; debt
                         {formatCurrency(prevDebt)}
                       </td>
                       <td className="border border-black p-1 bg-slate-50 text-slate-800 font-bold">
-                        کۆی قەرزی پێشوو (الديون السابقة)
+                        <div className="flex justify-between items-center px-1">
+                          <span>کۆی قەرزی پێشوو</span>
+                          <span className="text-[9px] text-gray-600 font-normal">الديون السابقة</span>
+                        </div>
                       </td>
                     </tr>
                     <tr>
@@ -866,7 +905,10 @@ export function ReceiptPrintLayout({ receipt, debts = [] }: { receipt: any; debt
                         {formatCurrency(overallDebt)}
                       </td>
                       <td className="border border-black p-1 bg-pink-50 text-pink-950 font-black">
-                        کۆی گشتی قەرزی ماوەی کڕیار (إجمالي الدين المتبقي)
+                        <div className="flex justify-between items-center px-1 text-xs">
+                          <span>قەرزی ماوەی کڕیار</span>
+                          <span className="text-[9px] text-pink-700/70 font-normal">إجمالي الدين المتبقي</span>
+                        </div>
                       </td>
                     </tr>
                   </>

@@ -303,7 +303,8 @@ export default function AccountStatementModal({
 
   const fixDebtBookMismatch = async () => {
     const totalCalculatedBalance = ledgerEntries.reduce((sum, e) => sum + e.debit - e.credit, 0);
-    if (!confirm(`ئایا دڵنیایت دەتەوێت دەفتەر قەرز نوێ بکەیتەوە بۆ ئەوەی ببێتە ${totalCalculatedBalance} دۆلار؟`)) return;
+    const textStatus = totalCalculatedBalance === 0 ? '(پاکتاو / سفر)' : (totalCalculatedBalance < 0 ? '(قەرزارین)' : '(قەرزارە)');
+    if (!confirm(`ئایا دڵنیایت دەتەوێت قەرزی ئەم کڕیارە چاک بکەیت بۆ ئەوەی بڕەکەی ببێتە ${formatCurrency(Math.abs(totalCalculatedBalance))} ${textStatus}؟`)) return;
 
     try {
       const batch = writeBatch(db);
@@ -360,7 +361,7 @@ export default function AccountStatementModal({
     <div 
       className="printable-statement-area w-full bg-white text-black p-[7mm] box-border relative flex flex-col border-2 border-black"
       dir="rtl"
-      style={{ fontFamily: "Cairo, Arial, sans-serif" }}
+      style={{ fontFamily: "'Rudaw', Tahoma, 'Noto Sans Arabic', Arial, sans-serif" }}
     >
       <style type="text/css" media="print">
          {`
@@ -374,6 +375,7 @@ export default function AccountStatementModal({
           }
           .printable-statement-area, .printable-statement-area * {
             visibility: visible !important;
+            font-family: 'Rudaw', 'Noto Sans Arabic', Tahoma, Arial, sans-serif !important;
           }
           .printable-statement-area {
             position: absolute !important;
@@ -433,7 +435,7 @@ export default function AccountStatementModal({
         <div className="flex-1 flex flex-col justify-center items-center text-center px-2">
           <h1
             className="text-3xl font-extrabold text-pink-600 tracking-wider mb-0.5 flex items-center gap-1.5 justify-center"
-            style={{ fontFamily: "'Cairo', 'Arial', sans-serif" }}
+            style={{ fontFamily: "'Rudaw', Tahoma, 'Noto Sans Arabic', Arial, sans-serif" }}
           >
             <span className="text-black font-extrabold text-2xl">گروپی</span>
             <span>PINK ELLE</span>
