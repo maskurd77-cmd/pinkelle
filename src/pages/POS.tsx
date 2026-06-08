@@ -1105,21 +1105,36 @@ export default function POS() {
                     onSubmit={handleCheckoutSubmit}
                     className="space-y-4"
                   >
-                    <div className="grid grid-cols-1 gap-3 mb-6 hidden">
-                      <label
-                        className={`cursor-pointer flex flex-col items-center justify-center gap-2 py-4 rounded-xl border-2 transition-all border-pink-500 bg-pink-50 text-pink-700`}
-                      >
-                        <input
-                          type="radio"
-                          name="paymentType"
-                          value="debt"
-                          checked={true}
-                          readOnly
-                          className="sr-only"
-                        />
-                        <History size={24} />
-                        <span className="font-bold text-sm">قەرز (ماوە)</span>
+                    <div className="space-y-1.5 pb-2">
+                      <label className="text-sm font-bold text-slate-700 flex items-center gap-1.5">
+                        <Banknote size={16} className="text-pink-500" /> جۆری پێدان (جۆری وەسڵ) <span className="text-red-500">*</span>
                       </label>
+                      <div className="grid grid-cols-2 gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setCustomerDetails({ ...customerDetails, paymentType: "cash" })}
+                          className={`py-3 px-4 rounded-xl border-2 font-bold text-sm flex items-center justify-center gap-2 transition-all duration-200 ${
+                            customerDetails.paymentType === "cash" || customerDetails.paymentType === "نەقد"
+                              ? "border-pink-600 bg-pink-50/80 text-pink-700 shadow-md shadow-pink-500/10 scale-[1.02]"
+                              : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:border-slate-300"
+                          }`}
+                        >
+                          <Banknote size={18} />
+                          نەقد (کاش)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setCustomerDetails({ ...customerDetails, paymentType: "debt" })}
+                          className={`py-3 px-4 rounded-xl border-2 font-bold text-sm flex items-center justify-center gap-2 transition-all duration-200 ${
+                            customerDetails.paymentType === "debt" || customerDetails.paymentType === "قەرز"
+                              ? "border-pink-600 bg-pink-50/80 text-pink-700 shadow-md shadow-pink-500/10 scale-[1.02]"
+                              : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:border-slate-300"
+                          }`}
+                        >
+                          <History size={18} />
+                          قەرز (ماوە)
+                        </button>
+                      </div>
                     </div>
 
                     <div className="space-y-2">

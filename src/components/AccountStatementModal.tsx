@@ -153,7 +153,7 @@ export default function AccountStatementModal({
   };
 
   const customerDebts = debts.filter(
-    (d: any) => d.customerName === customer.name,
+    (d: any) => d.customerName?.trim() === customer.name?.trim(),
   );
   const totalDebtAmount = customerDebts.reduce(
     (sum: number, d: any) => sum + (d.remainingAmount || 0),
@@ -207,6 +207,7 @@ export default function AccountStatementModal({
 
   // Add Debt Transactions
   debtTransactions.forEach((tx: any) => {
+    if (tx.status && tx.status !== "completed") return;
     const ts = tx.timestamp?.toDate ? tx.timestamp.toDate() : new Date();
 
     if (tx.type === "add") {

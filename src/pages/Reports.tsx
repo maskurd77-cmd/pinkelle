@@ -124,7 +124,7 @@ export default function Reports() {
     });
 
     const salesByDate: Record<string, number> = {};
-    const categoryCount: Record<string, number> = {};
+    const productCount: Record<string, number> = {};
 
     filteredData.filteredReceipts.forEach((r) => {
       if (r.status === "pending" || r.status === "canceled") return;
@@ -169,9 +169,9 @@ export default function Reports() {
             retailProfit += itemProfit;
           }
 
-          const cat = item.category || "گشتی";
-          if (!categoryCount[cat]) categoryCount[cat] = 0;
-          categoryCount[cat] += qty;
+          const prodName = item.name || item.productName || "ناوی دیاری نەکراو";
+          if (!productCount[prodName]) productCount[prodName] = 0;
+          productCount[prodName] += qty;
         });
       }
     });
@@ -188,7 +188,7 @@ export default function Reports() {
       name,
       sales: salesAmount,
     }));
-    const pData = Object.entries(categoryCount)
+    const pData = Object.entries(productCount)
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value)
       .slice(0, 5);
@@ -603,7 +603,7 @@ export default function Reports() {
             <div className="w-10 h-10 rounded-xl bg-pink-50 flex items-center justify-center text-pink-600">
               <PieChartIcon size={20} />
             </div>
-            پڕفرۆشترین جۆرەکان
+            پڕفرۆشترین بەرهەمەکان
           </h3>
           <div className="flex-1 w-full min-h-[350px]">
             {categoryData.length > 0 ? (
