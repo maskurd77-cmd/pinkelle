@@ -502,7 +502,18 @@ export default function POS() {
            }
 
            if (debtDiff !== 0) {
-               const existingDebt = debts.find((d) => d.customerName === customerName && d.status === "active") || debts.find((d) => d.customerName === customerName);
+               const existingDebt = (() => {
+                  const normalizeName = (name: string | null | undefined): string => {
+                    if (!name) return "";
+                    return name
+                      .trim()
+                      .replace(/\s+/g, " ")
+                      .replace(/[ییێىي]/g, "ی")
+                      .replace(/[ەەھة]/g, "ە")
+                      .toLowerCase();
+                  };
+                  return debts.find((d) => normalizeName(d.customerName) === normalizeName(customerName) && d.status === "active") || debts.find((d) => normalizeName(d.customerName) === normalizeName(customerName));
+                })();
                
                if (existingDebt) {
                   const newRemaining = (existingDebt.remainingAmount || 0) + debtDiff;

@@ -344,8 +344,30 @@ export default function Receipts() {
                   >
                     {formatDate(rec.timestamp)}
                   </td>
-                  <td className="px-6 py-4 text-slate-600 font-bold font-mono">
-                    {rec.totalItems} دانە
+                  <td className="px-6 py-4 text-slate-600 font-bold whitespace-nowrap">
+                    {(() => {
+                      const cartonCount = rec.items?.reduce((sum: number, item: any) => {
+                        if (item.unitType === 'carton') {
+                          return sum + (item.originalQuantity || (item.quantity / (item.cartonSize || 1)));
+                        }
+                        return sum;
+                      }, 0) || 0;
+
+                      const pieceCount = rec.items?.reduce((sum: number, item: any) => {
+                        if (item.unitType !== 'carton') {
+                          return sum + item.quantity;
+                        }
+                        return sum;
+                      }, 0) || 0;
+
+                      return (
+                        <div className="flex flex-col text-xs gap-0.5">
+                          {cartonCount > 0 && <span className="text-pink-600 font-mono font-extrabold">{cartonCount} کارتن</span>}
+                          {pieceCount > 0 && <span className="text-slate-600 font-mono font-bold">{pieceCount} دانە</span>}
+                          {cartonCount === 0 && pieceCount === 0 && <span className="text-slate-400 font-mono">0 دانە</span>}
+                        </div>
+                      );
+                    })()}
                   </td>
                   <td className="px-6 py-4 font-bold text-pink-700">
                     {rec.sellerName || "نەزانراو"}
@@ -673,10 +695,22 @@ export function ReceiptPrintLayout({ receipt, debts = [] }: { receipt: any; debt
                   <span className="text-[9px] text-gray-600 font-normal">الكمية</span>
                 </div>
               </th>
+              <th className="border-l border-black px-1 py-1 w-14">
+                <div className="flex flex-col items-center">
+                  <span>یەکە</span>
+                  <span className="text-[9px] text-gray-600 font-normal">الوحدة</span>
+                </div>
+              </th>
               <th className="border-l border-black px-1 py-1 w-20">
                 <div className="flex flex-col items-center">
                   <span>نرخ</span>
                   <span className="text-[9px] text-gray-600 font-normal">السعر</span>
+                </div>
+              </th>
+              <th className="border-l border-black px-1 py-1 w-18">
+                <div className="flex flex-col items-center">
+                  <span>نرخی دانە</span>
+                  <span className="text-[9px] text-gray-600 font-normal">سعر م</span>
                 </div>
               </th>
               <th className="border-l border-black px-1 py-1 w-16">
@@ -711,6 +745,19 @@ export function ReceiptPrintLayout({ receipt, debts = [] }: { receipt: any; debt
                   (item.originalUnitPrice - item.unitPrice) * item.quantity;
               }
 
+              const isCarton = item.unitType === 'carton';
+              const displayQty = isCarton ? (item.originalQuantity || item.quantity) : item.quantity;
+              const displayUnit = isCarton ? `${item.cartonSize || 1} دانە` : 'دانە';
+              
+              // unitPriceObj is the base price per single piece (as inputted or default)
+              const basePiecePrice = item.originalUnitPrice || item.unitPrice;
+              
+              // The main price column ("نرخ") shows the carton price if carton, otherwise individual piece price
+              const mainPrice = isCarton ? (basePiecePrice * (item.cartonSize || 1)) : basePiecePrice;
+              
+              // The single piece price column ("نرخی دانە") shows the single piece price in all cases
+              const piecePriceFormatted = formatCurrency(basePiecePrice, itemCurrency).replace(itemCurrency, "");
+
               return (
                 <tr key={i} className="border-b border-black">
                   <td className="border-l border-black p-1">{i + 1}</td>
@@ -718,30 +765,18 @@ export function ReceiptPrintLayout({ receipt, debts = [] }: { receipt: any; debt
                     {item.name} {item.isWholesale ? "(جوملە)" : ""}
                   </td>
                   <td className="border-l border-black p-1 font-mono text-sm leading-tight align-middle text-center">
-                    {item.originalQuantity && item.unitType === 'carton' ? (
-                      <div className="flex flex-col items-center justify-center">
-                         <span>{item.originalQuantity} <span className="text-[10px] font-normal">کارتۆن</span></span>
-                         <span className="text-[9px] font-normal text-slate-600">({item.cartonSize} دانە ناو کارتۆن)</span>
-                      </div>
-                    ) : (
-                      <div className="flex flex-col items-center justify-center">
-                         <span>{item.quantity} <span className="text-[10px] font-normal">دانە</span></span>
-                         {item.cartonSize && item.cartonSize > 1 && (
-                            <span className="text-[9px] font-normal text-slate-600">({item.cartonSize} دانە ناو کارتۆن)</span>
-                         )}
-                      </div>
-                    )}
+                    {displayQty}
+                  </td>
+                  <td className="border-l border-black p-1 text-xs leading-tight text-center">
+                    <span className="font-bold">{displayUnit}</span>
                   </td>
                   <td className="border-l border-black p-1 font-mono text-sm leading-tight align-middle text-center">
                     <div>
-                      {formatCurrency(
-                        item.originalUnitPrice || item.unitPrice,
-                        itemCurrency,
-                      ).replace(itemCurrency, "")}
+                      {formatCurrency(mainPrice, itemCurrency).replace(itemCurrency, "")}
                     </div>
-                    {item.cartonSize && item.cartonSize > 1 ? (
-                       <div className="text-[9px] font-normal text-slate-600">نرخی ۱ دانە</div>
-                    ) : null}
+                  </td>
+                  <td className="border-l border-black p-1 font-mono text-sm leading-tight align-middle text-center text-slate-800">
+                    {piecePriceFormatted}
                   </td>
                   <td className="border-l border-black p-1 font-mono text-sm text-red-600 leading-none">
                     {diff > 0 ? diff.toLocaleString() : "0"}
@@ -768,19 +803,21 @@ export function ReceiptPrintLayout({ receipt, debts = [] }: { receipt: any; debt
                 <td className="border-l border-black p-1">.</td>
                 <td className="border-l border-black p-1">.</td>
                 <td className="border-l border-black p-1">.</td>
+                <td className="border-l border-black p-1">.</td>
+                <td className="border-l border-black p-1">.</td>
                 <td className="p-1">.</td>
               </tr>
             ))}
             <tr className="border-t-2 border-black">
               <td
-                colSpan={3}
+                colSpan={4}
                 className="border-l border-black p-1.5 pr-2 text-[10px] text-gray-500 font-bold tracking-wide flex-col items-start text-right"
               >
                 <div>هیچ کاڵایەکی بەسەرچوو وەرناگیرێتەوە</div>
                 <div className="font-normal text-[9px] mt-0.5">البضاعة التالفة لا ترد ولا تستبدل</div>
               </td>
               <td
-                colSpan={2}
+                colSpan={3}
                 className="border-l border-black p-1.5 text-center font-bold bg-gray-100"
               >
                 <div className="leading-tight">

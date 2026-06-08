@@ -152,8 +152,18 @@ export default function AccountStatementModal({
     }
   };
 
+  const normalizeName = (name: string | null | undefined): string => {
+    if (!name) return "";
+    return name
+      .trim()
+      .replace(/\s+/g, " ")
+      .replace(/[ییێىي]/g, "ی")
+      .replace(/[ەەھة]/g, "ە")
+      .toLowerCase();
+  };
+
   const customerDebts = debts.filter(
-    (d: any) => d.customerName?.trim() === customer.name?.trim(),
+    (d: any) => normalizeName(d.customerName) === normalizeName(customer.name),
   );
   const totalDebtAmount = customerDebts.reduce(
     (sum: number, d: any) => sum + (d.remainingAmount || 0),
@@ -244,7 +254,7 @@ export default function AccountStatementModal({
 
   // Add Cash Receipts
   if (receipts) {
-    const cashReceipts = receipts.filter((r: any) => r.customerName === customer.name && r.status === "completed" && (r.paymentType === "cash" || r.paymentType === "نەقد"));
+    const cashReceipts = receipts.filter((r: any) => normalizeName(r.customerName) === normalizeName(customer.name) && r.status === "completed" && (r.paymentType === "cash" || r.paymentType === "نەقد"));
     cashReceipts.forEach((r: any) => {
        const ts = r.timestamp?.toDate ? r.timestamp.toDate() : new Date(r.timestamp);
        ledgerEntries.push({

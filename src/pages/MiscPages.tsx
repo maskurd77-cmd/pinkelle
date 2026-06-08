@@ -266,7 +266,8 @@ export function Returns() {
   const filteredReceipts = receipts.filter(
     (r) =>
       r.id.toLowerCase().includes(search.toLowerCase()) ||
-      r.items?.some((i: any) => i.name.includes(search)),
+      (r.customerName || "").toLowerCase().includes(search.toLowerCase()) ||
+      r.items?.some((i: any) => i.name.toLowerCase().includes(search.toLowerCase())),
   );
 
   return (
@@ -284,7 +285,7 @@ export function Returns() {
           />
           <input
             type="text"
-            placeholder="گەڕان بەدوای کالا یان ژمارەی وەسڵ..."
+            placeholder="گەڕان بەدوای کالا، وەسڵ، یان کڕیار..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="bg-slate-50 border border-slate-200 pr-9 pl-4 py-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-pink-500 w-full sm:w-72"
@@ -294,10 +295,12 @@ export function Returns() {
 
       <div className="flex-1 overflow-auto custom-scrollbar">
         {filteredReceipts.length > 0 ? (
-          <table className="w-full text-right border-collapse">
+          <table className="w-full text-right border-collapse min-w-[700px]">
             <thead className="bg-slate-50 text-slate-500 text-[11px] uppercase tracking-wider sticky top-0">
               <tr>
                 <th className="px-4 py-3 font-semibold">ژمارەی وەسڵ</th>
+                <th className="px-4 py-3 font-semibold">کڕیار / لایەن</th>
+                <th className="px-4 py-3 font-semibold">کاڵاکان</th>
                 <th className="px-4 py-3 font-semibold">کاتی فرۆشتن</th>
                 <th className="px-4 py-3 font-semibold">کۆی گشتی</th>
                 <th className="px-4 py-3 font-semibold text-center">کردار</th>
@@ -309,7 +312,25 @@ export function Returns() {
                   <td className="px-4 py-4 font-mono font-bold text-slate-700">
                     #{r.id.slice(0, 6).toUpperCase()}
                   </td>
-                  <td className="px-4 py-4 text-slate-600">
+                  <td className="px-4 py-4 text-slate-800 font-bold">
+                    {r.customerName || "کڕیاری گشتی"}
+                  </td>
+                  <td className="px-4 py-4 text-xs text-slate-600 max-w-[280px]">
+                    <div className="flex flex-wrap gap-1">
+                      {r.items?.map((item: any, idx: number) => {
+                        const isCarton = item.unitType === 'carton';
+                        const qtyText = isCarton 
+                          ? `${item.originalQuantity} ک` 
+                          : `${item.quantity} د`;
+                        return (
+                          <span key={idx} className="bg-slate-100 text-slate-705 px-1.5 py-0.5 rounded font-medium border border-slate-200">
+                            {item.name} ({qtyText})
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </td>
+                  <td className="px-4 py-4 text-slate-600 text-xs">
                     {r.timestamp?.toDate
                       ? new Date(r.timestamp.toDate()).toLocaleString("ku")
                       : "کات نەزانراوە"}
@@ -341,9 +362,15 @@ export function Returns() {
         <div className="fixed inset-0 bg-slate-900/60 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4 backdrop-blur-sm">
           <div className="bg-white rounded-t-[32px] sm:rounded-2xl shadow-xl w-full max-w-2xl max-h-[90dvh] sm:max-h-[90vh] flex flex-col animate-in slide-in-from-bottom-10 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-200">
             <div className="p-5 sm:p-6 flex justify-between items-center border-b border-slate-100 shrink-0">
-              <h3 className="text-lg font-bold">
-                زانیاری وەسڵی #{returningReceipt.id.slice(0, 6).toUpperCase()}
-              </h3>
+              <div>
+                <h3 className="text-lg font-bold">
+                  زانیاری وەسڵی #{returningReceipt.id.slice(0, 6).toUpperCase()}
+                </h3>
+                <p className="text-xs text-slate-500 mt-1 flex gap-3">
+                  <span>کڕیار: <span className="font-extrabold text-slate-800">{returningReceipt.customerName || "کڕیاری گشتی"}</span></span>
+                  {returningReceipt.sellerName && <span>| مەندوب: <span className="font-bold text-slate-700">{returningReceipt.sellerName}</span></span>}
+                </p>
+              </div>
               <button
                 onClick={() => setReturningReceipt(null)}
                 className="w-10 h-10 flex items-center justify-center text-slate-400 bg-slate-100 hover:bg-slate-200 hover:text-slate-600 rounded-xl transition-all"
@@ -354,34 +381,52 @@ export function Returns() {
             <div className="flex-1 overflow-auto p-4 sm:p-6 custom-scrollbar pb-[max(calc(env(safe-area-inset-bottom)+1rem),1rem)] sm:pb-6">
               <div className="border border-slate-100 rounded-lg overflow-hidden">
                 <table className="w-full text-right text-sm">
-                <thead className="bg-slate-50">
+                <thead className="bg-slate-50 text-xs text-slate-500">
                   <tr>
-                    <th className="px-4 py-2">ناونیشان</th>
-                    <th className="px-4 py-2">بڕ</th>
-                    <th className="px-4 py-2">نرخ</th>
+                    <th className="px-4 py-2">ناوی کالا</th>
+                    <th className="px-4 py-2">بڕی فرۆشراو / یەکە</th>
+                    <th className="px-4 py-2">نرخی فرۆشراو</th>
+                    <th className="px-4 py-2">نرخی دانە</th>
                     <th className="px-4 py-2">کردار</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {returningReceipt.items?.map((item: any, i: number) => (
-                    <tr key={i}>
-                      <td className="px-4 py-3 font-bold text-slate-700">
-                        {item.name}
-                      </td>
-                      <td className="px-4 py-3 font-mono">{item.quantity}</td>
-                      <td className="px-4 py-3 font-mono text-pink-600">
-                        {formatCurrency(item.unitPrice)}
-                      </td>
-                      <td className="px-4 py-3">
-                        <button
-                          onClick={() => handleReturnSingleItem(i)}
-                          className="px-3 py-1.5 bg-pink-100 text-pink-700 rounded hover:bg-pink-200 text-xs font-bold transition-colors"
-                        >
-                          گەڕاندنەوە
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                  {returningReceipt.items?.map((item: any, i: number) => {
+                    const isCarton = item.unitType === 'carton';
+                    const displayQty = isCarton ? (item.originalQuantity || item.quantity) : item.quantity;
+                    const displayUnit = isCarton ? `${item.cartonSize || 1} دانە` : 'دانە';
+                    
+                    const basePiecePrice = item.originalUnitPrice || item.unitPrice;
+                    const mainPrice = isCarton ? (basePiecePrice * (item.cartonSize || 1)) : basePiecePrice;
+                    
+                    const piecePriceFormatted = formatCurrency(basePiecePrice, item.currency || "USD").replace(item.currency || "USD", "");
+
+                    return (
+                      <tr key={i}>
+                        <td className="px-4 py-3 font-bold text-slate-700">
+                          {item.name}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="font-bold font-mono">{displayQty}</span>{" "}
+                          <span className="text-xs text-slate-500">({isCarton ? 'کارتۆن' : 'دانە'}: {displayUnit})</span>
+                        </td>
+                        <td className="px-4 py-3 font-mono font-bold text-pink-600">
+                          {formatCurrency(mainPrice, item.currency || "USD")}
+                        </td>
+                        <td className="px-4 py-3 font-mono text-slate-500">
+                          {piecePriceFormatted}
+                        </td>
+                        <td className="px-4 py-3">
+                          <button
+                            onClick={() => handleReturnSingleItem(i)}
+                            className="px-3 py-1.5 bg-pink-100 text-pink-700 rounded hover:bg-pink-200 text-xs font-bold transition-colors"
+                          >
+                            گەڕاندنەوە
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
               </div>
@@ -533,7 +578,8 @@ export function Exchanges() {
   const filteredReceipts = receipts.filter(
     (r) =>
       r.id.toLowerCase().includes(search.toLowerCase()) ||
-      r.items?.some((i: any) => i.name.includes(search)),
+      (r.customerName || "").toLowerCase().includes(search.toLowerCase()) ||
+      r.items?.some((i: any) => i.name.toLowerCase().includes(search.toLowerCase())),
   );
 
   return (
@@ -549,7 +595,7 @@ export function Exchanges() {
           />
           <input
             type="text"
-            placeholder="گەڕان بەدوای کالا یان ژمارەی وەسڵ..."
+            placeholder="گەڕان بەدوای کالا، وەسڵ، یان کڕیار..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="bg-slate-50 border border-slate-200 pr-9 pl-4 py-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-pink-500 w-full sm:w-72"
@@ -559,10 +605,12 @@ export function Exchanges() {
 
       <div className="flex-1 overflow-auto custom-scrollbar">
         {filteredReceipts.length > 0 ? (
-          <table className="w-full text-right border-collapse">
+          <table className="w-full text-right border-collapse min-w-[700px]">
             <thead className="bg-slate-50 text-slate-500 text-[11px] uppercase tracking-wider sticky top-0">
               <tr>
                 <th className="px-4 py-3 font-semibold">ژمارەی وەسڵ</th>
+                <th className="px-4 py-3 font-semibold">کڕیار / لایەن</th>
+                <th className="px-4 py-3 font-semibold">کاڵاکان</th>
                 <th className="px-4 py-3 font-semibold">کاتی فرۆشتن</th>
                 <th className="px-4 py-3 font-semibold">کۆی گشتی</th>
                 <th className="px-4 py-3 font-semibold text-center">کردار</th>
@@ -574,13 +622,31 @@ export function Exchanges() {
                   <td className="px-4 py-4 font-mono font-bold text-slate-700">
                     #{r.id.slice(0, 6).toUpperCase()}
                   </td>
-                  <td className="px-4 py-4 text-slate-600">
+                  <td className="px-4 py-4 text-slate-800 font-bold">
+                    {r.customerName || "کڕیاری گشتی"}
+                  </td>
+                  <td className="px-4 py-4 text-xs text-slate-600 max-w-[280px]">
+                    <div className="flex flex-wrap gap-1">
+                      {r.items?.map((item: any, idx: number) => {
+                        const isCarton = item.unitType === 'carton';
+                        const qtyText = isCarton 
+                          ? `${item.originalQuantity} ک` 
+                          : `${item.quantity} د`;
+                        return (
+                          <span key={idx} className="bg-slate-100 text-slate-705 px-1.5 py-0.5 rounded font-medium border border-slate-200">
+                            {item.name} ({qtyText})
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </td>
+                  <td className="px-4 py-4 text-slate-600 text-xs">
                     {r.timestamp?.toDate
                       ? new Date(r.timestamp.toDate()).toLocaleString("ku")
                       : "کات نەزانراوە"}
                   </td>
                   <td className="px-4 py-4 font-mono font-bold text-green-600">
-                    {formatCurrency(r.totalAmount || r.total || 0)}
+                    {formatCurrency(r.totalAmount || r.total || 0, r.invoiceCurrency || "USD")}
                   </td>
                   <td className="px-4 py-4 flex justify-center">
                     <button
@@ -606,10 +672,15 @@ export function Exchanges() {
         <div className="fixed inset-0 bg-slate-900/60 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4 backdrop-blur-sm">
           <div className="bg-white rounded-t-[32px] sm:rounded-2xl shadow-xl w-full max-w-2xl max-h-[90dvh] sm:max-h-[90vh] flex flex-col animate-in slide-in-from-bottom-10 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-200">
             <div className="p-5 sm:p-6 flex justify-between items-center border-b border-slate-100 shrink-0">
-              <h3 className="text-lg font-bold">
-                زانیاری وەسڵی #{returningReceipt.id.slice(0, 6).toUpperCase()}{" "}
-                بۆ گۆڕینەوە
-              </h3>
+              <div>
+                <h3 className="text-lg font-bold">
+                  زانیاری وەسڵی #{returningReceipt.id.slice(0, 6).toUpperCase()} بۆ گۆڕینەوە
+                </h3>
+                <p className="text-xs text-slate-500 mt-1 flex gap-3">
+                  <span>کڕیار: <span className="font-extrabold text-slate-800">{returningReceipt.customerName || "کڕیاری گشتی"}</span></span>
+                  {returningReceipt.sellerName && <span>| مەندوب: <span className="font-bold text-slate-700">{returningReceipt.sellerName}</span></span>}
+                </p>
+              </div>
               <button
                 onClick={() => setReturningReceipt(null)}
                 className="w-10 h-10 flex items-center justify-center text-slate-400 bg-slate-100 hover:bg-slate-200 hover:text-slate-600 rounded-xl transition-all"
@@ -620,34 +691,52 @@ export function Exchanges() {
             <div className="flex-1 overflow-auto p-4 sm:p-6 custom-scrollbar pb-[max(calc(env(safe-area-inset-bottom)+1rem),1rem)] sm:pb-6">
               <div className="border border-slate-100 rounded-lg overflow-hidden">
                 <table className="w-full text-right text-sm">
-                <thead className="bg-slate-50">
+                <thead className="bg-slate-50 text-xs text-slate-500">
                   <tr>
-                    <th className="px-4 py-2">ناونیشان</th>
-                    <th className="px-4 py-2">بڕ</th>
-                    <th className="px-4 py-2">نرخ</th>
+                    <th className="px-4 py-2">ناوی کالا</th>
+                    <th className="px-4 py-2">بڕی فرۆشراو / یەکە</th>
+                    <th className="px-4 py-2">نرخی فرۆشراو</th>
+                    <th className="px-4 py-2">نرخی دانە</th>
                     <th className="px-4 py-2">کردار</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {returningReceipt.items?.map((item: any, i: number) => (
-                    <tr key={i}>
-                      <td className="px-4 py-3 font-bold text-slate-700">
-                        {item.name}
-                      </td>
-                      <td className="px-4 py-3 font-mono">{item.quantity}</td>
-                      <td className="px-4 py-3 font-mono text-pink-600">
-                        {formatCurrency(item.unitPrice)}
-                      </td>
-                      <td className="px-4 py-3">
-                        <button
-                          onClick={() => handleReturnSingleItem(i)}
-                          className="px-3 py-1.5 bg-pink-100 text-pink-700 rounded hover:bg-pink-200 text-xs font-bold transition-colors"
-                        >
-                          گۆڕینەوە
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                  {returningReceipt.items?.map((item: any, i: number) => {
+                    const isCarton = item.unitType === 'carton';
+                    const displayQty = isCarton ? (item.originalQuantity || item.quantity) : item.quantity;
+                    const displayUnit = isCarton ? `${item.cartonSize || 1} دانە` : 'دانە';
+                    
+                    const basePiecePrice = item.originalUnitPrice || item.unitPrice;
+                    const mainPrice = isCarton ? (basePiecePrice * (item.cartonSize || 1)) : basePiecePrice;
+                    
+                    const piecePriceFormatted = formatCurrency(basePiecePrice, item.currency || "USD").replace(item.currency || "USD", "");
+
+                    return (
+                      <tr key={i}>
+                        <td className="px-4 py-3 font-bold text-slate-700">
+                          {item.name}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="font-bold font-mono">{displayQty}</span>{" "}
+                          <span className="text-xs text-slate-500">({isCarton ? 'کارتۆن' : 'دانە'}: {displayUnit})</span>
+                        </td>
+                        <td className="px-4 py-3 font-mono font-bold text-pink-600">
+                          {formatCurrency(mainPrice, item.currency || "USD")}
+                        </td>
+                        <td className="px-4 py-3 font-mono text-slate-500">
+                          {piecePriceFormatted}
+                        </td>
+                        <td className="px-4 py-3">
+                          <button
+                            onClick={() => handleReturnSingleItem(i)}
+                            className="px-3 py-1.5 bg-pink-100 text-pink-700 rounded hover:bg-pink-200 text-xs font-bold transition-colors"
+                          >
+                            گۆڕینەوە
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
               </div>

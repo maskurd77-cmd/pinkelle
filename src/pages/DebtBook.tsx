@@ -432,7 +432,17 @@ export default function DebtBook() {
 
     const amountValRaw = parseFloat(newAmount);
 
-    const existingDebt = debts.find((d) => d.customerName === newName);
+    const normalizeName = (name: string | null | undefined): string => {
+      if (!name) return "";
+      return name
+        .trim()
+        .replace(/\s+/g, " ")
+        .replace(/[ییێىي]/g, "ی")
+        .replace(/[ەەھة]/g, "ە")
+        .toLowerCase();
+    };
+
+    const existingDebt = debts.find((d) => normalizeName(d.customerName) === normalizeName(newName));
     const isPending = userRole !== "admin" && userRole !== "accountant";
 
     if (existingDebt) {

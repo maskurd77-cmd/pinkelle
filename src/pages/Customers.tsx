@@ -373,11 +373,21 @@ export default function Customers() {
         {viewMode === 'list' ? (
            <div className="p-4 sm:p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                {filteredCustomers.map(customer => {
-                  const customerReceipts = receipts.filter(r => r.customerName === customer.name);
+                  const normalizeName = (name: string | null | undefined): string => {
+                     if (!name) return "";
+                     return name
+                       .trim()
+                       .replace(/\s+/g, " ")
+                       .replace(/[ییێىي]/g, "ی")
+                       .replace(/[ەەھة]/g, "ە")
+                       .toLowerCase();
+                  };
+
+                  const customerReceipts = receipts.filter(r => normalizeName(r.customerName) === normalizeName(customer.name));
                   const totalPurchases = customerReceipts.reduce((sum, r) => sum + (r.totalAmount || 0), 0);
                   const purchaseCount = customerReceipts.length;
 
-                  const customerDebts = debts.filter(d => d.customerName === customer.name);
+                  const customerDebts = debts.filter(d => normalizeName(d.customerName) === normalizeName(customer.name));
                   const totalDebt = customerDebts.reduce((sum, d) => sum + (d.remainingAmount || 0), 0);
 
                   return (
