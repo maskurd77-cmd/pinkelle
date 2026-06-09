@@ -77,34 +77,43 @@ export default function Receipts({ preselectedCustomer, hideLayout }: { preselec
 
       // Add debt if paymentType is 'debt'
       if (
-        rec.paymentType === "debt" &&
+        (rec.paymentType === "debt" || rec.paymentType === "قەرز") &&
         rec.totalAmount > 0 &&
         rec.customerName
       ) {
-        const debtsSnap = await getDocs(
-          query(
-            collection(db, "debts"),
-            where("customerName", "==", rec.customerName),
-            where("status", "==", "active"),
-          ),
-        );
-        if (!debtsSnap.empty) {
-          const existingDebt = debtsSnap.docs[0];
-          const dData = existingDebt.data();
-          batch.update(existingDebt.ref, {
-            amount: (dData.amount || 0) + rec.totalAmount,
-            remainingAmount: (dData.remainingAmount || 0) + rec.totalAmount,
-            updatedAt: Timestamp.now(),
-          });
-          batch.set(doc(collection(db, "debt_transactions")), {
-            debtId: existingDebt.id,
-            amount: rec.totalAmount,
-            type: "add",
-            timestamp: Timestamp.now(),
-            notes:
-              "زیادبوونی قەرز لە وەسڵی پەسەندکراوی ژمارە: " +
-              rec.id.slice(-8).toUpperCase(),
-          });
+        const normalizeName = (name: string | null | undefined): string => {
+          if (!name) return "";
+          return name
+            .trim()
+            .replace(/\s+/g, " ")
+            .replace(/[ییێىي]/g, "ی")
+            .replace(/[ەەھة]/g, "ە")
+            .toLowerCase();
+        };
+
+        const existingDebtState = debts.find((d) => normalizeName(d.customerName) === normalizeName(rec.customerName) && d.status === "active") || debts.find((d) => normalizeName(d.customerName) === normalizeName(rec.customerName));
+
+        if (existingDebtState) {
+          const debtRef = doc(db, "debts", existingDebtState.id);
+          const dSnap = await getDoc(debtRef);
+          if (dSnap.exists()) {
+             const dData = dSnap.data();
+             batch.update(debtRef, {
+               amount: (dData.amount || 0) + rec.totalAmount,
+               remainingAmount: (dData.remainingAmount || 0) + rec.totalAmount,
+               status: "active",
+               updatedAt: Timestamp.now(),
+             });
+             batch.set(doc(collection(db, "debt_transactions")), {
+               debtId: existingDebtState.id,
+               amount: rec.totalAmount,
+               type: "add",
+               timestamp: Timestamp.now(),
+               notes:
+                 "زیادبوونی قەرز لە وەسڵی پەسەندکراوی ژمارە: " +
+                 (rec.invoiceNo ? rec.invoiceNo : rec.id.slice(-8).toUpperCase()),
+             });
+          }
         } else {
           const newDebtRef = doc(collection(db, "debts"));
           batch.set(newDebtRef, {
@@ -114,7 +123,7 @@ export default function Receipts({ preselectedCustomer, hideLayout }: { preselec
             remainingAmount: rec.totalAmount,
             status: "active",
             notes:
-              "پاشماوەی وەسڵی پەسەندکراو: " + rec.id.slice(-8).toUpperCase(),
+              "پاشماوەی وەسڵی پەسەندکراو: " + (rec.invoiceNo ? rec.invoiceNo : rec.id.slice(-8).toUpperCase()),
             timestamp: Timestamp.now(),
           });
           batch.set(doc(collection(db, "debt_transactions")), {
@@ -124,7 +133,7 @@ export default function Receipts({ preselectedCustomer, hideLayout }: { preselec
             timestamp: Timestamp.now(),
             notes:
               "قەرزی نوێ لە وەسڵی پەسەندکراوی ژمارە: " +
-              rec.id.slice(-8).toUpperCase(),
+              (rec.invoiceNo ? rec.invoiceNo : rec.id.slice(-8).toUpperCase()),
           });
         }
       }
@@ -321,8 +330,76 @@ export default function Receipts({ preselectedCustomer, hideLayout }: { preselec
           </div>
         )}
 
-        <div className="flex-1 overflow-auto custom-scrollbar">
-          <table className="w-full text-right border-collapse min-w-[900px]">
+        <div className="flex-1 overflow-auto custom-scrollbar bg-slate-50 lg:bg-white pb-20 lg:pb-0">
+          {/* Mobile view (Cards) */}
+          <div className="lg:hidden p-3 space-y-3">
+             {filtered.map((rec) => (
+                <div key={rec.id} className="bg-white rounded-[24px] p-4 shadow-sm border border-slate-100 flex flex-col relative overflow-hidden group hover:shadow-md transition-all">
+                  
+                  {rec.status === "pending" && (
+                     <div className="absolute top-0 right-0 w-1.5 h-full bg-orange-400"></div>
+                  )}
+                  
+                  <div className="flex justify-between items-start mb-4">
+                     <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-[14px] bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400 shrink-0">
+                           <ReceiptText size={20} strokeWidth={1.5} />
+                        </div>
+                        <div className="flex flex-col">
+                           <span className="font-black text-slate-800 text-sm">{rec.customerName}</span>
+                           <span className="text-[10px] font-bold text-slate-400" dir="ltr">{formatDate(rec.timestamp)}</span>
+                        </div>
+                     </div>
+                     <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-50 text-slate-500 font-mono text-[10px] font-bold border border-slate-100">
+                        #{rec.id.slice(-6)}
+                     </span>
+                  </div>
+                  
+                  <div className="flex items-center justify-between p-3 bg-slate-50 rounded-2xl border border-slate-100 mb-3">
+                     <span className="font-mono font-black text-pink-600 text-[15px]">{formatCurrency(rec.totalAmount, rec.invoiceCurrency || "USD")}</span>
+                     <div className="flex gap-1.5">
+                         <span
+                           className={`inline-flex px-2 py-0.5 rounded-lg text-[10px] font-bold ${rec.paymentType === "نەقد" ? "bg-emerald-50 text-emerald-600 border border-emerald-100" : "bg-indigo-50 text-indigo-600 border border-indigo-100"}`}
+                         >
+                           {rec.paymentType}
+                         </span>
+                         {rec.status === "pending" && (
+                           <span className="inline-flex px-2 py-0.5 rounded-lg text-[10px] font-bold bg-orange-50 border border-orange-100 text-orange-600">
+                             چاوەڕێکراو
+                           </span>
+                         )}
+                     </div>
+                  </div>
+
+                  <div className="flex gap-2">
+                     {rec.status === "pending" &&
+                       (userRole === "admin" || userRole === "accountant") && (
+                         <button
+                           onClick={() => handleApprove(rec)}
+                           disabled={isProcessingId === rec.id}
+                           className="flex-1 text-white bg-emerald-500 hover:bg-emerald-600 font-bold py-2.5 rounded-[14px] transition-colors flex items-center justify-center gap-1.5 text-xs disabled:opacity-50 shadow-sm shadow-emerald-500/20"
+                         >
+                           <CheckCircle2 size={16} /> پەسەندکردن
+                         </button>
+                       )}
+                     <button
+                       onClick={() => setSelectedReceipt(rec)}
+                       className={`${rec.status === "pending" ? 'flex-1' : 'w-full'} text-pink-600 bg-pink-50 hover:bg-pink-100 hover:text-pink-700 font-bold py-2.5 rounded-[14px] transition-colors flex items-center justify-center gap-1.5 text-xs border border-pink-100`}>
+                       <Eye size={16} /> بینین و چاپ
+                     </button>
+                  </div>
+                </div>
+             ))}
+             {filtered.length === 0 && (
+                <div className="flex flex-col items-center justify-center py-12 text-slate-400 bg-slate-50 rounded-[28px] border border-dashed border-slate-200">
+                  <ReceiptText size={40} className="text-slate-300 mb-3" strokeWidth={1.5} />
+                  <p className="text-sm font-bold text-slate-500">هیچ وەسڵێک نەدۆزرایەوە</p>
+                </div>
+             )}
+          </div>
+
+          {/* Desktop view (Table) */}
+          <table className="hidden lg:table w-full text-right border-collapse min-w-[900px]">
             <thead className="bg-slate-50/80 backdrop-blur-sm text-slate-500 text-[11px] uppercase tracking-wider sticky top-0 z-10">
               <tr>
                 <th className="px-6 py-4 font-bold border-b border-slate-200">

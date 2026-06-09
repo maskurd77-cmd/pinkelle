@@ -168,64 +168,63 @@ export default function Layout({
         </div>
 
         {/* Mobile Bottom Tab Bar */}
-        <nav className="mobile-bottom-tabs lg:hidden shrink-0 bg-white/90 backdrop-blur-xl border-t border-slate-200/60 shadow-[0_-8px_30px_rgba(0,0,0,0.06)] z-[35] print:hidden relative">
-          <div className="flex items-center justify-around pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-1.5 px-2">
-            {(() => {
-              const adminDefaultTabs = [
-                { id: "dashboard", label: "داشبۆرد", icon: LayoutDashboard },
-                { id: "pos", label: "کاشێر", icon: ShoppingCart },
-                { id: "customers", label: "کڕیاران", icon: Users },
-                { id: "products", label: "کالا", icon: Package },
-              ];
-              if (userData?.role === "admin") return adminDefaultTabs;
+        {currentRoute !== "pos" && (
+          <nav className="mobile-bottom-tabs lg:hidden shrink-0 bg-white/95 backdrop-blur-2xl border-t border-pink-100/30 shadow-[0_-10px_40px_rgba(219,39,119,0.05)] z-[35] print:hidden relative pb-[env(safe-area-inset-bottom)]">
+            <div className="flex items-center justify-around pb-2 pt-2 px-1">
+              {(() => {
+                const adminDefaultTabs = [
+                  { id: "dashboard", label: "داشبۆرد", icon: LayoutDashboard },
+                  { id: "receipts", label: "وەسڵەکان", icon: ReceiptText },
+                  { id: "customers", label: "کڕیاران", icon: Users },
+                  { id: "products", label: "کالا", icon: Package },
+                ];
+                if (userData?.role === "admin") return adminDefaultTabs;
 
-              const allowed = navItems.filter((item) =>
-                (userData?.permissions || []).includes(item.id),
-              );
-              return allowed.slice(0, 4);
-            })().map((item) => {
-              const isActive = currentRoute === item.id;
-              const Icon = item.icon;
-              return (
-                <button
-                  key={item.id}
-                  data-id={`mobile-${item.id}`}
-                  onClick={() => onNavigate(item.id)}
-                  className="flex flex-col items-center justify-center py-1.5 flex-1 gap-1 relative"
-                >
-                  {isActive && (
-                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-10 h-1 bg-pink-600 rounded-b-full shadow-[0_2px_8px_rgba(219,39,119,0.5)] transition-all"></div>
-                  )}
-                  <div
-                    className={`p-1.5 rounded-xl transition-all duration-300 ${isActive ? "text-pink-600 scale-110" : "text-slate-400 hover:text-slate-600 hover:bg-slate-50"}`}
+                const allowed = navItems.filter((item) =>
+                  (userData?.permissions || []).includes(item.id),
+                );
+                return allowed.slice(0, 4);
+              })().map((item) => {
+                const isActive = currentRoute === item.id;
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={item.id}
+                    data-id={`mobile-${item.id}`}
+                    onClick={() => onNavigate(item.id)}
+                    className="flex flex-col items-center justify-center p-1.5 flex-1 relative group w-full h-full"
                   >
-                    <Icon
-                      size={22}
-                      className={isActive ? "stroke-[2.5px]" : "stroke-[2px]"}
-                    />
-                  </div>
-                  <span
-                    className={`text-[10px] transition-colors ${isActive ? "font-bold text-pink-700" : "font-medium text-slate-500"}`}
-                  >
-                    {item.label}
+                    <div
+                      className={`flex flex-col items-center justify-center gap-1.5 p-2 w-14 sm:w-16 rounded-2xl transition-all duration-300 ${isActive ? "bg-pink-50 text-pink-600 shadow-sm shadow-pink-500/10" : "text-slate-400 hover:text-slate-600 hover:bg-slate-50"}`}
+                    >
+                      <Icon
+                        size={20}
+                        className={isActive ? "stroke-[2.5px]" : "stroke-[2px]"}
+                      />
+                      <span
+                        className={`text-[9px] sm:text-[10px] transition-colors whitespace-nowrap ${isActive ? "font-black text-pink-700" : "font-semibold text-slate-500"}`}
+                      >
+                        {item.label}
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
+              {/* زیاتر (More) Button */}
+              <button
+                onClick={() => setIsMobileMenuOpen(true)}
+                className="flex flex-col items-center justify-center p-1.5 flex-1 relative group w-full h-full"
+              >
+                <div className="flex flex-col items-center justify-center gap-1.5 p-2 w-14 sm:w-16 rounded-2xl text-slate-400 group-hover:text-slate-600 group-hover:bg-slate-50 transition-all duration-300">
+                  <Menu size={20} className="stroke-[2px]" />
+                  <span className="text-[9px] sm:text-[10px] font-semibold text-slate-500 whitespace-nowrap transition-colors">
+                    زیاتر
                   </span>
-                </button>
-              );
-            })}
-            {/* زیاتر (More) Button */}
-            <button
-              onClick={() => setIsMobileMenuOpen(true)}
-              className="flex flex-col items-center justify-center py-1.5 flex-1 gap-1 relative group"
-            >
-              <div className="p-1.5 rounded-xl text-slate-400 group-hover:text-slate-600 group-hover:bg-slate-50 transition-colors">
-                <Menu size={22} className="stroke-[2px]" />
-              </div>
-              <span className="text-[10px] font-medium text-slate-500 transition-colors">
-                زیاتر
-              </span>
-            </button>
-          </div>
-        </nav>
+                </div>
+              </button>
+            </div>
+          </nav>
+        )}
       </main>
     </div>
   );

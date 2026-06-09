@@ -15,6 +15,7 @@ import {
   Upload,
   Database,
   PlusCircle,
+  Clock,
 } from "lucide-react";
 import {
   collection,
@@ -295,65 +296,119 @@ export function Returns() {
 
       <div className="flex-1 overflow-auto custom-scrollbar">
         {filteredReceipts.length > 0 ? (
-          <table className="w-full text-right border-collapse min-w-[700px]">
-            <thead className="bg-slate-50 text-slate-500 text-[11px] uppercase tracking-wider sticky top-0">
-              <tr>
-                <th className="px-4 py-3 font-semibold">ژمارەی وەسڵ</th>
-                <th className="px-4 py-3 font-semibold">کڕیار / لایەن</th>
-                <th className="px-4 py-3 font-semibold">کاڵاکان</th>
-                <th className="px-4 py-3 font-semibold">کاتی فرۆشتن</th>
-                <th className="px-4 py-3 font-semibold">کۆی گشتی</th>
-                <th className="px-4 py-3 font-semibold text-center">کردار</th>
-              </tr>
-            </thead>
-            <tbody className="text-sm divide-y divide-slate-100">
+          <>
+            {/* Desktop Table View */}
+            <div className="hidden md:block">
+              <table className="w-full text-right border-collapse min-w-[700px]">
+                <thead className="bg-slate-50 text-slate-500 text-[11px] uppercase tracking-wider sticky top-0">
+                  <tr>
+                    <th className="px-4 py-3 font-semibold">ژمارەی وەسڵ</th>
+                    <th className="px-4 py-3 font-semibold">کڕیار / لایەن</th>
+                    <th className="px-4 py-3 font-semibold">کاڵاکان</th>
+                    <th className="px-4 py-3 font-semibold">کاتی فرۆشتن</th>
+                    <th className="px-4 py-3 font-semibold">کۆی گشتی</th>
+                    <th className="px-4 py-3 font-semibold text-center">کردار</th>
+                  </tr>
+                </thead>
+                <tbody className="text-sm divide-y divide-slate-100">
+                  {filteredReceipts.map((r) => (
+                    <tr key={r.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="px-4 py-4 font-mono font-bold text-slate-700">
+                        #{r.id.slice(0, 6).toUpperCase()}
+                      </td>
+                      <td className="px-4 py-4 text-slate-800 font-bold">
+                        {r.customerName || "کڕیاری گشتی"}
+                      </td>
+                      <td className="px-4 py-4 text-xs text-slate-600 max-w-[280px]">
+                        <div className="flex flex-wrap gap-1">
+                          {r.items?.map((item: any, idx: number) => {
+                            const isCarton = item.unitType === 'carton';
+                            const qtyText = isCarton 
+                              ? `${item.originalQuantity} ک` 
+                              : `${item.quantity} د`;
+                            return (
+                              <span key={idx} className="bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded font-medium border border-slate-200">
+                                {item.name} ({qtyText})
+                              </span>
+                            );
+                          })}
+                        </div>
+                      </td>
+                      <td className="px-4 py-4 text-slate-600 text-xs text-right">
+                        <div className="flex items-center gap-1.5 justify-end">
+                           <Clock size={12} className="text-slate-400" />
+                           <span dir="ltr">{r.timestamp?.toDate ? new Date(r.timestamp.toDate()).toLocaleString("ku") : "نەزانراوە"}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-4 font-mono font-bold text-green-600">
+                        {formatCurrency(r.totalAmount || r.total || 0, r.invoiceCurrency || "USD")}
+                      </td>
+                      <td className="px-4 py-4 flex justify-center">
+                        <button
+                          onClick={() => setReturningReceipt(r)}
+                          className="text-pink-600 hover:bg-pink-50 p-2 rounded-lg transition-colors flex items-center gap-2 font-bold text-xs border border-pink-100"
+                        >
+                          <ExchangeIcon /> هەڵبژاردن بۆ گەڕانەوە
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Card View */}
+            <div className="md:hidden flex flex-col gap-3 pb-[80px]">
               {filteredReceipts.map((r) => (
-                <tr key={r.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-4 py-4 font-mono font-bold text-slate-700">
-                    #{r.id.slice(0, 6).toUpperCase()}
-                  </td>
-                  <td className="px-4 py-4 text-slate-800 font-bold">
-                    {r.customerName || "کڕیاری گشتی"}
-                  </td>
-                  <td className="px-4 py-4 text-xs text-slate-600 max-w-[280px]">
-                    <div className="flex flex-wrap gap-1">
-                      {r.items?.map((item: any, idx: number) => {
-                        const isCarton = item.unitType === 'carton';
-                        const qtyText = isCarton 
-                          ? `${item.originalQuantity} ک` 
-                          : `${item.quantity} د`;
-                        return (
-                          <span key={idx} className="bg-slate-100 text-slate-705 px-1.5 py-0.5 rounded font-medium border border-slate-200">
-                            {item.name} ({qtyText})
-                          </span>
-                        );
-                      })}
-                    </div>
-                  </td>
-                  <td className="px-4 py-4 text-slate-600 text-xs">
-                    {r.timestamp?.toDate
-                      ? new Date(r.timestamp.toDate()).toLocaleString("ku")
-                      : "کات نەزانراوە"}
-                  </td>
-                  <td className="px-4 py-4 font-mono font-bold text-green-600">
-                    {formatCurrency(r.totalAmount || r.total || 0, r.invoiceCurrency || "USD")}
-                  </td>
-                  <td className="px-4 py-4 flex justify-center">
-                    <button
-                      onClick={() => setReturningReceipt(r)}
-                      className="text-pink-600 hover:bg-pink-50 p-2 rounded-lg transition-colors flex items-center gap-2 font-bold text-xs border border-pink-100"
-                    >
-                      <ExchangeIcon /> هەڵبژاردن بۆ گەڕانەوە
-                    </button>
-                  </td>
-                </tr>
+                <div key={r.id} className="bg-white border border-slate-200 p-4 rounded-[20px] shadow-sm flex flex-col gap-3 relative overflow-hidden">
+                  <div className="flex justify-between items-start border-b border-slate-100 pb-3">
+                     <div>
+                        <div className="flex items-center gap-2 mb-1.5">
+                           <span className="font-mono text-xs font-bold text-pink-600 bg-pink-50 px-2 py-0.5 rounded border border-pink-100 tracking-wider">#{r.id.slice(0, 6).toUpperCase()}</span>
+                        </div>
+                        <h4 className="font-extrabold text-slate-800 text-sm">
+                           {r.customerName || "کڕیاری گشتی"}
+                        </h4>
+                     </div>
+                     <div className="text-left flex flex-col items-end">
+                        <span className="font-mono font-black text-green-600 text-[15px]">
+                           {formatCurrency(r.totalAmount || r.total || 0, r.invoiceCurrency || "USD")}
+                        </span>
+                        <div className="flex items-center gap-1.5 mt-1 text-[10px] text-slate-400 font-medium">
+                           <Clock size={10} />
+                           <span dir="ltr">{r.timestamp?.toDate ? new Date(r.timestamp.toDate()).toLocaleDateString("ku") : "نەزانراو"}</span>
+                        </div>
+                     </div>
+                  </div>
+                  
+                  <div className="flex flex-wrap gap-1">
+                     {r.items?.map((item: any, idx: number) => {
+                       const isCarton = item.unitType === 'carton';
+                       const qtyText = isCarton 
+                         ? `${item.originalQuantity} ک` 
+                         : `${item.quantity} د`;
+                       return (
+                         <span key={idx} className="bg-slate-50 text-slate-600 text-[10px] px-2 py-1 rounded-[6px] font-bold border border-slate-100">
+                           {item.name} <span className="text-slate-400 mx-1">|</span> {qtyText}
+                         </span>
+                       );
+                     })}
+                  </div>
+
+                  <button
+                     onClick={() => setReturningReceipt(r)}
+                     className="w-full bg-pink-50 text-pink-700 hover:bg-pink-100 py-3 rounded-[12px] font-extrabold text-xs transition-colors flex items-center justify-center gap-2 mt-1 border border-pink-100/50"
+                  >
+                     <ExchangeIcon /> هەڵبژاردن بۆ گەڕانەوەکە
+                  </button>
+                </div>
               ))}
-            </tbody>
-          </table>
+            </div>
+          </>
         ) : (
           <div className="h-full flex items-center justify-center text-slate-400 flex-col gap-4">
             <Undo2 size={48} strokeWidth={1} />
-            <p>هیچ پسوولەیەکی گەڕانەوە بوونی نییە.</p>
+            <p className="font-bold text-sm">هیچ پسوولەیەکی گەڕانەوە بوونی نییە.</p>
           </div>
         )}
       </div>
@@ -605,65 +660,119 @@ export function Exchanges() {
 
       <div className="flex-1 overflow-auto custom-scrollbar">
         {filteredReceipts.length > 0 ? (
-          <table className="w-full text-right border-collapse min-w-[700px]">
-            <thead className="bg-slate-50 text-slate-500 text-[11px] uppercase tracking-wider sticky top-0">
-              <tr>
-                <th className="px-4 py-3 font-semibold">ژمارەی وەسڵ</th>
-                <th className="px-4 py-3 font-semibold">کڕیار / لایەن</th>
-                <th className="px-4 py-3 font-semibold">کاڵاکان</th>
-                <th className="px-4 py-3 font-semibold">کاتی فرۆشتن</th>
-                <th className="px-4 py-3 font-semibold">کۆی گشتی</th>
-                <th className="px-4 py-3 font-semibold text-center">کردار</th>
-              </tr>
-            </thead>
-            <tbody className="text-sm divide-y divide-slate-100">
+          <>
+            {/* Desktop Table View */}
+            <div className="hidden md:block">
+              <table className="w-full text-right border-collapse min-w-[700px]">
+                <thead className="bg-slate-50 text-slate-500 text-[11px] uppercase tracking-wider sticky top-0">
+                  <tr>
+                    <th className="px-4 py-3 font-semibold">ژمارەی وەسڵ</th>
+                    <th className="px-4 py-3 font-semibold">کڕیار / لایەن</th>
+                    <th className="px-4 py-3 font-semibold">کاڵاکان</th>
+                    <th className="px-4 py-3 font-semibold">کاتی فرۆشتن</th>
+                    <th className="px-4 py-3 font-semibold">کۆی گشتی</th>
+                    <th className="px-4 py-3 font-semibold text-center">کردار</th>
+                  </tr>
+                </thead>
+                <tbody className="text-sm divide-y divide-slate-100">
+                  {filteredReceipts.map((r) => (
+                    <tr key={r.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="px-4 py-4 font-mono font-bold text-slate-700">
+                        #{r.id.slice(0, 6).toUpperCase()}
+                      </td>
+                      <td className="px-4 py-4 text-slate-800 font-bold">
+                        {r.customerName || "کڕیاری گشتی"}
+                      </td>
+                      <td className="px-4 py-4 text-xs text-slate-600 max-w-[280px]">
+                        <div className="flex flex-wrap gap-1">
+                          {r.items?.map((item: any, idx: number) => {
+                            const isCarton = item.unitType === 'carton';
+                            const qtyText = isCarton 
+                              ? `${item.originalQuantity} ک` 
+                              : `${item.quantity} د`;
+                            return (
+                              <span key={idx} className="bg-slate-100 text-slate-705 px-1.5 py-0.5 rounded font-medium border border-slate-200">
+                                {item.name} ({qtyText})
+                              </span>
+                            );
+                          })}
+                        </div>
+                      </td>
+                      <td className="px-4 py-4 text-slate-600 text-xs text-right">
+                        <div className="flex items-center gap-1.5 justify-end">
+                          <Clock size={12} className="text-slate-400" />
+                          <span dir="ltr">{r.timestamp?.toDate ? new Date(r.timestamp.toDate()).toLocaleString("ku") : "نەزانراوە"}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-4 font-mono font-bold text-green-600">
+                        {formatCurrency(r.totalAmount || r.total || 0, r.invoiceCurrency || "USD")}
+                      </td>
+                      <td className="px-4 py-4 flex justify-center">
+                        <button
+                          onClick={() => setReturningReceipt(r)}
+                          className="text-pink-600 hover:bg-pink-50 p-2 rounded-lg transition-colors flex items-center gap-2 font-bold text-xs border border-pink-100"
+                        >
+                          <ArrowLeftRight size={14} /> هەڵبژاردن بۆ گۆڕینەوە
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Card View */}
+            <div className="md:hidden flex flex-col gap-3 pb-[80px]">
               {filteredReceipts.map((r) => (
-                <tr key={r.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-4 py-4 font-mono font-bold text-slate-700">
-                    #{r.id.slice(0, 6).toUpperCase()}
-                  </td>
-                  <td className="px-4 py-4 text-slate-800 font-bold">
-                    {r.customerName || "کڕیاری گشتی"}
-                  </td>
-                  <td className="px-4 py-4 text-xs text-slate-600 max-w-[280px]">
-                    <div className="flex flex-wrap gap-1">
-                      {r.items?.map((item: any, idx: number) => {
-                        const isCarton = item.unitType === 'carton';
-                        const qtyText = isCarton 
-                          ? `${item.originalQuantity} ک` 
-                          : `${item.quantity} د`;
-                        return (
-                          <span key={idx} className="bg-slate-100 text-slate-705 px-1.5 py-0.5 rounded font-medium border border-slate-200">
-                            {item.name} ({qtyText})
-                          </span>
-                        );
-                      })}
-                    </div>
-                  </td>
-                  <td className="px-4 py-4 text-slate-600 text-xs">
-                    {r.timestamp?.toDate
-                      ? new Date(r.timestamp.toDate()).toLocaleString("ku")
-                      : "کات نەزانراوە"}
-                  </td>
-                  <td className="px-4 py-4 font-mono font-bold text-green-600">
-                    {formatCurrency(r.totalAmount || r.total || 0, r.invoiceCurrency || "USD")}
-                  </td>
-                  <td className="px-4 py-4 flex justify-center">
-                    <button
-                      onClick={() => setReturningReceipt(r)}
-                      className="text-pink-600 hover:bg-pink-50 p-2 rounded-lg transition-colors flex items-center gap-2 font-bold text-xs border border-pink-100"
-                    >
-                      <ArrowLeftRight size={14} /> هەڵبژاردن بۆ گۆڕینەوە
-                    </button>
-                  </td>
-                </tr>
+                <div key={r.id} className="bg-white border border-slate-200 p-4 rounded-[20px] shadow-sm flex flex-col gap-3 relative overflow-hidden">
+                  <div className="flex justify-between items-start border-b border-slate-100 pb-3">
+                     <div>
+                        <div className="flex items-center gap-2 mb-1.5">
+                           <span className="font-mono text-xs font-bold text-pink-600 bg-pink-50 px-2 py-0.5 rounded border border-pink-100 tracking-wider">#{r.id.slice(0, 6).toUpperCase()}</span>
+                        </div>
+                        <h4 className="font-extrabold text-slate-800 text-sm">
+                           {r.customerName || "کڕیاری گشتی"}
+                        </h4>
+                     </div>
+                     <div className="text-left flex flex-col items-end">
+                        <span className="font-mono font-black text-green-600 text-[15px]">
+                           {formatCurrency(r.totalAmount || r.total || 0, r.invoiceCurrency || "USD")}
+                        </span>
+                        <div className="flex items-center gap-1.5 mt-1 text-[10px] text-slate-400 font-medium">
+                           <Clock size={10} />
+                           <span dir="ltr">{r.timestamp?.toDate ? new Date(r.timestamp.toDate()).toLocaleDateString("ku") : "نەزانراو"}</span>
+                        </div>
+                     </div>
+                  </div>
+                  
+                  <div className="flex flex-wrap gap-1">
+                     {r.items?.map((item: any, idx: number) => {
+                       const isCarton = item.unitType === 'carton';
+                       const qtyText = isCarton 
+                         ? `${item.originalQuantity} ک` 
+                         : `${item.quantity} د`;
+                       return (
+                         <span key={idx} className="bg-slate-50 text-slate-600 text-[10px] px-2 py-1 rounded-[6px] font-bold border border-slate-100">
+                           {item.name} <span className="text-slate-400 mx-1">|</span> {qtyText}
+                         </span>
+                       );
+                     })}
+                  </div>
+
+                  <button
+                     onClick={() => setReturningReceipt(r)}
+                     className="w-full bg-pink-50 text-pink-700 hover:bg-pink-100 py-3 rounded-[12px] font-extrabold text-xs transition-colors flex items-center justify-center gap-2 mt-1 border border-pink-100/50"
+                  >
+                     <ArrowLeftRight size={14} /> هەڵبژاردن بۆ گۆڕینەوە
+                  </button>
+                </div>
               ))}
-            </tbody>
-          </table>
+            </div>
+          </>
         ) : (
           <div className="h-full flex items-center justify-center text-slate-400 flex-col gap-4">
             <ArrowLeftRight size={48} strokeWidth={1} />
-            <p>هیچ پسوولەیەکی گۆڕینەوە بوونی نییە.</p>
+            <p className="font-bold text-sm">هیچ پسوولەیەکی گۆڕینەوە بوونی نییە.</p>
           </div>
         )}
       </div>
@@ -897,29 +1006,29 @@ export function UsersPage() {
   };
 
   return (
-    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm h-full flex flex-col">
-      <div className="border-b border-slate-100 pb-4 mb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div className="bg-slate-50 md:bg-white p-3 md:p-6 rounded-none md:rounded-[24px] border-0 md:border border-slate-200 shadow-none md:shadow-sm h-full flex flex-col pt-6 md:pt-6 pb-20 md:pb-6 custom-scrollbar overflow-y-auto">
+      <div className="border-b border-slate-200 md:border-slate-100 pb-4 mb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+          <h2 className="text-xl font-extrabold text-slate-900 flex items-center gap-2">
             <Users className="text-pink-600" /> بەکارهێنەرانی سیستەم
           </h2>
-          <p className="text-xs text-slate-500 mt-1">
+          <p className="text-xs text-slate-500 mt-1.5 font-medium">
             بەڕێوەبەری سەرەکی دەتوانێت دەسەڵاتەکان دیاری بکات
           </p>
         </div>
         <button
           onClick={() => setIsAddUserModalOpen(true)}
-          className="px-4 py-2 bg-pink-600 hover:bg-pink-700 text-white rounded-xl text-sm font-bold flex items-center gap-2 shadow-md transition-colors"
+          className="w-full sm:w-auto px-5 py-3 md:py-2.5 bg-pink-600 hover:bg-pink-700 text-white rounded-[16px] md:rounded-xl text-sm font-black flex items-center justify-center gap-2 shadow-lg shadow-pink-600/30 transition-colors"
         >
-          <Plus size={16} /> زیادکردنی بەکارهێنەر
+          <Plus size={18} /> زیادکردنی بەکارهێنەر
         </button>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5 mt-6 overflow-y-auto pb-4 px-1 custom-scrollbar">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-5 mt-2 md:mt-6 pb-4 md:px-1">
         {users.map((u) => (
           <div
             key={u.id}
-            className="p-5 border border-slate-200 rounded-2xl flex flex-col justify-between hover:border-pink-300 hover:shadow-md transition-all duration-300 bg-gradient-to-br from-white to-slate-50 relative group"
+            className="p-5 border border-slate-200 rounded-[20px] flex flex-col justify-between hover:border-pink-300 hover:shadow-md transition-all duration-300 bg-white md:bg-gradient-to-br from-white to-slate-50 relative group shadow-sm md:shadow-none"
           >
             {u.role === "admin" && (
               <span className="absolute top-3 left-3 text-[10px] font-black tracking-wider bg-pink-100 text-pink-700 px-2.5 py-1 rounded-lg">
@@ -932,7 +1041,7 @@ export function UsersPage() {
               </span>
             )}
             <div className="flex items-center gap-4 mb-5">
-              <div className="w-14 h-14 bg-white border border-slate-200 rounded-full flex items-center justify-center text-slate-400 font-bold text-xl uppercase shadow-sm overflow-hidden shrink-0 group-hover:border-pink-300 transition-colors">
+              <div className="w-14 h-14 bg-slate-50 border border-slate-200 rounded-[16px] flex items-center justify-center text-slate-400 font-bold text-xl uppercase shadow-sm overflow-hidden shrink-0 group-hover:border-pink-300 transition-colors">
                 {u.avatar ? (
                   <img src={u.avatar} alt="Avatar" className="w-full h-full object-cover" />
                 ) : (
@@ -940,11 +1049,11 @@ export function UsersPage() {
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="font-bold text-slate-800 text-lg truncate">
+                <h3 className="font-extrabold text-slate-800 text-lg truncate">
                   {u.name || (u.email && u.email.split("@")[0])}
                 </h3>
                 <p
-                  className="text-[11px] text-slate-500 mt-1 font-mono bg-white inline-block px-1.5 py-0.5 rounded shadow-sm border border-slate-100"
+                  className="text-[11px] text-slate-500 mt-1 font-mono bg-slate-50 inline-block px-2 py-0.5 rounded-[6px] shadow-sm border border-slate-100/50"
                   dir="ltr"
                 >
                   {u.email}
@@ -952,15 +1061,15 @@ export function UsersPage() {
               </div>
             </div>
 
-            <div className="pt-4 border-t border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-              <div className="text-[11px] font-medium text-slate-500 bg-slate-100 px-2.5 py-1 rounded-lg">
+            <div className="pt-4 border-t border-slate-100 flex flex-col gap-4">
+              <div className="text-[11px] font-bold text-slate-600 bg-slate-100/80 px-3 py-1.5 rounded-[10px] w-full text-center">
                 {u.role === "admin"
                   ? "هەموو دەسەڵاتەکانی هەیە"
                   : u.role === "accountant"
                     ? "دەسەڵاتی کۆکردنەوە و ڕێکخستنی وەسڵەکان"
                     : (u.permissions?.length || 0) + " بەش کراوەیە"}
               </div>
-              <div className="flex flex-wrap gap-2 w-full sm:w-auto mt-2 sm:mt-0">
+              <div className="flex flex-row justify-end gap-2 w-full">
                 {u.id !== getAuth().currentUser?.uid && (
                   <button
                     onClick={async () => {
@@ -972,7 +1081,7 @@ export function UsersPage() {
                         await deleteDoc(doc(db, "users", u.id));
                       }
                     }}
-                    className="flex-1 sm:flex-none text-xs font-bold text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 px-3 py-2 rounded-xl transition-colors text-center"
+                    className="flex-1 text-[11px] font-extrabold text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 px-1 py-2.5 rounded-[12px] transition-colors text-center"
                   >
                     سڕینەوە
                   </button>
@@ -985,7 +1094,7 @@ export function UsersPage() {
                     setEditUserPassword("");
                     setIsEditUserModalOpen(true);
                   }}
-                  className="flex-1 sm:flex-none text-xs font-bold text-emerald-600 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-3 py-2 rounded-xl transition-colors text-center"
+                  className="flex-1 text-[11px] font-extrabold text-emerald-600 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-1 py-2.5 rounded-[12px] transition-colors text-center"
                 >
                   گۆڕین
                 </button>
@@ -996,7 +1105,7 @@ export function UsersPage() {
                       setAllowedPages(u.permissions || []);
                       setIsModalOpen(true);
                     }}
-                    className="flex-1 sm:flex-none text-xs font-bold text-pink-600 hover:text-pink-800 bg-pink-50 hover:bg-pink-100 px-3 py-2 rounded-xl transition-colors text-center"
+                    className="flex-1 text-[11px] font-extrabold text-pink-600 hover:text-pink-800 bg-pink-50 hover:bg-pink-100 px-1 py-2.5 rounded-[12px] transition-colors text-center"
                   >
                     دەسەڵاتەکان
                   </button>
@@ -1280,6 +1389,7 @@ export function SettingsPage() {
     telegramChatId: "",
   });
   const [isSaving, setIsSaving] = useState(false);
+  const [isMigratingConfig, setIsMigratingConfig] = useState(false);
   const [safes, setSafes] = useState<any[]>([]);
 
   useEffect(() => {
@@ -1434,29 +1544,29 @@ export function SettingsPage() {
   };
 
   return (
-    <div className="bg-slate-50 rounded-2xl h-full overflow-y-auto w-full max-w-5xl mx-auto space-y-6 pb-12">
-      <div className="bg-white p-6 md:p-8 rounded-2xl border border-slate-200 shadow-sm">
-        <div className="border-b border-slate-100 pb-4 mb-6">
-          <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+    <div className="bg-slate-50 rounded-2xl h-full overflow-y-auto w-full max-w-5xl mx-auto space-y-4 md:space-y-6 pb-20 custom-scrollbar">
+      <div className="bg-white p-5 md:p-8 rounded-[24px] border border-slate-200 shadow-sm">
+        <div className="border-b border-slate-100 pb-4 mb-5 md:mb-6">
+          <h2 className="text-xl md:text-2xl font-bold text-slate-900 flex items-center gap-2">
             <Settings className="text-pink-600" /> ڕێکخستنی سیستەم
           </h2>
-          <p className="text-sm text-slate-500 mt-1">
+          <p className="text-[11px] md:text-sm text-slate-500 mt-1">
             بەڕێوەبردنی زانیارییەکان، قفڵی شاشە، و پاشەکەوتی داتاکان
           </p>
         </div>
 
-        <div className="space-y-8">
+        <div className="space-y-6 md:space-y-8">
           {/* Shop Information */}
           <section className="space-y-4">
-            <h3 className="font-bold text-lg text-slate-800 flex items-center gap-2">
+            <h3 className="font-bold text-base md:text-lg text-slate-800 flex items-center gap-2">
               زانیاریەکانی دوکان
             </h3>
-            <p className="text-xs text-slate-500 mb-4">
+            <p className="text-[10px] md:text-xs text-slate-500 mb-2 md:mb-4">
               ئەم زانیاریانە لەسەر پسوڵە (ریسیپت) دەردەکەون.
             </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-col sm:flex-row">
               <div>
-                <label className="text-sm font-bold text-slate-600 mb-1.5 block">
+                <label className="text-xs md:text-sm font-bold text-slate-600 mb-1 block">
                   ناوی دوکان / کۆمپانیا
                 </label>
                 <input
@@ -1465,11 +1575,11 @@ export function SettingsPage() {
                   onChange={(e) =>
                     setSettings({ ...settings, shopName: e.target.value })
                   }
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 focus:ring-2 focus:ring-pink-500 focus:outline-none transition-all font-medium text-slate-800"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-[14px] py-2.5 px-3.5 focus:ring-2 focus:ring-pink-500 focus:outline-none transition-all font-bold text-sm text-slate-800"
                 />
               </div>
               <div>
-                <label className="text-sm font-bold text-slate-600 mb-1.5 block">
+                <label className="text-xs md:text-sm font-bold text-slate-600 mb-1 block">
                   ژمارە مۆبایل
                 </label>
                 <input
@@ -1478,12 +1588,12 @@ export function SettingsPage() {
                   onChange={(e) =>
                     setSettings({ ...settings, shopPhone: e.target.value })
                   }
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 focus:ring-2 focus:ring-pink-500 focus:outline-none transition-all font-mono text-left"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-[14px] py-2.5 px-3.5 focus:ring-2 focus:ring-pink-500 focus:outline-none transition-all font-mono text-sm text-left"
                   dir="ltr"
                 />
               </div>
               <div>
-                <label className="text-sm font-bold text-slate-600 mb-1.5 block">
+                <label className="text-xs md:text-sm font-bold text-slate-600 mb-1 block">
                   ناونیشان بۆ سەر وەسڵ
                 </label>
                 <input
@@ -1492,11 +1602,11 @@ export function SettingsPage() {
                   onChange={(e) =>
                     setSettings({ ...settings, shopAddress: e.target.value })
                   }
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 focus:ring-2 focus:ring-pink-500 focus:outline-none transition-all font-medium text-slate-800"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-[14px] py-2.5 px-3.5 focus:ring-2 focus:ring-pink-500 focus:outline-none transition-all font-bold text-sm text-slate-800"
                 />
               </div>
               <div>
-                <label className="text-sm font-bold text-slate-600 mb-1.5 block">
+                <label className="text-xs md:text-sm font-bold text-slate-600 mb-1 block">
                   تێکستی خوارەوەی وەسڵ
                 </label>
                 <input
@@ -1505,14 +1615,14 @@ export function SettingsPage() {
                   onChange={(e) =>
                     setSettings({ ...settings, receiptFooter: e.target.value })
                   }
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 focus:ring-2 focus:ring-pink-500 focus:outline-none transition-all font-medium text-slate-800"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-[14px] py-2.5 px-3.5 focus:ring-2 focus:ring-pink-500 focus:outline-none transition-all font-bold text-sm text-slate-800"
                 />
               </div>
               <div className="md:col-span-2">
-                <label className="text-sm font-bold text-slate-600 mb-1.5 block">
+                <label className="text-xs md:text-sm font-bold text-slate-600 mb-1 block">
                   نرخی گۆڕینەوەی دۆلار بەرامبەر بە دینار ($1 = ؟ دینار)
                 </label>
-                <div className="flex flex-col md:flex-row gap-4">
+                <div className="flex flex-col md:flex-row gap-3">
                   <input
                     type="number"
                     min="0"
@@ -1524,21 +1634,13 @@ export function SettingsPage() {
                         exchangeRate: Number(e.target.value),
                       })
                     }
-                    className="w-full md:w-1/2 bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 focus:ring-2 focus:ring-pink-500 focus:outline-none transition-all font-mono text-left text-lg"
+                    className="w-full md:w-1/2 bg-slate-50 border border-slate-200 rounded-[14px] py-2.5 px-3.5 focus:ring-2 focus:ring-pink-500 focus:outline-none transition-all font-mono text-left text-base font-bold"
                     dir="ltr"
                   />
                 </div>
 
-                <div className="mt-6 bg-slate-50 rounded-xl border border-slate-200 p-5">
-                  <h4 className="font-bold text-slate-700 mb-4 flex items-center gap-2">
-                    حاسیبەی گۆڕینەوەی دراو
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  </div>
-                </div>
-
-                <div className="mt-6 pt-4 border-t border-slate-100">
-                  <label className="text-sm font-bold text-slate-600 mb-1.5 block">
+                <div className="mt-4 pt-4 border-t border-slate-100 flex flex-col gap-1.5">
+                  <label className="text-xs md:text-sm font-bold text-slate-600 mb-1 block">
                     قاسەی بنەڕەتی بۆ وەرگرتنەوەی قەرز
                   </label>
                   <select
@@ -1546,14 +1648,14 @@ export function SettingsPage() {
                     onChange={(e) =>
                       setSettings({ ...settings, defaultSafeForDebt: e.target.value })
                     }
-                    className="w-full md:w-1/2 bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 focus:ring-2 focus:ring-pink-500 focus:outline-none transition-all font-medium text-slate-800"
+                    className="w-full md:w-1/2 bg-slate-50 border border-slate-200 rounded-[14px] py-2.5 px-3.5 focus:ring-2 focus:ring-pink-500 focus:outline-none transition-all font-bold text-sm text-slate-800 appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23131313%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E')] bg-[length:10px_10px] bg-[position:left_1rem_center] bg-no-repeat"
                   >
-                    <option value="">-- هیچ قاسەیەک دیارینەکراوە --</option>
+                    <option value="">-- هەڵبژاردنی قاسە --</option>
                     {safes.map(s => (
                        <option key={s.id} value={s.id}>{s.name} ({formatCurrency(s.balance || 0, "USD")})</option>
                     ))}
                   </select>
-                  <p className="text-xs text-slate-400 mt-2">
+                  <p className="text-[10px] text-slate-400 font-medium">
                     ئەم قاسەیە بەشێوەیەکی ئۆتۆماتیکی هەڵدەبژێردرێت کاتێک لە تابی 'وەرگرتنی قەرز' پارە وەردەگریت.
                   </p>
                 </div>
@@ -1565,12 +1667,12 @@ export function SettingsPage() {
 
           {/* Security & Lock */}
           <section className="space-y-4">
-            <h3 className="font-bold text-lg text-slate-800">
+            <h3 className="font-bold text-base md:text-lg text-slate-800">
               پارێزگاری و قفڵکردن
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-col sm:flex-row">
               <div>
-                <label className="text-sm font-bold text-slate-600 mb-1.5 block">
+                <label className="text-xs md:text-sm font-bold text-slate-600 mb-1 block">
                   پین کۆدی قفڵکردنی شاشە (PIN)
                 </label>
                 <input
@@ -1580,11 +1682,11 @@ export function SettingsPage() {
                   onChange={(e) =>
                     setSettings({ ...settings, pinCode: e.target.value })
                   }
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 focus:ring-2 focus:ring-pink-500 focus:outline-none transition-all font-mono text-left tracking-[0.5em]"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-[14px] py-2.5 px-3.5 focus:ring-2 focus:ring-pink-500 focus:outline-none transition-all font-mono text-left tracking-[0.5em]"
                   dir="ltr"
                 />
-                <p className="text-[11px] text-slate-500 mt-2">
-                  توێژینەوەی ئەگەر بەتاڵ بێت، شاشە قفڵ ناکرێت.
+                <p className="text-[10px] text-slate-500 font-medium mt-1">
+                  تێبینی ئەگەر بەتاڵ بێت، شاشە قفڵ ناکرێت.
                 </p>
               </div>
             </div>
@@ -1594,28 +1696,28 @@ export function SettingsPage() {
 
           {/* Backup & Restore */}
           <section className="space-y-4">
-            <h3 className="font-bold text-lg text-slate-800 flex items-center gap-2">
-              <Database className="text-pink-600" size={20} /> باکئاپ و
+            <h3 className="font-bold text-base md:text-lg text-slate-800 flex items-center gap-2">
+              <Database className="text-pink-600" size={18} /> باکئاپ و
               گەڕاندنەوەی داتاکان
             </h3>
-            <p className="text-xs text-slate-500 mb-2">
+            <p className="text-[10px] md:text-xs text-slate-500 mb-2">
               پارێزگاری لە داتاکانت بکە بە وەرگرتنی باکئاپ و گەڕاندنەوەی لە کاتی
               پێویستدا.
             </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <button
                 type="button"
                 onClick={handleBackup}
-                className="p-4 bg-white border border-slate-200 hover:border-pink-300 hover:bg-pink-50 rounded-xl transition-all shadow-sm flex flex-col items-center justify-center gap-3 group"
+                className="p-3 md:p-4 bg-white border border-slate-200 hover:border-pink-300 hover:bg-pink-50 rounded-[16px] transition-all shadow-sm flex items-center md:flex-col justify-start md:justify-center gap-3 group text-right md:text-center"
               >
-                <div className="bg-pink-100 p-3 rounded-full text-pink-600 group-hover:scale-110 transition-transform">
-                  <Download size={24} />
+                <div className="bg-pink-100 p-2 md:p-3 rounded-full text-pink-600 group-hover:scale-110 transition-transform shrink-0">
+                  <Download size={20} className="md:w-6 md:h-6" />
                 </div>
-                <div className="text-center">
-                  <h4 className="font-bold text-sm text-slate-800">
+                <div>
+                  <h4 className="font-extrabold text-[13px] md:text-sm text-slate-800">
                     وەرگرتنی باکئاپ (دابەزاندن)
                   </h4>
-                  <p className="text-[11px] text-slate-500 mt-1">
+                  <p className="text-[10px] md:text-[11px] text-slate-500 mt-1">
                     هەموو داتاکانت لەسەر ئامێرەکەت خەزن بکە
                   </p>
                 </div>
@@ -1624,16 +1726,16 @@ export function SettingsPage() {
               <button
                 type="button"
                 onClick={handleRestore}
-                className="p-4 bg-white border border-slate-200 hover:border-pink-300 hover:bg-pink-50 rounded-xl transition-all shadow-sm flex flex-col items-center justify-center gap-3 group"
+                className="p-3 md:p-4 bg-white border border-slate-200 hover:border-pink-300 hover:bg-pink-50 rounded-[16px] transition-all shadow-sm flex items-center md:flex-col justify-start md:justify-center gap-3 group text-right md:text-center"
               >
-                <div className="bg-pink-100 p-3 rounded-full text-pink-600 group-hover:scale-110 transition-transform">
-                  <Upload size={24} />
+                <div className="bg-pink-100 p-2 md:p-3 rounded-full text-pink-600 group-hover:scale-110 transition-transform shrink-0">
+                  <Upload size={20} className="md:w-6 md:h-6" />
                 </div>
-                <div className="text-center">
-                  <h4 className="font-bold text-sm text-slate-800">
+                <div>
+                  <h4 className="font-extrabold text-[13px] md:text-sm text-slate-800">
                     گەڕاندنەوەی داتاکان (هێنانە ناوەوە)
                   </h4>
-                  <p className="text-[11px] text-slate-500 mt-1">
+                  <p className="text-[10px] md:text-[11px] text-slate-500 mt-1">
                     باکئاپی پێشوو بخەرەوە ناو سیستەمەکە
                   </p>
                 </div>
@@ -1645,21 +1747,21 @@ export function SettingsPage() {
 
           {/* Telegram Settings */}
           <section className="space-y-4">
-            <h3 className="font-bold text-lg border-l-4 border-pink-500 pl-2 text-slate-800">
+            <h3 className="font-bold text-base md:text-lg border-l-4 border-pink-500 pl-2 text-slate-800">
               ڕێکخستنەکانی تێلیگرام (Telegram)
             </h3>
-            <p className="text-xs text-slate-500 mb-2">
+            <p className="text-[10px] md:text-xs text-slate-500 mb-2">
               ئەگەر ئەم دوو خانەیە پڕبکرێنەوە، سیستەمەکە دەتوانێت نامە بنێرێت بۆ
               تێلیگرام لە کاتی داخستنی ڕۆژ یان کارە گرنگەکان.
             </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-col sm:flex-row">
               <div>
-                <label className="text-sm font-bold text-slate-600 mb-1.5 block">
+                <label className="text-xs md:text-sm font-bold text-slate-600 mb-1 block">
                   تۆکنی بۆت (Bot Token)
                 </label>
                 <input
                   type="text"
-                  placeholder="123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
+                  placeholder="123456:ABC-DEF"
                   value={settings.telegramBotToken || ""}
                   onChange={(e) =>
                     setSettings({
@@ -1667,12 +1769,12 @@ export function SettingsPage() {
                       telegramBotToken: e.target.value,
                     })
                   }
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 focus:ring-2 focus:ring-pink-500 focus:outline-none transition-all font-mono text-sm text-left opacity-70 focus:opacity-100"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-[14px] py-2.5 px-3.5 focus:ring-2 focus:ring-pink-500 focus:outline-none transition-all font-mono text-xs text-left opacity-70 focus:opacity-100"
                   dir="ltr"
                 />
               </div>
               <div>
-                <label className="text-sm font-bold text-slate-600 mb-1.5 block">
+                <label className="text-xs md:text-sm font-bold text-slate-600 mb-1 block">
                   ئایدی چات (Chat ID)
                 </label>
                 <input
@@ -1682,7 +1784,7 @@ export function SettingsPage() {
                   onChange={(e) =>
                     setSettings({ ...settings, telegramChatId: e.target.value })
                   }
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 focus:ring-2 focus:ring-pink-500 focus:outline-none transition-all font-mono text-sm text-left opacity-70 focus:opacity-100"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-[14px] py-2.5 px-3.5 focus:ring-2 focus:ring-pink-500 focus:outline-none transition-all font-mono text-xs text-left opacity-70 focus:opacity-100"
                   dir="ltr"
                 />
               </div>
@@ -1690,11 +1792,11 @@ export function SettingsPage() {
           </section>
 
           {/* Action Footer */}
-          <div className="pt-6 mt-8 flex justify-end">
+          <div className="pt-6 mt-8 flex justify-end sticky bottom-4 z-10">
             <button
               disabled={isSaving}
               onClick={handleSave}
-              className="px-8 py-3.5 bg-pink-600 text-white rounded-xl font-bold text-sm hover:bg-pink-700 disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-pink-200 transition-all w-full md:w-auto"
+              className="px-6 py-3.5 md:py-3 md:px-8 bg-pink-600 text-white rounded-[16px] font-black text-sm hover:bg-pink-700 disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-pink-600/30 transition-all w-full md:w-auto"
             >
               <Save size={18} />
               {isSaving
@@ -1706,20 +1808,22 @@ export function SettingsPage() {
       </div>
 
             {/* Migration Section */}
-      <div className="bg-pink-50 border border-pink-200 rounded-2xl p-6 md:p-8 shadow-sm space-y-6 mb-8">
-        <div className="flex items-start gap-4">
-          <div className="w-12 h-12 bg-pink-100 rounded-xl flex items-center justify-center text-pink-600 shrink-0">
+      <div className="bg-pink-50 border border-pink-200 rounded-[24px] p-5 md:p-8 shadow-sm space-y-4 md:space-y-6 mb-6 md:mb-8">
+        <div className="flex flex-col md:flex-row items-center md:items-start gap-4 text-center md:text-right">
+          <div className="w-12 h-12 md:w-14 md:h-14 bg-pink-100 rounded-[16px] flex items-center justify-center text-pink-600 shrink-0 mx-auto md:mx-0">
             <ArrowLeftRight size={24} />
           </div>
           <div className="flex-1">
-            <h3 className="font-bold text-xl text-pink-900">گۆڕینی داتاکانی پێشوو (دینار بۆ دۆلار)</h3>
-            <p className="text-sm text-pink-700 mt-1 font-medium">
+            <h3 className="font-extrabold text-lg md:text-xl text-pink-900">گۆڕینی داتاکانی پێشوو (دینار بۆ دۆلار)</h3>
+            <p className="text-xs md:text-sm text-pink-700 mt-2 font-medium leading-relaxed">
               ئەگەر پێشتر کڕین و فرۆشتنت بە دینار زانیارییەکانت داخڵ کردووە، ئەوا بە یەک کلیک هەموو سیستەمەکە دۆکامێنتەکان کەنڤەرت دەکات بۆ دۆلار.
             </p>
-            <p className="text-xs text-pink-500 font-bold mt-2">تێبینی: نرخی 100 دۆلار = {((settings.exchangeRate || 1500) * 100).toLocaleString()} دینار هەژمار دەکرێت بۆ کەنڤەرت کردن.</p>
+            <div className="bg-white/50 border border-pink-100 px-3 py-2 inline-block rounded-xl mt-3">
+               <p className="text-[11px] md:text-xs text-pink-600 font-extrabold">تێبینی: نرخی 100 دۆلار = {((settings.exchangeRate || 1500) * 100).toLocaleString("en-US")} دینار هەژمار دەکرێت بۆ کەنڤەرت کردن.</p>
+            </div>
           </div>
         </div>
-        <div className="flex justify-end">
+        <div className="flex justify-center md:justify-end pt-2">
            <button
              onClick={async () => {
                 if(!confirm('دڵنیایت لەم کارە؟ ئەمە هەموو نرخەکانی ناو (کالاکان، خەرجییەکان، قەرزەکان، قاسەکان) دابەشی نرخی دۆلار دەکات.')) return;
@@ -1790,7 +1894,7 @@ export function SettingsPage() {
                    alert('هەڵەیەک ڕوویدا');
                 }
              }}
-             className="bg-pink-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-pink-700 transition-colors flex items-center gap-2 shadow-sm"
+             className="w-full md:w-auto bg-pink-600 text-white px-6 py-3.5 md:py-3 rounded-[16px] font-black text-sm hover:bg-pink-700 transition-colors flex items-center justify-center gap-2 shadow-lg shadow-pink-600/30"
            >
               <ArrowLeftRight size={18} />
               گۆڕینی هەموو نرخەکان بۆ دۆلار
@@ -1798,19 +1902,19 @@ export function SettingsPage() {
         </div>
       </div>
 
-      <div className="bg-yellow-50 p-6 md:p-8 rounded-2xl border border-yellow-200 shadow-sm space-y-6">
-        <div className="flex items-start gap-4">
-          <div className="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center text-yellow-600 shrink-0">
-            <AlertTriangle size={24} />
+      <div className="bg-amber-50 p-5 md:p-8 rounded-[24px] border border-amber-200 shadow-sm space-y-6">
+        <div className="flex flex-col md:flex-row items-center md:items-start gap-4 text-center md:text-right">
+          <div className="w-12 h-12 md:w-14 md:h-14 bg-amber-100 rounded-[16px] flex items-center justify-center text-amber-600 shrink-0 mx-auto md:mx-0">
+            <Database size={24} />
           </div>
           <div>
-            <h3 className="font-bold text-xl text-yellow-800">چاکسازی سیستەم (مایگرەیشنی قەرزەکان)</h3>
-            <p className="text-sm text-yellow-600 mt-1 font-medium">
+            <h3 className="font-extrabold text-lg md:text-xl text-amber-900">چاکسازی سیستەم (مایگرەیشنی قەرزەکان)</h3>
+            <p className="text-xs md:text-sm text-amber-700 mt-2 font-medium leading-relaxed">
               گۆڕینی هەموو ئەو وەسڵانەی کە پێشتر بە نەقد (کاش) فرۆشراون بۆ قەرز، وە دروستکردنی مامەڵەی قەرز بۆیان. ئەگەر نیازی لابردنی نەقدت هەیە لە فرۆشتن، ئەمە بکە.
             </p>
           </div>
         </div>
-        <div className="flex justify-start">
+        <div className="flex justify-center md:justify-end">
            <button
              onClick={async () => {
                 if(!confirm('دڵنیایت؟ ئەمە هەموو وەسڵە نەقدەکان دەکات بە قەرز و دەیانخاتە سەر حیسابی کڕیارەکان.')) return;
@@ -1882,20 +1986,104 @@ export function SettingsPage() {
                    alert('هەڵەیەک ڕوویدا');
                 }
              }}
-             className="bg-yellow-500 text-white px-6 py-3 rounded-xl font-bold hover:bg-yellow-600 transition-colors flex items-center gap-2 shadow-sm"
+             className="w-full md:w-auto bg-amber-500 text-white px-6 py-3.5 md:py-3 rounded-[16px] font-black text-sm hover:bg-amber-600 transition-colors flex items-center justify-center gap-2 shadow-sm shadow-amber-500/30"
            >
               گۆڕینی وەسڵە نەقدەکان بۆ قەرز
            </button>
         </div>
 
-        <div className="flex flex-col gap-4 border-t border-yellow-200 pt-6 mt-6">
-           <h3 className="font-bold text-lg text-yellow-800">مایگرەیشنی قەرزە وەرگیراوەکان بۆ قاسە</h3>
-           <p className="text-sm text-yellow-600 font-medium">ئەمە ئەو قەرزانەی پێشتر وەرگیراونەتەوە و نەچوونەتە ناو قاسە، دەیانخاتە ناو قاسەیەکی دیاریکراوەوە. تکایە قاسەیەک هەڵبژێرە و پاشان مایگرەیشنەکە بکە.</p>
+        <div className="flex flex-col gap-4 border-t border-amber-200/60 pt-6 mt-6">
+           <div className="text-center md:text-right">
+              <h3 className="font-extrabold text-base md:text-lg text-amber-900 leading-tight">بەستنەوەی کڕیارەکان (مایگرەیشنی Customer ID)</h3>
+              <p className="text-[11px] md:text-xs text-amber-700 font-medium mt-1.5 leading-relaxed">ئەمە هەموو وەسڵ و قەرز و سەردانەکان دەبەستێتەوە بە ئایدی کڕیارەوە لە جیاتی تەنها ناو، کە وا دەکات گۆڕینی ناوی کڕیارەکان کێشە دروست نەکات لە داهاتوودا.</p>
+           </div>
            
-           <div className="flex flex-col sm:flex-row items-center gap-3">
+           <div className="flex justify-center md:justify-end">
+             <button
+               onClick={async () => {
+                 if(!confirm('دڵنیایت؟ ئەمە پێویستە تەنها یەک جار بکرێت.')) return;
+                 setIsMigratingConfig(true);
+                 try {
+                    const batch = writeBatch(db);
+                    let count = 0;
+                    
+                    const normalizeName = (name: string | null | undefined): string => {
+                       if (!name) return "";
+                       return name.trim().replace(/\s+/g, " ").replace(/[ییێىي]/g, "ی").replace(/[ەەھة]/g, "ە").toLowerCase();
+                    };
+                    
+                    const customersSnap = await getDocs(collection(db, "customers"));
+                    const customersList = customersSnap.docs.map(d => ({ id: d.id, name: d.data().name }));
+                    
+                    // Update Receipts
+                    const receiptsSnap = await getDocs(collection(db, "receipts"));
+                    for (let r of receiptsSnap.docs) {
+                        const rData = r.data();
+                        if (rData.customerName && !rData.customerId) {
+                            const match = customersList.find(c => normalizeName(c.name) === normalizeName(rData.customerName));
+                            if (match) {
+                               batch.update(r.ref, { customerId: match.id });
+                               count++;
+                            }
+                        }
+                    }
+                    
+                    // Update Debts
+                    const debtsSnap = await getDocs(collection(db, "debts"));
+                    for (let d of debtsSnap.docs) {
+                        const dData = d.data();
+                        if (dData.customerName && !dData.customerId) {
+                            const match = customersList.find(c => normalizeName(c.name) === normalizeName(dData.customerName));
+                            if (match) {
+                               batch.update(d.ref, { customerId: match.id });
+                               count++;
+                            }
+                        }
+                    }
+                    
+                    // Update Visits
+                    const visitsSnap = await getDocs(collection(db, "visits"));
+                    for (let v of visitsSnap.docs) {
+                        const vData = v.data();
+                        if (vData.customerName && !vData.customerId) {
+                            const match = customersList.find(c => normalizeName(c.name) === normalizeName(vData.customerName));
+                            if (match) {
+                               batch.update(v.ref, { customerId: match.id });
+                               count++;
+                            }
+                        }
+                    }
+                    
+                    if (count > 0) {
+                        await batch.commit();
+                        alert(`مایگرەیشن سەرکەوتوو بوو، ${count} دۆکومێنت نوێکرانەوە.`);
+                    } else {
+                        alert('هیچ دۆکومێنتێک پێویستی بە نوێکردنەوە نەبوو.');
+                    }
+                 } catch (e) {
+                    console.error("Migration error:", e);
+                    alert("هەڵەیەک ڕوویدا لە کاتی مایگرەیشن");
+                 } finally {
+                    setIsMigratingConfig(false);
+                 }
+               }}
+               className="w-full sm:w-auto bg-amber-600 text-white px-6 py-3.5 rounded-[16px] font-black hover:bg-amber-700 transition-colors shadow-sm text-sm"
+             >
+                ئەنجامدانی مایگرەیشنی ناو بۆ ئایدی
+             </button>
+           </div>
+        </div>
+
+        <div className="flex flex-col gap-4 border-t border-amber-200/60 pt-6 mt-6">
+           <div className="text-center md:text-right">
+              <h3 className="font-extrabold text-base md:text-lg text-amber-900 leading-tight">مایگرەیشنی قەرزە وەرگیراوەکان بۆ قاسە</h3>
+              <p className="text-[11px] md:text-xs text-amber-700 font-medium mt-1.5 leading-relaxed">ئەمە ئەو قەرزانەی پێشتر وەرگیراونەتەوە و نەچوونەتە ناو قاسە، دەیانخاتە ناو قاسەیەکی دیاریکراوەوە. تکایە قاسەیەک هەڵبژێرە و پاشان مایگرەیشنەکە بکە.</p>
+           </div>
+           
+           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
              <select
                id="migrationSafeSelector"
-               className="w-full sm:w-1/2 bg-white border border-yellow-300 rounded-xl py-3 px-4 focus:ring-2 focus:ring-yellow-500 focus:outline-none transition-all font-medium text-slate-800"
+               className="flex-1 bg-white border border-amber-300 rounded-[16px] py-3.5 px-4 focus:ring-2 focus:ring-amber-500/50 focus:outline-none transition-all font-bold text-sm text-slate-800"
              >
                <option value="">-- هەڵبژاردنی قاسە --</option>
                {safes.map((s) => (
@@ -1926,13 +2114,9 @@ export function SettingsPage() {
                     let totalAdded = 0;
                     let count = 0;
                     
-                    // We need to look for transactions where type === "sub" and NOT type === "add" 
-                    // AND where status === "completed" and it does NOT have safeId
-                    
                     const batch = writeBatch(db);
                     let currentSafeBalance = safeSnap.data().balance || 0;
                     
-                    // We must group them in batches of 500 if too many, but typically < 500.
                     for (let t of txSnap.docs) {
                        const tData = t.data();
                        if (tData.type === "sub" && tData.status === "completed" && !tData.safeId && !tData.syncedToSafe) {
@@ -1974,7 +2158,7 @@ export function SettingsPage() {
                     alert("هەڵەیەک ڕوویدا لە کاتی مایگرەیشن");
                   }
                }}
-               className="bg-yellow-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-yellow-700 transition-colors shadow-sm w-full sm:w-auto"
+               className="w-full sm:w-auto bg-amber-600 text-white px-6 py-3.5 rounded-[16px] font-black hover:bg-amber-700 transition-colors shadow-sm text-sm"
              >
                 مایگرەیشنی قەرز
              </button>
@@ -1983,73 +2167,73 @@ export function SettingsPage() {
       </div>
 
       {/* Danger Zone */}
-      <div className="bg-red-50 p-6 md:p-8 rounded-2xl border border-red-200 shadow-sm space-y-6">
-        <div className="flex items-start gap-4">
-          <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center text-red-600 shrink-0">
+      <div className="bg-rose-50 p-5 md:p-8 rounded-[24px] border border-rose-200 shadow-sm space-y-6">
+        <div className="flex flex-col md:flex-row items-center md:items-start gap-4 text-center md:text-right">
+          <div className="w-12 h-12 md:w-14 md:h-14 bg-rose-100/80 rounded-[16px] flex items-center justify-center text-rose-600 shrink-0 mx-auto md:mx-0">
             <AlertTriangle size={24} />
           </div>
           <div>
-            <h3 className="font-bold text-xl text-red-800">ناوچەی مەترسیدار</h3>
-            <p className="text-sm text-red-600 mt-1 font-medium">
+            <h3 className="font-extrabold text-lg md:text-xl text-rose-900">ناوچەی مەترسیدار</h3>
+            <p className="text-xs md:text-sm text-rose-600 mt-1 font-bold">
               ئاگاداربە، سڕینەوەی داتاکان پاشگەزبوونەوەی نییە. دڵنیابە لە
               هەبوونی باکئاپ پێش ئەم هەنگاوە.
             </p>
           </div>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 pt-2">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-2">
           <button
             onClick={() => handleClearAlert("receipts", "وەسڵەکان")}
-            className="py-3 px-4 bg-white border border-red-200 text-red-700 hover:bg-red-100 rounded-xl text-sm font-bold transition-colors shadow-sm flex flex-col items-center justify-center text-center gap-2"
+            className="p-3 md:py-4 md:px-4 bg-white border border-rose-200 text-rose-600 hover:bg-rose-100/50 rounded-[16px] text-[11px] md:text-xs font-bold transition-colors shadow-sm flex flex-col items-center justify-center text-center gap-2.5 h-full"
           >
-            <Trash2 size={20} /> سڕینەوەی وەسڵەکان
+            <Trash2 size={20} strokeWidth={1.5} /> <span className="leading-tight">وەسڵەکان</span>
           </button>
           <button
             onClick={() => handleClearAlert("return_transactions", "چاوەڕێکراوی گەڕانەوەکان")}
-            className="py-3 px-4 bg-white border border-red-200 text-red-700 hover:bg-red-100 rounded-xl text-sm font-bold transition-colors shadow-sm flex flex-col items-center justify-center text-center gap-2"
+            className="p-3 md:py-4 md:px-4 bg-white border border-rose-200 text-rose-600 hover:bg-rose-100/50 rounded-[16px] text-[11px] md:text-xs font-bold transition-colors shadow-sm flex flex-col items-center justify-center text-center gap-2.5 h-full"
           >
-            <Trash2 size={20} /> سڕینەوەی چاوەڕێکراوی گەڕانەوە
+            <Trash2 size={20} strokeWidth={1.5} /> <span className="leading-tight">وەسڵی چاوەڕێکراو</span>
           </button>
           <button
             onClick={() => handleClearAlert("expenses", "خەرجییەکان")}
-            className="py-3 px-4 bg-white border border-red-200 text-red-700 hover:bg-red-100 rounded-xl text-sm font-bold transition-colors shadow-sm flex flex-col items-center justify-center text-center gap-2"
+            className="p-3 md:py-4 md:px-4 bg-white border border-rose-200 text-rose-600 hover:bg-rose-100/50 rounded-[16px] text-[11px] md:text-xs font-bold transition-colors shadow-sm flex flex-col items-center justify-center text-center gap-2.5 h-full"
           >
-            <Trash2 size={20} /> سڕینەوەی خەرجییەکان
+            <Trash2 size={20} strokeWidth={1.5} /> <span className="leading-tight">خەرجییەکان</span>
           </button>
           <button
             onClick={() => handleClearAlert("products", "کالاکان")}
-            className="py-3 px-4 bg-white border border-red-200 text-red-700 hover:bg-red-100 rounded-xl text-sm font-bold transition-colors shadow-sm flex flex-col items-center justify-center text-center gap-2"
+            className="p-3 md:py-4 md:px-4 bg-white border border-rose-200 text-rose-600 hover:bg-rose-100/50 rounded-[16px] text-[11px] md:text-xs font-bold transition-colors shadow-sm flex flex-col items-center justify-center text-center gap-2.5 h-full"
           >
-            <Trash2 size={20} /> سڕینەوەی کالاکان
+            <Trash2 size={20} strokeWidth={1.5} /> <span className="leading-tight">کالاکان</span>
           </button>
           <button
             onClick={() => handleClearAlert("debts", "قەرزەکان")}
-            className="py-3 px-4 bg-white border border-red-200 text-red-700 hover:bg-red-100 rounded-xl text-sm font-bold transition-colors shadow-sm flex flex-col items-center justify-center text-center gap-2"
+            className="p-3 md:py-4 md:px-4 bg-white border border-rose-200 text-rose-600 hover:bg-rose-100/50 rounded-[16px] text-[11px] md:text-xs font-bold transition-colors shadow-sm flex flex-col items-center justify-center text-center gap-2.5 h-full"
           >
-            <Trash2 size={20} /> سڕینەوەی قەرزەکان
+            <Trash2 size={20} strokeWidth={1.5} /> <span className="leading-tight">قەرزەکان</span>
           </button>
           <button
             onClick={() => handleClearAlert("customers", "کڕیارەکان و سەردانەکان")}
-            className="py-3 px-4 bg-white border border-red-200 text-red-700 hover:bg-red-100 rounded-xl text-sm font-bold transition-colors shadow-sm flex flex-col items-center justify-center text-center gap-2"
+            className="p-3 md:py-4 md:px-4 bg-white border border-rose-200 text-rose-600 hover:bg-rose-100/50 rounded-[16px] text-[11px] md:text-xs font-bold transition-colors shadow-sm flex flex-col items-center justify-center text-center gap-2.5 h-full"
           >
-            <Trash2 size={20} /> سڕینەوەی کڕیار و سەردان
+            <Trash2 size={20} strokeWidth={1.5} /> <span className="leading-tight">کڕیار و سەردان</span>
           </button>
           <button
             onClick={() => handleClearAlert("companies", "کۆمپانیا و مەندوبەکان")}
-            className="py-3 px-4 bg-white border border-red-200 text-red-700 hover:bg-red-100 rounded-xl text-sm font-bold transition-colors shadow-sm flex flex-col items-center justify-center text-center gap-2"
+            className="p-3 md:py-4 md:px-4 bg-white border border-rose-200 text-rose-600 hover:bg-rose-100/50 rounded-[16px] text-[11px] md:text-xs font-bold transition-colors shadow-sm flex flex-col items-center justify-center text-center gap-2.5 h-full"
           >
-            <Trash2 size={20} /> سڕینەوەی مەندوبەکان
+            <Trash2 size={20} strokeWidth={1.5} /> <span className="leading-tight">مەندوبەکان</span>
           </button>
           <button
             onClick={() => handleClearAlert("safe_transactions", "مێژووی مامەڵەکانی قاسە")}
-            className="py-3 px-4 bg-white border border-red-200 text-red-700 hover:bg-red-100 rounded-xl text-sm font-bold transition-colors shadow-sm flex flex-col items-center justify-center text-center gap-2"
+            className="p-3 md:py-4 md:px-4 bg-white border border-rose-200 text-rose-600 hover:bg-rose-100/50 rounded-[16px] text-[11px] md:text-xs font-bold transition-colors shadow-sm flex flex-col items-center justify-center text-center gap-2.5 h-full"
           >
-            <Trash2 size={20} /> سڕینەوەی مامەڵەی قاسەکان
+            <Trash2 size={20} strokeWidth={1.5} /> <span className="leading-tight">مێژووی قاسەکان</span>
           </button>
           <button
             onClick={() => handleClearAlert("ALL", "هەموو داتاکان بە یەکجاری")}
-            className="py-3 px-4 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-bold transition-colors shadow-md shadow-red-200/50 flex flex-col items-center justify-center text-center gap-2 sm:col-span-1 md:col-span-1"
+            className="col-span-2 md:col-span-4 p-4 md:py-5 bg-rose-600 hover:bg-rose-700 text-white rounded-[16px] text-sm md:text-base font-extrabold transition-colors shadow-md shadow-rose-200/50 flex flex-row items-center justify-center text-center gap-2 w-full mt-2"
           >
-            <AlertTriangle size={20} /> سڕینەوەی گشتی
+            <AlertTriangle size={20} /> سڕینەوەی گشتی (زۆر مەترسیدارە)
           </button>
         </div>
       </div>

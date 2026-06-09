@@ -63,8 +63,8 @@ export default function DebtBook({ preselectedCustomer, hideLayout }: { preselec
   const [paymentNote, setPaymentNote] = useState("");
 
   const [newDebtModalOpen, setNewDebtModalOpen] = useState(false);
-  const [newName, setNewName] = useState("");
-  const [newPhone, setNewPhone] = useState("");
+  const [newName, setNewName] = useState(preselectedCustomer?.name || "");
+  const [newPhone, setNewPhone] = useState(preselectedCustomer?.phone || "");
   const [newAmount, setNewAmount] = useState("");
 
   const [userRole, setUserRole] = useState("");
@@ -494,6 +494,26 @@ export default function DebtBook({ preselectedCustomer, hideLayout }: { preselec
     const existingDebt = debts.find((d) => normalizeName(d.customerName) === normalizeName(newName));
     const isPending = userRole !== "admin" && userRole !== "accountant";
 
+    let resolvedCustomerId = "";
+    const existingCus = customers.find((c) => normalizeName(c.name) === normalizeName(newName));
+    if (!existingCus) {
+      const cusRef = await addDoc(collection(db, "customers"), {
+        name: newName,
+        phone: newPhone,
+        address: "",
+        createdAt: Timestamp.now(),
+        lastPurchase: Timestamp.now(),
+      });
+      resolvedCustomerId = cusRef.id;
+    } else {
+      resolvedCustomerId = existingCus.id;
+      if (newPhone && !existingCus.phone) {
+        await updateDoc(doc(db, "customers", existingCus.id), {
+          phone: newPhone,
+        });
+      }
+    }
+
     if (existingDebt) {
       if (!isPending) {
         await updateDoc(doc(db, "debts", existingDebt.id), {
@@ -518,6 +538,7 @@ export default function DebtBook({ preselectedCustomer, hideLayout }: { preselec
       if (!isPending) {
         const debtRef = await addDoc(collection(db, "debts"), {
           customerName: newName,
+          ...(resolvedCustomerId ? { customerId: resolvedCustomerId } : {}),
           phone: newPhone,
           amount: amountValRaw,
           remainingAmount: amountValRaw,
@@ -539,6 +560,7 @@ export default function DebtBook({ preselectedCustomer, hideLayout }: { preselec
         // Create a placeholder debt with 0 amount, and a pending transaction to add the amount
         const debtRef = await addDoc(collection(db, "debts"), {
           customerName: newName,
+          ...(resolvedCustomerId ? { customerId: resolvedCustomerId } : {}),
           phone: newPhone,
           amount: 0,
           remainingAmount: 0,
@@ -559,24 +581,9 @@ export default function DebtBook({ preselectedCustomer, hideLayout }: { preselec
       }
     }
 
-    const existingCus = customers.find((c) => c.name === newName);
-    if (!existingCus) {
-      await addDoc(collection(db, "customers"), {
-        name: newName,
-        phone: newPhone,
-        address: "",
-        createdAt: Timestamp.now(),
-        lastPurchase: Timestamp.now(),
-      });
-    } else if (newPhone && !existingCus.phone) {
-      await updateDoc(doc(db, "customers", existingCus.id), {
-        phone: newPhone,
-      });
-    }
-
     setNewDebtModalOpen(false);
-    setNewName("");
-    setNewPhone("");
+    setNewName(preselectedCustomer?.name || "");
+    setNewPhone(preselectedCustomer?.phone || "");
     setNewAmount("");
   };
 
@@ -1233,46 +1240,58 @@ export default function DebtBook({ preselectedCustomer, hideLayout }: { preselec
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-bold text-slate-700 mb-2">
-                    ناوی کڕیار (هەڵبژاردن یان نووسین)
+                    ناوی کڕیار {preselectedCustomer ? "" : "(هەڵبژاردن یان نووسین)"}
                   </label>
                   <div className="flex gap-2">
-                    <select
-                      className="bg-white border-2 border-slate-200 rounded-xl p-3 focus:outline-none focus:border-pink-500 transition-colors w-1/2"
-                      value={
-                        customers.find((c) => c.name === newName) ? newName : ""
-                      }
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        if (val) {
-                          setNewName(val);
-                          const found = customers.find((c) => c.name === val);
-                          if (found && !newPhone)
-                            setNewPhone(found.phone || "");
-                        }
-                      }}
-                    >
-                      <option value="">-- کڕیارەکان --</option>
-                      {customers.map((c) => (
-                        <option key={c.id} value={c.name}>
-                          {c.name}
-                        </option>
-                      ))}
-                    </select>
-                    <input
-                      required
-                      type="text"
-                      value={newName}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setNewName(val);
-                        const found = customers.find((c) => c.name === val);
-                        if (found && !newPhone) {
-                          setNewPhone(found.phone || "");
-                        }
-                      }}
-                      className="w-1/2 bg-white border-2 border-slate-200 rounded-xl p-3 focus:outline-none focus:border-pink-500 transition-colors"
-                      placeholder="ناوی نوێ بنووسە..."
-                    />
+                    {!preselectedCustomer ? (
+                      <>
+                        <select
+                          className="bg-white border-2 border-slate-200 rounded-xl p-3 focus:outline-none focus:border-pink-500 transition-colors w-1/2"
+                          value={
+                            customers.find((c) => c.name === newName) ? newName : ""
+                          }
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (val) {
+                              setNewName(val);
+                              const found = customers.find((c) => c.name === val);
+                              if (found && !newPhone)
+                                setNewPhone(found.phone || "");
+                            }
+                          }}
+                        >
+                          <option value="">-- کڕیارەکان --</option>
+                          {customers.map((c) => (
+                            <option key={c.id} value={c.name}>
+                              {c.name}
+                            </option>
+                          ))}
+                        </select>
+                        <input
+                          required
+                          type="text"
+                          value={newName}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setNewName(val);
+                            const found = customers.find((c) => c.name === val);
+                            if (found && !newPhone) {
+                              setNewPhone(found.phone || "");
+                            }
+                          }}
+                          className="w-1/2 bg-white border-2 border-slate-200 rounded-xl p-3 focus:outline-none focus:border-pink-500 transition-colors"
+                          placeholder="ناوی نوێ بنووسە..."
+                        />
+                      </>
+                    ) : (
+                      <input
+                        required
+                        type="text"
+                        value={newName}
+                        disabled
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 focus:outline-none focus:border-pink-500 transition-colors opacity-90 cursor-not-allowed font-bold"
+                      />
+                    )}
                   </div>
                 </div>
               </div>
@@ -1283,9 +1302,10 @@ export default function DebtBook({ preselectedCustomer, hideLayout }: { preselec
                 <input
                   type="text"
                   value={newPhone}
-                  onChange={(e) => setNewPhone(e.target.value)}
+                  onChange={(e) => !preselectedCustomer && setNewPhone(e.target.value)}
                   dir="ltr"
-                  className="w-full bg-white border-2 border-slate-200 rounded-xl p-3 focus:outline-none focus:border-pink-500 font-mono text-left transition-colors"
+                  disabled={!!preselectedCustomer}
+                  className={`w-full bg-white border-2 border-slate-200 rounded-xl p-3 focus:outline-none focus:border-pink-500 font-mono text-left transition-colors ${preselectedCustomer ? 'bg-slate-50 opacity-90 cursor-not-allowed' : ''}`}
                   placeholder="0750 XXX XXXX"
                 />
               </div>

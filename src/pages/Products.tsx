@@ -409,7 +409,7 @@ export default function Products() {
           </table>
 
           {/* Mobile Card View */}
-          <div className="md:hidden flex flex-col gap-3 p-4">
+          <div className="md:hidden flex flex-col gap-3 p-3">
             {filteredProducts.map((product) => {
               const pCost = product.unitCost || 0;
               const pPrice = product.unitPrice || 0;
@@ -420,53 +420,65 @@ export default function Products() {
               const isOutOfStock = pStock === 0;
 
               return (
-                <div key={product.id} className={`bg-white rounded-2xl border ${isOutOfStock ? 'border-red-200' : isLowStock ? 'border-orange-200' : 'border-slate-200'} p-4 shadow-sm relative overflow-hidden`}>
-                  {(isOutOfStock || isLowStock) && (
-                    <div className={`absolute top-0 right-0 w-2 h-full ${isOutOfStock ? 'bg-red-500' : 'bg-orange-400'}`}></div>
-                  )}
+                <div key={product.id} className={`bg-white rounded-[24px] border border-slate-100 p-4 shadow-sm relative overflow-hidden group hover:shadow-md transition-all`}>
                   <div className="flex gap-4 items-start">
                     {product.imageUrl ? (
-                      <img
-                        src={product.imageUrl}
-                        alt={product.name}
-                        className="w-16 h-16 object-cover rounded-xl border border-slate-100 shrink-0"
-                        referrerPolicy="no-referrer"
-                      />
+                      <div className="w-[85px] h-[85px] rounded-[20px] shadow-sm border border-slate-100/50 flex-shrink-0 overflow-hidden relative bg-slate-50">
+                        <img
+                          src={product.imageUrl}
+                          alt={product.name}
+                          className="w-full h-full object-cover"
+                          referrerPolicy="no-referrer"
+                        />
+                         {(isOutOfStock || isLowStock) && (
+                            <div className={`absolute top-0 right-0 w-full h-full border-[3px] rounded-[20px] pointer-events-none ${isOutOfStock ? 'border-rose-500/80 shadow-inner shadow-rose-500/20' : 'border-orange-400/80'}`}></div>
+                         )}
+                      </div>
                     ) : (
-                      <div className="w-16 h-16 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-300 shrink-0">
-                        <ImageIcon size={24} />
+                      <div className={`w-[85px] h-[85px] rounded-[20px] bg-slate-50 border border-slate-100 flex flex-col items-center justify-center text-slate-300 shrink-0 relative overflow-hidden ${(isOutOfStock || isLowStock) ? 'border-[3px]' : ''} ${isOutOfStock ? 'border-rose-500/80 bg-rose-50/30' : isLowStock ? 'border-orange-400/80 bg-orange-50/30' : ''}`}>
+                        <ImageIcon size={26} strokeWidth={1.5} />
                       </div>
                     )}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex justify-between items-start mb-1">
-                        <h3 className="font-bold text-slate-900 truncate pr-2">{product.name}</h3>
-                        <div className="flex gap-1 shrink-0">
-                          <button onClick={() => openEditModal(product)} className="p-1.5 text-pink-500 bg-pink-50 rounded-lg"><Edit size={14}/></button>
-                          <button onClick={() => handleDelete(product.id)} className="p-1.5 text-red-500 bg-red-50 rounded-lg"><Trash2 size={14}/></button>
+                    <div className="flex-1 min-w-0 flex flex-col pt-1">
+                      <div className="flex justify-between items-start mb-1.5">
+                        <h3 className="font-extrabold text-slate-800 text-sm truncate pr-1 leading-tight">{product.name}</h3>
+                        <div className="flex gap-1.5 shrink-0">
+                          <button onClick={() => openEditModal(product)} className="w-7 h-7 flex items-center justify-center text-pink-500 bg-pink-50 hover:bg-pink-100 rounded-xl transition-colors"><Edit size={14}/></button>
+                          <button onClick={() => handleDelete(product.id)} className="w-7 h-7 flex items-center justify-center text-rose-500 bg-rose-50 hover:bg-rose-100 rounded-xl transition-colors"><Trash2 size={14}/></button>
                         </div>
                       </div>
-                      <div className="text-[11px] text-slate-400 font-mono mb-2" dir="ltr">{product.barcode || "بێ بارکۆد"}</div>
-                      <div className="flex flex-wrap gap-1.5 mb-3">
-                        <span className="text-[10px] px-2 py-0.5 bg-slate-100 text-slate-600 rounded-md truncate max-w-[100px]">{product.category}</span>
-                        <span className="text-[10px] px-2 py-0.5 bg-pink-50 text-pink-600 rounded-md truncate max-w-[100px]">{product.company}</span>
-                        {product.location && <span className="text-[10px] px-2 py-0.5 bg-slate-100 text-slate-600 rounded-md truncate max-w-[100px] flex items-center gap-0.5"><MapPin size={10} />{product.location}</span>}
+                      <div className="text-[10px] font-bold text-slate-400 font-mono mb-2 track-wider bg-slate-50 inline-flex self-start px-2 py-0.5 rounded-lg border border-slate-100" dir="ltr">{product.barcode || "---"}</div>
+                      <div className="flex flex-wrap gap-1.5 mt-auto">
+                        <span className="text-[10px] font-bold px-2.5 py-1 bg-slate-100 text-slate-600 rounded-lg truncate max-w-[100px]">{product.category}</span>
+                        <span className="text-[10px] font-bold px-2.5 py-1 bg-pink-50 text-pink-600 rounded-lg truncate max-w-[100px]">{product.company}</span>
+                        {product.location && <span className="text-[10px] font-bold px-2.5 py-1 bg-slate-100 text-slate-600 rounded-lg truncate max-w-[100px] flex items-center gap-1"><MapPin size={10} className="text-slate-400" />{product.location}</span>}
                       </div>
                     </div>
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-3 mt-2 pt-3 border-t border-slate-100">
-                    <div>
-                      <p className="text-[10px] text-slate-400 mb-0.5">بەهای فرۆشتن</p>
-                      <p className="font-bold font-mono text-slate-800">{formatCurrency(pPrice)}</p>
+                  <div className="grid grid-cols-2 gap-3 mt-4 pt-3 border-t border-slate-100">
+                    <div className="bg-slate-50 rounded-[16px] p-2.5 border border-slate-100 flex flex-col justify-center">
+                      <p className="text-[10px] font-bold text-slate-400 mb-1">فرۆشتن / قازانج</p>
+                      <div className="flex items-center gap-2">
+                         <p className="font-black text-slate-800 text-[13px]">{formatCurrency(pPrice)}</p>
+                         <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-md border border-emerald-100">+{formatCurrency(profitPerUnit)}</span>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-[10px] text-slate-400 mb-0.5">قازانج</p>
-                      <p className="font-bold font-mono text-green-600">+{formatCurrency(profitPerUnit)}</p>
-                    </div>
-                    <div className="col-span-2 flex items-center justify-between bg-slate-50 rounded-lg p-2 mt-1">
-                      <span className="text-xs font-medium text-slate-600">لە کۆگا ماوە:</span>
-                      <span className={`text-sm font-bold font-mono px-2 py-0.5 rounded ${isOutOfStock ? 'bg-red-100 text-red-700' : isLowStock ? 'bg-orange-100 text-orange-700' : 'text-slate-700'}`}>
-                        {pStock} دانە
+
+                    <div className={`${isOutOfStock ? 'bg-rose-50 border-rose-100' : isLowStock ? 'bg-orange-50 border-orange-100' : 'bg-slate-50 border-slate-100'} rounded-[16px] p-2.5 border flex flex-col justify-center items-center`}>
+                      <span className="text-[10px] font-bold text-slate-400 mb-1">لە کۆگا ماوە</span>
+                      <span className={`text-[13px] font-black ${isOutOfStock ? 'text-rose-700' : isLowStock ? 'text-orange-700' : 'text-slate-800'}`}>
+                         {product.cartonSize && product.cartonSize > 1 ? (
+                            <div className="flex flex-col items-center leading-tight">
+                              <div className="flex gap-1 items-baseline">
+                                <span>{Math.floor(pStock / product.cartonSize)} <span className="text-[10px] font-bold text-slate-500 opacity-80">کارتۆن</span></span>
+                                {pStock % product.cartonSize !== 0 && <span>{pStock % product.cartonSize} <span className="text-[10px] font-bold text-slate-500 opacity-80">دانە</span></span>}
+                              </div>
+                              <span className="text-[9px] text-slate-400 font-bold opacity-80 border-t border-black/10 pt-0.5 mt-0.5 min-w-[30px] text-center">{pStock}</span>
+                            </div>
+                         ) : (
+                            <>{pStock} دانە</>
+                         )}
                       </span>
                     </div>
                   </div>
@@ -474,8 +486,9 @@ export default function Products() {
               );
             })}
             {filteredProducts.length === 0 && (
-              <div className="text-center py-10 text-slate-400 bg-white rounded-2xl border border-slate-200">
-                هیچ کالایەک نەدۆزرایەوە بەم فلتەرانە.
+              <div className="text-center py-12 flex flex-col items-center justify-center text-slate-400 bg-slate-50 rounded-3xl border border-dashed border-slate-200 col-span-2">
+                 <Package size={40} className="text-slate-305 mb-3" strokeWidth={1.5} />
+                 <p className="text-sm font-bold text-slate-500">هیچ کالایەک نەدۆزرایەوە بەم فلتەرانە</p>
               </div>
             )}
           </div>
@@ -483,283 +496,411 @@ export default function Products() {
       </div>
 
       {isModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4 transition-all duration-300">
           <form
             onSubmit={handleSubmit}
-            className="bg-white rounded-t-[32px] sm:rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[92dvh] sm:max-h-[90vh] animate-in slide-in-from-bottom-10 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-200"
+            className="bg-white rounded-t-[32px] sm:rounded-3xl shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[92dvh] sm:max-h-[90vh] animate-in slide-in-from-bottom-10 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-300 text-slate-800 border border-slate-100"
+            dir="rtl"
           >
-            <div className="px-5 sm:px-8 py-5 border-b border-slate-100 bg-white flex justify-between items-center shrink-0">
-              <h2 className="text-xl font-extrabold text-slate-800">
-                {editingProduct ? "دەستکاریکردنی کالا" : "زیادکردنی کالای نوێ"}
-              </h2>
+            {/* Header */}
+            <div className="px-6 py-5 border-b border-slate-100 bg-slate-50/70 flex justify-between items-center shrink-0 relative overflow-hidden">
+              <div className="absolute top-0 right-1/4 w-40 h-40 bg-pink-500/5 rounded-full blur-xl pointer-events-none"></div>
+              <div className="absolute bottom-0 left-1/4 w-32 h-32 bg-sky-500/5 rounded-full blur-xl pointer-events-none"></div>
+              
+              <div className="flex items-center gap-3.5 z-10">
+                <div className="w-11 h-11 bg-gradient-to-tr from-pink-500 to-pink-600 rounded-xl flex items-center justify-center text-white shadow-md shadow-pink-500/20">
+                  <Package size={20} />
+                </div>
+                <div>
+                  <h2 className="text-lg font-black text-slate-900 leading-none">
+                    {editingProduct ? "دەستکاریکردنی زانیاری کالا" : "تۆمارکردنی نوێی کالا"}
+                  </h2>
+                  <p className="text-[11px] text-slate-400 font-bold mt-1.5">
+                    {editingProduct ? "ڕێکخستن و دەستکاریکردنی نرخ و کۆگای کاڵا" : "زیادکردنی کاڵای نوێ بۆ کۆگا بە زانیاری تەواوەوە"}
+                  </p>
+                </div>
+              </div>
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="text-slate-400 bg-slate-50 hover:bg-slate-200 hover:text-slate-700 w-10 h-10 flex items-center justify-center rounded-xl transition-colors"
+                className="text-slate-400 bg-white hover:bg-slate-100 hover:text-slate-700 w-9 h-9 flex items-center justify-center rounded-xl transition-all border border-slate-200 shadow-xs active:scale-90"
               >
-                <X size={20} />
+                <X size={18} />
               </button>
             </div>
 
-            <div className="p-5 sm:p-8 space-y-6 overflow-y-auto custom-scrollbar pb-[max(calc(env(safe-area-inset-bottom)+1rem),1rem)] sm:pb-8">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 sm:gap-6">
-                <div className="col-span-1 sm:col-span-2">
-                  <div className="flex justify-between items-center">
-                    <label className="block text-sm font-medium text-slate-700">
-                      وێنەی کالا
+            {/* Scrollable Form Body */}
+            <div className="p-6 sm:p-8 space-y-7 overflow-y-auto custom-scrollbar pb-[max(calc(env(safe-area-inset-bottom)+1.5rem),1.5rem)] sm:pb-8 bg-white/50">
+              
+              {/* SECTION A: General Details */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
+                  <span className="w-1.5 h-4 bg-pink-500 rounded-full"></span>
+                  <h3 className="text-xs font-black text-slate-400 uppercase tracking-wider">کورتەی کاڵا و وێنە</h3>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+                  
+                  {/* Photo Section */}
+                  <div className="md:col-span-1 flex flex-col items-center justify-center p-4 bg-slate-50 rounded-2xl border border-slate-200/80">
+                    <label className="block text-xs font-black text-slate-600 mb-2.5 text-center">
+                      وێنەی کاڵا
                     </label>
-                    <div className="flex bg-slate-100 rounded-lg p-1 gap-1">
+                    
+                    {imageUrl ? (
+                      <div className="relative group w-28 h-28 rounded-2xl overflow-hidden border border-slate-200 bg-white mb-3 shadow-inner">
+                        <img
+                          src={imageUrl}
+                          alt="بەرچاوینەی کاڵا"
+                          className="w-full h-full object-contain"
+                          referrerPolicy="no-referrer"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setImageUrl("")}
+                          className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-xs font-bold transition-all duration-200"
+                        >
+                          سڕینەوەی وێنە
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="w-28 h-28 rounded-2xl border border-dashed border-slate-350 bg-white flex flex-col items-center justify-center text-slate-400 mb-3">
+                        <ImageIcon size={28} className="opacity-70 text-slate-400 mb-1" />
+                        <span className="text-[10px] font-bold">بێ وێنە</span>
+                      </div>
+                    )}
+
+                    <div className="flex bg-slate-200/70 rounded-xl p-1 gap-1 w-full">
                       <button
                         type="button"
                         onClick={() => setInputType("url")}
-                        className={`px-3 py-1 text-xs font-bold rounded-md flex items-center gap-1 ${inputType === "url" ? "bg-white shadow-sm text-pink-600" : "text-slate-500"}`}
+                        className={`flex-1 py-1.5 text-[10px] font-black rounded-lg flex items-center justify-center gap-1 transition-all ${inputType === "url" ? "bg-white shadow-xs text-pink-600 font-extrabold" : "text-slate-500 hover:text-slate-800"}`}
                       >
-                        <LinkIcon size={14} /> هەواڵە / بەستەر
+                        <LinkIcon size={12} /> لینکی وێنە
                       </button>
                       <button
                         type="button"
                         onClick={() => setInputType("file")}
-                        className={`px-3 py-1 text-xs font-bold rounded-md flex items-center gap-1 ${inputType === "file" ? "bg-white shadow-sm text-pink-600" : "text-slate-500"}`}
+                        className={`flex-1 py-1.5 text-[10px] font-black rounded-lg flex items-center justify-center gap-1 transition-all ${inputType === "file" ? "bg-white shadow-xs text-pink-600 font-extrabold" : "text-slate-500 hover:text-slate-800"}`}
                       >
-                        <Camera size={14} /> فایلی وێنە
+                        <Camera size={12} /> فایل
                       </button>
                     </div>
+
+                    <div className="w-full mt-2.5">
+                      {inputType === "url" ? (
+                        <input
+                          type="text"
+                          value={imageUrl}
+                          onChange={(e) => setImageUrl(e.target.value)}
+                          dir="ltr"
+                          className="w-full bg-white border border-slate-200 rounded-lg py-1 px-2 focus:ring-1 focus:ring-pink-500 outline-none font-mono text-[11px] text-center"
+                          placeholder="https://example.com/img.png"
+                        />
+                      ) : (
+                        <label className="relative block w-full py-1 text-center bg-white border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50 transition-colors">
+                          <span className="text-[11px] font-bold text-slate-600">هەڵبژاردنی فایل</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleImageFileChange}
+                            className="hidden"
+                          />
+                        </label>
+                      )}
+                    </div>
                   </div>
-                  {inputType === "url" ? (
-                    <input
-                      type="text"
-                      value={imageUrl}
-                      onChange={(e) => setImageUrl(e.target.value)}
-                      dir="ltr"
-                      className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-pink-500 font-mono text-left text-sm"
-                      placeholder="https://example.com/image.png"
-                    />
-                  ) : (
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageFileChange}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-pink-500 text-sm"
-                    />
-                  )}
-                  {imageUrl && (
-                    <div className="mt-2 text-center">
-                      <img
-                        src={imageUrl}
-                        alt="بەرچاوینەی وێنە"
-                        className="max-h-32 rounded-lg border border-slate-200 mx-auto object-contain"
-                        referrerPolicy="no-referrer"
+
+                  {/* General details fields */}
+                  <div className="md:col-span-2 space-y-4">
+                    <div>
+                      <label className="block text-[12px] font-black text-slate-750 mb-1.5">
+                        ناوی کالا <span className="text-pink-500">*</span>
+                      </label>
+                      <input
+                        required
+                        type="text"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        placeholder="بۆ نموونە: شامپۆی ئۆلیڤ..."
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 focus:bg-white focus:ring-2 focus:ring-pink-500/10 focus:border-pink-500 outline-none font-bold text-sm transition-all text-slate-850"
                       />
                     </div>
-                  )}
-                </div>
 
-                <div className="col-span-1 sm:col-span-2">
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
-                    ناوی کالا
-                  </label>
-                  <input
-                    required
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-pink-500"
-                  />
-                </div>
-                <div className="col-span-1 sm:col-span-2">
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
-                    بارکۆد
-                  </label>
-                  <input
-                    type="text"
-                    value={barcode}
-                    onChange={(e) => setBarcode(e.target.value)}
-                    dir="ltr"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-pink-500 font-mono text-left text-sm"
-                    placeholder="بۆ نموونە: 620000000000"
-                  />
-                </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-[12px] font-black text-slate-750 mb-1.5">
+                          کەتەگۆری <span className="text-pink-500">*</span>
+                        </label>
+                        <select
+                          required
+                          value={category}
+                          onChange={(e) => setCategory(e.target.value)}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 focus:bg-white focus:ring-2 focus:ring-pink-500/10 focus:border-pink-500 outline-none font-bold text-sm transition-all"
+                        >
+                          {availableCategories.map((c) => (
+                            <option key={c} value={c}>
+                              {c}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
 
-                <div className="col-span-1 sm:col-span-1">
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
-                    کەتەگۆری
-                  </label>
-                  <select
-                    required
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-pink-500"
-                  >
-                    {availableCategories.map((c) => (
-                      <option key={c} value={c}>
-                        {c}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="col-span-1 sm:col-span-1">
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
-                    کۆمپانیا (بریکار)
-                  </label>
-                  <input
-                    required
-                    type="text"
-                    list="companies-list"
-                    value={company}
-                    onChange={(e) => setCompany(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-pink-500"
-                  />
-                  <datalist id="companies-list">
-                    {availableCompanies.map((c) => (
-                      <option key={c} value={c} />
-                    ))}
-                  </datalist>
-                </div>
-
-                <div className="col-span-2 sm:col-span-1">
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
-                    تێچوو (دانە)
-                  </label>
-                  <input
-                    required
-                    type="number"
-                    min="0"
-                    step="any"
-                    value={unitCost}
-                    onChange={(e) => setUnitCost(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-pink-500 font-mono text-left"
-                    dir="ltr"
-                  /> 
-                  <IQDInput usdValue={unitCost} setUsdValue={(val) => setUnitCost(val.toString())} />
-                </div>
-                <div className="col-span-2 sm:col-span-1">
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
-                    نرخی فرۆشتن (دانە)
-                  </label>
-                  <input
-                    required
-                    type="number"
-                    min="0"
-                    step="any"
-                    value={unitPrice}
-                    onChange={(e) => setUnitPrice(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-pink-500 font-mono text-left"
-                    dir="ltr"
-                  /> 
-                  <IQDInput usdValue={unitPrice} setUsdValue={(val) => setUnitPrice(val.toString())} />
-                </div>
-
-                <div className="col-span-2 sm:col-span-1">
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
-                    تێچوو (جوملە)
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="any"
-                    value={wholesaleCost}
-                    onChange={(e) => setWholesaleCost(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-pink-500 font-mono text-left"
-                    dir="ltr"
-                    placeholder="ئارەزوومەندانە"
-                  /> 
-                  <IQDInput usdValue={wholesaleCost} setUsdValue={(val) => setWholesaleCost(val.toString())} />
-                </div>
-                <div className="col-span-2 sm:col-span-1">
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
-                    نرخی فرۆشتن (جوملە)
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="any"
-                    value={wholesalePrice}
-                    onChange={(e) => setWholesalePrice(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-pink-500 font-mono text-left"
-                    dir="ltr"
-                    placeholder="ئارەزوومەندانە"
-                  /> 
-                  <IQDInput usdValue={wholesalePrice} setUsdValue={(val) => setWholesalePrice(val.toString())} />
-                </div>
-                                <div className="col-span-2">
-                  <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden flex flex-col">
-                    <div className="bg-slate-50 border-b border-slate-200 px-4 py-3">
-                      <h4 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-                        <Package className="text-pink-500" size={18} />
-                        ڕێکخستنی ستۆک و بەردەستبوون
-                      </h4>
+                      <div>
+                        <label className="block text-[12px] font-black text-slate-750 mb-1.5">
+                          کۆمپانیا (بریکار) <span className="text-pink-500">*</span>
+                        </label>
+                        <input
+                          required
+                          type="text"
+                          list="companies-list"
+                          value={company}
+                          onChange={(e) => setCompany(e.target.value)}
+                          placeholder="کۆمپانیای فڵان..."
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 focus:bg-white focus:ring-2 focus:ring-pink-500/10 focus:border-pink-500 outline-none font-bold text-sm transition-all"
+                        />
+                        <datalist id="companies-list">
+                          {availableCompanies.map((c) => (
+                            <option key={c} value={c} />
+                          ))}
+                        </datalist>
+                      </div>
                     </div>
+
+                    <div>
+                      <label className="block text-[12px] font-black text-slate-755 mb-1.5">
+                        بارکۆدی کاڵا (ئارەزوومەندانە)
+                      </label>
+                      <input
+                        type="text"
+                        value={barcode}
+                        onChange={(e) => setBarcode(e.target.value)}
+                        dir="ltr"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 focus:bg-white focus:ring-2 focus:ring-pink-500/10 focus:border-pink-500 outline-none font-mono text-left text-sm font-bold opacity-90 transition-all placeholder:text-slate-350"
+                        placeholder="ئەگەر بارکۆدی نییە بە تەنیا ڕێیبدە"
+                      />
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+
+              {/* SECTION B: Pricing */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
+                  <span className="w-1.5 h-4 bg-emerald-500 rounded-full"></span>
+                  <h3 className="text-xs font-black text-slate-400 uppercase tracking-wider">سیاسەتی نرخ و گۆڕینەوە</h3>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                  
+                  {/* Unit Sale segment */}
+                  <div className="p-4 rounded-2xl border border-slate-150 bg-slate-50/20 space-y-3.5">
+                    <span className="text-[11px] font-extrabold text-slate-400 block bg-slate-100 px-2 py-0.5 rounded max-w-fit">فرۆشتنی بە تاڵ (دانە)</span>
                     
-                    <div className="p-4 sm:p-5">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-5">
-                        {/* Shelf / Alert */}
-                        <div className="space-y-4">
-                          <div>
-                            <label className="block text-[11px] font-bold text-slate-700 mb-1.5 flex items-center gap-1.5">
-                              <MapPin size={14} className="text-slate-400"/> شوێن / ڕەفە
-                            </label>
-                            <input type="text" value={location} onChange={(e) => setLocation(e.target.value)} className="w-full bg-slate-50 hover:bg-white border border-slate-200 rounded-lg px-3 py-2.5 focus:ring-1 focus:ring-pink-500 outline-none text-sm transition-colors" placeholder="کۆگای A - ڕەفەی 2" />
-                          </div>
-                          <div>
-                            <label className="block text-[11px] font-bold text-slate-700 mb-1.5 flex items-center gap-1.5">
-                              <AlertTriangle size={14} className="text-amber-500"/> کەمترین ڕێژەی ستۆک بۆ ئاگادارکردنەوە
-                            </label>
-                            <div className="relative">
-                              <input type="number" min="0" value={minStockAlert} onChange={(e) => setMinStockAlert(e.target.value)} className="w-full bg-slate-50 hover:bg-white border border-slate-200 rounded-lg px-3 py-2.5 focus:ring-1 focus:ring-amber-500 outline-none font-mono text-left transition-colors" dir="ltr" placeholder="10" />
-                            </div>
-                          </div>
+                    <div className="space-y-1">
+                      <label className="block text-[11px] font-black text-slate-700">تێچووی دانە (USD) <span className="text-pink-500">*</span></label>
+                      <input
+                        required
+                        type="number"
+                        min="0"
+                        step="any"
+                        value={unitCost}
+                        onChange={(e) => setUnitCost(e.target.value)}
+                        className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-pink-500 font-mono text-left"
+                        dir="ltr"
+                      />
+                      <IQDInput usdValue={unitCost} setUsdValue={(val) => setUnitCost(val.toString())} label="کۆی گشتی بە دینار" />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="block text-[11px] font-black text-slate-700">نرخی فرۆشتنی دانە (USD) <span className="text-pink-500">*</span></label>
+                      <input
+                        required
+                        type="number"
+                        min="0"
+                        step="any"
+                        value={unitPrice}
+                        onChange={(e) => setUnitPrice(e.target.value)}
+                        className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-pink-500 font-mono text-left"
+                        dir="ltr"
+                      />
+                      <IQDInput usdValue={unitPrice} setUsdValue={(val) => setUnitPrice(val.toString())} label="کۆی گشتی بە دینار" />
+                    </div>
+                  </div>
+
+                  {/* Wholesale segment */}
+                  <div className="p-4 rounded-2xl border border-slate-150 bg-slate-50/20 space-y-3.5">
+                    <span className="text-[11px] font-extrabold text-slate-400 block bg-slate-100 px-2 py-0.5 rounded max-w-fit">فرۆشتنی بە جوملە</span>
+                    
+                    <div className="space-y-1">
+                      <label className="block text-[11px] font-black text-slate-700">تێچووی جوملە (USD)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="any"
+                        value={wholesaleCost}
+                        onChange={(e) => setWholesaleCost(e.target.value)}
+                        className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-pink-500 font-mono text-left"
+                        dir="ltr"
+                        placeholder="ئارەزوومەندانە"
+                      />
+                      <IQDInput usdValue={wholesaleCost} setUsdValue={(val) => setWholesaleCost(val.toString())} label="کۆی گشتی بە دینار" />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="block text-[11px] font-black text-slate-700">نرخی فرۆشتنی جوملە (USD)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="any"
+                        value={wholesalePrice}
+                        onChange={(e) => setWholesalePrice(e.target.value)}
+                        className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-pink-500 font-mono text-left"
+                        dir="ltr"
+                        placeholder="ئارەزوومەندانە"
+                      />
+                      <IQDInput usdValue={wholesalePrice} setUsdValue={(val) => setWholesalePrice(val.toString())} label="کۆی گشتی بە دینار" />
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+
+              {/* SECTION C: Inventory Configurations */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
+                  <span className="w-1.5 h-4 bg-amber-500 rounded-full"></span>
+                  <h3 className="text-xs font-black text-slate-400 uppercase tracking-wider">کۆگا و شوێنی کالا</h3>
+                </div>
+
+                <div className="bg-white border border-slate-200/80 rounded-2xl shadow-xs overflow-hidden flex flex-col">
+                  <div className="bg-slate-50/80 border-b border-slate-200/80 px-5 py-3">
+                    <h4 className="text-xs font-black text-slate-750 flex items-center gap-2">
+                      <Package className="text-pink-600" size={16} />
+                      ڕێکخستنی ستۆک و بەردەستبوون
+                    </h4>
+                  </div>
+                  
+                  <div className="p-5">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-5">
+                      {/* Shelf / Alert level */}
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-[11px] font-black text-slate-700 mb-1.5 flex items-center gap-1.5">
+                            <MapPin size={14} className="text-slate-400" /> شوێن یان ژمارەی ڕەفە
+                          </label>
+                          <input
+                            type="text"
+                            value={location}
+                            onChange={(e) => setLocation(e.target.value)}
+                            className="w-full bg-slate-50 hover:bg-slate-100/50 border border-slate-200 rounded-xl px-3.5 py-2.5 focus:bg-white focus:ring-1 focus:ring-pink-550 outline-none text-xs sm:text-sm transition-all"
+                            placeholder="بۆ نموونە: کۆگای سەرەکی - ڕەفەی ۳"
+                          />
                         </div>
 
-                        {/* Inventory */}
-                        <div className="space-y-4 bg-slate-50/50 p-4 rounded-xl border border-slate-200">
-                          <div>
-                            <label className="block text-[11px] font-bold text-slate-700 mb-1.5 flex items-center gap-1.5">
-                              <Box size={14} className="text-pink-500"/> یەک کارتۆن چەند دانەیە؟
-                            </label>
-                            <div className="relative">
-                              <input required type="number" min="1" value={cartonSize} onChange={(e) => setCartonSize(e.target.value)} className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2.5 outline-none focus:border-pink-400 focus:ring-1 focus:ring-pink-400 font-mono font-bold text-pink-700 text-left" dir="ltr" />
-                              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">دانە</span>
-                            </div>
+                        <div>
+                          <label className="block text-[11px] font-black text-slate-705 mb-1.5 flex items-center gap-1.5">
+                            <AlertTriangle size={14} className="text-amber-500" /> کەمترین ڕێژەی ئاگادارکردنەوەی ستۆک
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            value={minStockAlert}
+                            onChange={(e) => setMinStockAlert(e.target.value)}
+                            className="w-full bg-slate-50 hover:bg-slate-100/50 border border-slate-200 rounded-xl px-3.5 py-2.5 focus:bg-white focus:ring-1 focus:ring-amber-500 outline-none font-mono text-left font-bold transition-all text-xs sm:text-sm"
+                            dir="ltr"
+                            placeholder="مەسالەن: 10"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Box config and dynamic calc */}
+                      <div className="space-y-4 bg-slate-50/70 p-4.5 rounded-2xl border border-slate-200">
+                        <div>
+                          <label className="block text-[11px] font-black text-slate-700 mb-1.5 flex items-center gap-1.5">
+                            <Box size={14} className="text-pink-500" /> یەک کارتۆن چەند دانەیە؟
+                          </label>
+                          <div className="relative">
+                            <input
+                              required
+                              type="number"
+                              min="1"
+                              value={cartonSize}
+                              onChange={(e) => setCartonSize(e.target.value)}
+                              className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-3 outline-none focus:border-pink-400 focus:ring-1 focus:ring-pink-400 font-mono font-black text-pink-700 text-left"
+                              dir="ltr"
+                            />
+                            <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-400">دانەی کارتۆنی</span>
                           </div>
-                          
-                          <div className="grid grid-cols-2 gap-3 pt-3 border-t border-slate-200/60">
-                             <div>
-                               <label className="block text-[10px] font-bold text-slate-500 mb-1 text-center">کارتۆن</label>
-                               <input type="number" min="0" value={cartonSize ? Math.floor((parseInt(stock, 10) || 0) / (parseInt(cartonSize, 10) || 1)) : 0} onChange={(e) => { const cVal = parseInt(e.target.value, 10) || 0; const cSize = parseInt(cartonSize, 10) || 1; const pVal = (parseInt(stock, 10) || 0) % cSize; setStock((cVal * cSize + pVal).toString()); }} className="w-full bg-white border border-slate-200 hover:border-pink-300 rounded-lg px-2 py-2 outline-none focus:ring-1 focus:ring-pink-400 font-mono text-center font-bold text-slate-800 text-lg" dir="ltr" />
-                            </div>
-                            <div>
-                               <label className="block text-[10px] font-bold text-slate-500 mb-1 text-center">دانە (بەتاڵ)</label>
-                               <input type="number" min="0" value={cartonSize ? (parseInt(stock, 10) || 0) % (parseInt(cartonSize, 10) || 1) : parseInt(stock, 10) || 0} onChange={(e) => { const pVal = parseInt(e.target.value, 10) || 0; const cSize = parseInt(cartonSize, 10) || 1; const cVal = Math.floor((parseInt(stock, 10) || 0) / cSize); setStock((cVal * cSize + pVal).toString()); }} className="w-full bg-white border border-slate-200 hover:border-pink-300 rounded-lg px-2 py-2 outline-none focus:ring-1 focus:ring-pink-400 font-mono text-center font-bold text-slate-800 text-lg" dir="ltr" />
-                            </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-3 pt-3 border-t border-slate-200/60">
+                          <div>
+                            <label className="block text-[10px] font-black text-slate-450 mb-1.5 text-center">بۆکس / کارتۆن</label>
+                            <input
+                              type="number"
+                              min="0"
+                              value={cartonSize ? Math.floor((parseInt(stock, 10) || 0) / (parseInt(cartonSize, 10) || 1)) : 0}
+                              onChange={(e) => {
+                                const cVal = parseInt(e.target.value, 10) || 0;
+                                const cSize = parseInt(cartonSize, 10) || 1;
+                                const pVal = (parseInt(stock, 10) || 0) % cSize;
+                                setStock((cVal * cSize + pVal).toString());
+                              }}
+                              className="w-full bg-white border border-slate-200 hover:border-pink-300 rounded-xl px-2 py-2 outline-none focus:ring-1 focus:ring-pink-400 font-mono text-center font-black text-slate-800 text-base"
+                              dir="ltr"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-black text-slate-450 mb-1.5 text-center">دانەی ماوە (زیادە)</label>
+                            <input
+                              type="number"
+                              min="0"
+                              value={cartonSize ? (parseInt(stock, 10) || 0) % (parseInt(cartonSize, 10) || 1) : parseInt(stock, 10) || 0}
+                              onChange={(e) => {
+                                const pVal = parseInt(e.target.value, 10) || 0;
+                                const cSize = parseInt(cartonSize, 10) || 1;
+                                const cVal = Math.floor((parseInt(stock, 10) || 0) / cSize);
+                                setStock((cVal * cSize + pVal).toString());
+                              }}
+                              className="w-full bg-white border border-slate-200 hover:border-pink-300 rounded-xl px-2 py-2 outline-none focus:ring-1 focus:ring-pink-400 font-mono text-center font-black text-slate-800 text-base"
+                              dir="ltr"
+                            />
                           </div>
                         </div>
                       </div>
 
-                      <div className="bg-pink-50 border border-pink-100 rounded-xl p-3 flex items-center justify-between">
-                         <span className="text-xs font-bold text-pink-800">کۆی گشتی ستۆک لە کۆگا:</span>
-                         <div className="text-xl font-black font-mono text-pink-700 bg-white px-3 py-1 rounded-lg border border-pink-200 shadow-sm flex items-baseline gap-1">
-                           {stock || 0} <span className="text-[10px] font-bold text-pink-400 font-sans">دانە</span>
-                         </div>
+                    </div>
+
+                    {/* Overall feedback strip */}
+                    <div className="bg-pink-50 border border-pink-100 rounded-xl p-3 flex items-center justify-between shadow-xs">
+                      <span className="text-xs font-black text-pink-805">کۆی گشتی ستۆکی هەژمارکراو:</span>
+                      <div className="text-lg font-black font-mono text-pink-700 bg-white px-3.5 py-1 rounded-lg border border-pink-200 shadow-xs flex items-baseline gap-1 animate-pulse">
+                        {stock || 0} <span className="text-[10px] font-bold text-pink-400 font-sans">دانە</span>
                       </div>
                     </div>
+
                   </div>
                 </div>
               </div>
+
             </div>
 
-            <div className="px-5 sm:px-8 py-4 sm:py-5 bg-white border-t border-slate-100 flex justify-end gap-3 shrink-0 pb-[max(calc(env(safe-area-inset-bottom)+1rem),1rem)] sm:pb-5">
+            {/* Footer Form Actions */}
+            <div className="px-6 py-4.5 bg-slate-50 border-t border-slate-100 flex justify-end gap-3 shrink-0 pb-[max(calc(env(safe-area-inset-bottom)+1rem),1rem)]">
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="px-5 py-2.5 sm:py-3 text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl text-sm font-bold transition-colors w-full sm:w-auto"
+                className="px-5 py-2.5 text-slate-500 bg-white hover:bg-slate-100 border border-slate-200 rounded-xl text-xs sm:text-sm font-black transition-all hover:scale-102 active:scale-95"
               >
                 پاشگەزبوونەوە
               </button>
               <button
                 type="submit"
-                className="px-5 py-2.5 sm:py-3 bg-pink-600 text-white hover:bg-pink-700 rounded-xl text-sm font-bold transition-all w-full sm:w-auto shadow-md shadow-pink-200 shadow-b active:scale-95 flex items-center justify-center gap-2"
+                className="px-6 py-2.5 bg-pink-600 hover:bg-pink-500 text-white rounded-xl text-xs sm:text-sm font-black shadow-md shadow-pink-600/10 transition-all hover:scale-102 active:scale-95 flex items-center gap-1.5 justify-center"
               >
-                <Plus size={18} /> پاشەکەوتکردن
+                <Plus size={16} /> پاشەکەوتکردن
               </button>
             </div>
           </form>
