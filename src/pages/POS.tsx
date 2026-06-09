@@ -48,7 +48,7 @@ interface CartItem extends Product {
   unitType?: 'piece' | 'carton';
 }
 
-export default function POS() {
+export default function POS({ preselectedCustomer, hideLayout }: { preselectedCustomer?: any, hideLayout?: boolean }) {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
 
@@ -60,15 +60,16 @@ export default function POS() {
 
   const [checkoutModalOpen, setCheckoutModalOpen] = useState(false);
   const [customerDetails, setCustomerDetails] = useState({
-    shopName: "",
-    phone: "",
-    address: "",
-    locationUrl: "",
-    lat: null as number | null,
-    lng: null as number | null,
+    shopName: preselectedCustomer?.name || "",
+    phone: preselectedCustomer?.phone || "",
+    address: preselectedCustomer?.address || "",
+    locationUrl: preselectedCustomer?.locationUrl || "",
+    lat: preselectedCustomer?.lat || null as number | null,
+    lng: preselectedCustomer?.lng || null as number | null,
     notes: "",
     paymentType: "debt",
   });
+
   const [saleCompleted, setSaleCompleted] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isLocationPickerOpen, setIsLocationPickerOpen] = useState(false);
@@ -639,8 +640,7 @@ export default function POS() {
 
       await batch.commit();
 
-      setCurrentReceiptId(receiptRef.id);
-      setSaleCompleted(true);
+      resetPOS();
     } catch (error) {
       console.error(error);
       alert("هەڵەیەک ڕوویدا لە کاتی فرۆشتن.");
@@ -652,9 +652,12 @@ export default function POS() {
   const resetPOS = () => {
     setCart([]);
     setCustomerDetails({
-      shopName: "",
-      phone: "",
-      address: "",
+      shopName: preselectedCustomer?.name || "",
+      phone: preselectedCustomer?.phone || "",
+      address: preselectedCustomer?.address || "",
+      locationUrl: preselectedCustomer?.locationUrl || "",
+      lat: preselectedCustomer?.lat || null as number | null,
+      lng: preselectedCustomer?.lng || null as number | null,
       notes: "",
       paymentType: "debt",
     });
@@ -666,10 +669,10 @@ export default function POS() {
   };
 
   return (
-    <div className="flex flex-col lg:flex-row h-full gap-4 lg:gap-6 overflow-hidden relative">
+    <div className={`flex flex-col lg:flex-row h-full gap-4 lg:gap-6 relative overflow-hidden ${hideLayout ? 'pb-20 lg:pb-0' : ''}`}>
       {/* LEFT / MAIN AREA: Products */}
-      <div className="flex-1 flex flex-col bg-slate-50/50 lg:bg-white lg:rounded-[24px] lg:border border-slate-200 shadow-sm overflow-hidden h-full -mx-3 sm:mx-0">
-        <div className="p-3 lg:p-5 border-b border-slate-200/60 bg-white flex flex-col gap-3 shrink-0 shadow-sm z-10 sticky top-0">
+      <div className={`flex-1 flex flex-col bg-slate-50/50 lg:bg-white lg:rounded-[24px] ${hideLayout ? '' : 'lg:border border-slate-200 shadow-sm'} overflow-hidden h-full -mx-3 sm:mx-0`}>
+        <div className={`p-3 lg:p-5 border-b border-slate-200/60 bg-white flex flex-col gap-3 shrink-0 z-10 sticky top-0 ${hideLayout ? 'shadow-none pt-2 lg:pt-3' : 'shadow-sm'}`}>
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full">
             <div className="flex gap-2 w-full">
               <div className="relative flex-1">
@@ -808,36 +811,38 @@ export default function POS() {
       </div>
 
       {/* MOBILE CART BUTTON (Floating) */}
-      <div className="mobile-floating-cart lg:hidden fixed bottom-[calc(max(env(safe-area-inset-bottom),0.5rem)+5.5rem)] left-4 right-4 z-40 print:hidden transition-all">
-        <button
-          onClick={() => setMobileCartOpen(true)}
-          className="w-full bg-slate-900 text-white py-4 rounded-2xl font-bold text-[15px] flex items-center justify-between px-6 shadow-xl shadow-slate-900/20 active:scale-[0.98] transition-all backdrop-blur-md bg-slate-900/95 border border-slate-700/50"
-        >
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <ShoppingCart size={22} className="text-pink-400" />
-              <div className="absolute -top-2 -right-2 w-5 h-5 bg-pink-500 rounded-full flex items-center justify-center text-[10px] font-bold shadow-sm shadow-pink-500/50">
-                {cartItemCount}
+      {cartItemCount > 0 && !checkoutModalOpen && (
+        <div className="mobile-floating-cart lg:hidden fixed bottom-[calc(max(env(safe-area-inset-bottom),0.5rem)+5.5rem)] left-4 right-4 z-[100] print:hidden transition-all">
+          <button
+            onClick={() => setMobileCartOpen(true)}
+            className="w-full bg-slate-900 text-white py-4 rounded-2xl font-bold text-[15px] flex items-center justify-between px-6 shadow-xl shadow-slate-900/40 active:scale-[0.98] transition-all backdrop-blur-md bg-slate-900/95 border border-slate-700/50"
+          >
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <ShoppingCart size={22} className="text-pink-400" />
+                <div className="absolute -top-2 -right-2 w-5 h-5 bg-pink-500 rounded-full flex items-center justify-center text-[10px] font-bold shadow-sm shadow-pink-500/50">
+                  {cartItemCount}
+                </div>
               </div>
+              <span>پارەدان</span>
             </div>
-            <span>بینینی پسوولە</span>
-          </div>
-          <div className="flex flex-col items-end">
-            <span className="font-mono text-lg tracking-tight text-white">
-              {formatCurrency(total)}
-            </span>
-            <span
-              className={`text-[10px] font-bold tracking-widest ${isWholesale ? "text-pink-400" : "text-pink-400"}`}
-            >
-              {isWholesale ? "جوملە" : "تاک"}
-            </span>
-          </div>
-        </button>
-      </div>
+            <div className="flex flex-col items-end">
+              <span className="font-mono text-lg tracking-tight text-white">
+                {formatCurrency(total)}
+              </span>
+              <span
+                className={`text-[10px] font-bold tracking-widest text-pink-400`}
+              >
+                {isWholesale ? "جوملە" : "تاک"}
+              </span>
+            </div>
+          </button>
+        </div>
+      )}
 
       {/* RIGHT AREA: Cart Sidebar (Desktop & Mobile Slider) */}
       <div
-        className={`fixed inset-y-0 right-0 h-[100dvh] lg:h-full z-[60] w-[calc(100vw-3rem)] max-w-[400px] bg-slate-50/50 shadow-2xl transition-transform duration-300 transform ${mobileCartOpen ? "translate-x-0" : "translate-x-full"} lg:relative lg:translate-x-0 lg:w-96 lg:shadow-sm lg:rounded-[24px] lg:border lg:border-slate-200 flex flex-col overflow-hidden lg:max-w-none`}
+        className={`fixed inset-y-0 right-0 h-[100dvh] lg:h-full z-[110] w-[calc(100vw-3rem)] max-w-[400px] bg-slate-50 shadow-2xl transition-transform duration-300 transform ${mobileCartOpen ? "translate-x-0" : "translate-x-full"} lg:relative lg:translate-x-0 lg:w-96 lg:shadow-sm lg:rounded-[24px] lg:border lg:border-slate-200 flex flex-col overflow-hidden lg:max-w-none`}
       >
         <div className="p-4 border-b border-slate-200/60 bg-white flex flex-col gap-3 shrink-0 shadow-sm z-10 w-full pt-[max(env(safe-area-inset-top),1rem)]">
           <div className="flex items-center justify-between w-full text-slate-900 font-bold text-lg">
@@ -1065,7 +1070,10 @@ export default function POS() {
           <div className="flex gap-3 pb-[max(calc(env(safe-area-inset-bottom)+5rem),2rem)] lg:pb-0">
             <button
               disabled={cart.length === 0}
-              onClick={() => setCheckoutModalOpen(true)}
+              onClick={() => {
+                setCheckoutModalOpen(true);
+                setMobileCartOpen(false);
+              }}
               className="flex-1 bg-slate-900 focus-visible:ring-4 focus-visible:ring-pink-500/30 hover:bg-slate-800 disabled:bg-slate-100 disabled:text-slate-400 disabled:shadow-none text-white py-4 rounded-2xl font-bold text-[15px] transition-all flex items-center justify-center gap-2.5 shadow-xl shadow-slate-900/10 active:scale-[0.98]"
             >
               <CreditCard size={20} />
@@ -1405,7 +1413,7 @@ export default function POS() {
                     <CheckCircle2 size={20} />
                     {isProcessing
                       ? "چاوەڕێبە..."
-                      : (editingReceiptId ? "نوێکردنەوەی وەسڵ" : `فرۆشتن (قەرز)`)}
+                      : (editingReceiptId ? "نوێکردنەوەی وەسڵ" : (customerDetails.paymentType === "cash" || customerDetails.paymentType === "نەقد" ? "فرۆشتنی نەقد" : "فرۆشتنی قەرز"))}
                   </button>
                 </div>
               </>

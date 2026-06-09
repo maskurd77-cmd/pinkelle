@@ -25,7 +25,7 @@ import {
 import { db, auth } from "../firebase";
 import { formatCurrency } from "../data";
 
-export default function Receipts() {
+export default function Receipts({ preselectedCustomer, hideLayout }: { preselectedCustomer?: any, hideLayout?: boolean }) {
   const [receipts, setReceipts] = useState<any[]>([]);
   const [debts, setDebts] = useState<any[]>([]);
   const [search, setSearch] = useState("");
@@ -225,6 +225,7 @@ export default function Receipts() {
 
   const filtered = receipts.filter((r) => {
     if (!r) return false;
+    if (preselectedCustomer && r.customerName !== preselectedCustomer.name) return false;
     const matchSearch =
       (r.customerName || "").includes(search) || r.id.includes(search);
     const matchTab = (r.status || "completed") === activeTab;
@@ -246,53 +247,79 @@ export default function Receipts() {
   };
 
   return (
-    <div className="flex flex-col h-full space-y-4">
+    <div className={`flex flex-col h-full ${hideLayout ? '' : 'space-y-4'}`}>
       {/* Normal View (Hidden when printing) */}
-      <div className="print:hidden flex-1 bg-white rounded-[24px] border border-slate-200 shadow-sm flex flex-col overflow-hidden">
-        <div className="px-6 py-5 border-b border-slate-100 flex flex-col xl:flex-row items-start xl:items-center justify-between bg-white gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-pink-50 text-pink-600 rounded-xl flex items-center justify-center">
-              <ReceiptText size={20} />
-            </div>
-            <h2 className="text-xl font-extrabold text-slate-800">وەسڵەکان</h2>
+      <div className={`print:hidden flex-1 bg-white ${hideLayout ? '' : 'rounded-[32px] border border-slate-200 shadow-xl shadow-slate-200/40'} flex flex-col overflow-hidden`}>
+        {!hideLayout && (
+          <div className="px-6 sm:px-8 py-6 border-b border-slate-100 flex flex-col xl:flex-row items-start xl:items-center justify-between bg-white gap-5">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 bg-gradient-to-br from-pink-500 to-pink-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-pink-500/20 shrink-0">
+                  <ReceiptText size={28} />
+                </div>
+                <div>
+                    <h2 className="text-2xl font-black text-slate-800 tracking-tight">وەسڵەکان</h2>
+                    <p className="text-sm font-medium text-slate-500 mt-1">لیست و تۆماری سەرجەم پسوولەکان</p>
+                </div>
+              </div>
 
-            <div className="flex bg-slate-100 p-1 rounded-xl mr-6">
-              <button
-                onClick={() => setActiveTab("completed")}
-                className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${activeTab === "completed" ? "bg-white text-pink-700 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
-              >
-                پسوولە پەسەندکراوەکان
-              </button>
-              <button
-                onClick={() => setActiveTab("pending")}
-                className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${activeTab === "pending" ? "bg-white text-orange-600 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
-              >
-                چاوەڕێکراوەکان
-                {receipts.filter((r) => r.status === "pending").length > 0 && (
-                  <span className="bg-orange-500 text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full leading-none">
-                    {receipts.filter((r) => r.status === "pending").length}
-                  </span>
-                )}
-              </button>
+              <div className="flex bg-slate-100/80 p-1.5 rounded-2xl border border-slate-200/60">
+                <button
+                  onClick={() => setActiveTab("completed")}
+                  className={`px-5 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === "completed" ? "bg-white text-pink-700 shadow-sm border border-slate-200/50" : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50"}`}
+                >
+                  پەسەندکراوەکان
+                </button>
+                <button
+                  onClick={() => setActiveTab("pending")}
+                  className={`px-5 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${activeTab === "pending" ? "bg-white text-orange-600 shadow-sm border border-slate-200/50" : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50"}`}
+                >
+                  چاوەڕێکراو
+                  {receipts.filter((r) => r.status === "pending").length > 0 && (
+                    <span className="bg-gradient-to-r from-orange-500 to-orange-600 text-white text-[10px] min-w-[20px] h-5 px-1.5 flex items-center justify-center rounded-full leading-none shadow-sm font-mono">
+                      {receipts.filter((r) => r.status === "pending").length}
+                    </span>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 w-full xl:w-auto">
+              <div className="relative flex-1 sm:w-[350px]">
+                <Search
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400"
+                  size={18}
+                />
+                <input
+                  type="text"
+                  placeholder="گەڕان بەدوای کڕیار یان ژمارەی وەسڵ..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="w-full bg-slate-50 hover:bg-slate-100 transition-colors border-none rounded-2xl py-3.5 pr-12 pl-4 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500/30 font-medium text-slate-800 placeholder:text-slate-400"
+                />
+              </div>
             </div>
           </div>
+        )}
 
-          <div className="flex items-center gap-3 w-full xl:w-auto">
-            <div className="relative flex-1 sm:w-72 sm:flex-none">
-              <Search
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400"
-                size={16}
-              />
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                type="text"
-                placeholder="گەڕان بۆ ژمارەی وەسڵ یان کڕیار..."
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 pr-10 pl-4 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 transition-all font-medium text-slate-800 shadow-sm"
-              />
-            </div>
+        {hideLayout && (
+          <div className="p-3 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+               <div className="flex bg-white p-1 rounded-xl shadow-sm border border-slate-200/60">
+                <button
+                  onClick={() => setActiveTab("completed")}
+                  className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${activeTab === "completed" ? "bg-pink-50 text-pink-700" : "text-slate-500 hover:text-slate-700"}`}
+                >
+                  پەسەندکراو
+                </button>
+                <button
+                  onClick={() => setActiveTab("pending")}
+                  className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${activeTab === "pending" ? "bg-orange-50 text-orange-700" : "text-slate-500 hover:text-slate-700"}`}
+                >
+                  چاوەڕێکراو
+                </button>
+              </div>
           </div>
-        </div>
+        )}
 
         <div className="flex-1 overflow-auto custom-scrollbar">
           <table className="w-full text-right border-collapse min-w-[900px]">

@@ -23,7 +23,7 @@ interface Sale {
   timestamp: any;
 }
 
-export default function VisitsPage() {
+export default function VisitsPage({ preselectedCustomer, hideLayout }: { preselectedCustomer?: any, hideLayout?: boolean }) {
   const [visits, setVisits] = useState<Visit[]>([]);
   const [receipts, setReceipts] = useState<Sale[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -31,7 +31,11 @@ export default function VisitsPage() {
 
   useEffect(() => {
     const unsubVisits = onSnapshot(query(collection(db, 'visits'), orderBy('startTime', 'desc')), (snapshot) => {
-      setVisits(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Visit)));
+      let v = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Visit));
+      if (preselectedCustomer) {
+         v = v.filter(visit => visit.customerName === preselectedCustomer.name);
+      }
+      setVisits(v);
     });
 
     const unsubReceipts = onSnapshot(query(collection(db, 'receipts'), orderBy('timestamp', 'desc')), (snapshot) => {
@@ -42,7 +46,7 @@ export default function VisitsPage() {
        unsubVisits();
        unsubReceipts();
     };
-  }, []);
+  }, [preselectedCustomer]);
 
   const mandubStats = useMemo(() => {
     const stats: Record<string, {
@@ -103,34 +107,79 @@ export default function VisitsPage() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-slate-50 relative rounded-[24px] lg:border border-slate-200 overflow-hidden" dir="rtl">
+    <div className={`flex flex-col h-full bg-slate-50 relative ${hideLayout ? '' : 'rounded-[24px] lg:border border-slate-200'} overflow-hidden`} dir="rtl">
       {/* Header */}
-      <div className="bg-white px-6 py-5 border-b border-slate-200/60 sticky top-0 z-10 shadow-sm flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 bg-pink-100 rounded-2xl flex items-center justify-center text-pink-600 shadow-inner">
-            <MapPin size={24} />
+      {!hideLayout && (
+        <div className="bg-white px-6 py-5 border-b border-slate-200/60 sticky top-0 z-10 shadow-sm flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 bg-pink-100 rounded-2xl flex items-center justify-center text-pink-600 shadow-inner">
+              <MapPin size={24} />
+            </div>
+            <div>
+              <h1 className="text-2xl font-extrabold text-slate-800">سەردانەکان</h1>
+              <p className="text-sm font-medium text-slate-500">راپۆرتی سەردانی مەندوبەکان بۆ لای کڕیاران</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-extrabold text-slate-800">سەردانەکان</h1>
-            <p className="text-sm font-medium text-slate-500">راپۆرتی سەردانی مەندوبەکان بۆ لای کڕیاران</p>
+          
+          <div className="relative w-full sm:w-auto">
+            <Search className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+            <input 
+              type="text" 
+              placeholder="گەڕان بەدوای کڕیار یان مەندوب..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full sm:w-72 bg-slate-50 hover:bg-slate-100/80 transition-colors border-none rounded-xl pr-10 pl-4 py-3 focus:outline-none focus:ring-2 focus:ring-pink-500/50 font-medium text-sm placeholder:text-slate-400"
+            />
           </div>
         </div>
-        
-        <div className="relative w-full sm:w-auto">
-          <Search className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-          <input 
-            type="text" 
-            placeholder="گەڕان بەدوای کڕیار یان مەندوب..." 
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full sm:w-72 bg-slate-50 hover:bg-slate-100/80 transition-colors border-none rounded-xl pr-10 pl-4 py-3 focus:outline-none focus:ring-2 focus:ring-pink-500/50 font-medium text-sm placeholder:text-slate-400"
-          />
-        </div>
-      </div>
+      )}
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto p-4 sm:p-6 custom-scrollbar bg-slate-50">
-        {!selectedMandub ? (
+      <div className={`flex-1 overflow-y-auto ${hideLayout ? 'p-2' : 'p-4 sm:p-6'} custom-scrollbar bg-slate-50`}>
+        {preselectedCustomer ? (
+           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+               {visits.map(visit => (
+                  <div key={visit.id} className="bg-white border border-slate-200 rounded-2xl p-5 hover:shadow-lg transition-shadow relative">
+                      <div className="flex justify-between items-start mb-4">
+                          <div>
+                              <h3 className="font-extrabold text-slate-800 text-lg mb-1">{visit.mandubName} <span className="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded">مەندوب</span></h3>
+                              <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium font-mono" dir="ltr">
+                                 <Calendar size={12} className="text-pink-400" />
+                                 {formatDateTime(visit.startTime)}
+                              </div>
+                          </div>
+                          {visit.status === 'active' ? (
+                              <span className="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 shadow-sm border border-emerald-200/50">
+                                 <Timer size={14} className="animate-pulse" />
+                                 لەسەرداندایە
+                              </span>
+                          ) : (
+                              <span className="bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full text-[10px] font-bold flex items-center gap-1">
+                                 <CheckCircle2 size={12} />
+                                 تەواوبووە
+                              </span>
+                          )}
+                      </div>
+
+                      <div className="flex items-center justify-between bg-slate-50 px-4 py-3 rounded-xl border border-slate-100">
+                           <div className="flex items-center gap-2 text-sm font-bold text-slate-700">
+                               <Clock size={16} className="text-slate-400" /> مانەوە
+                           </div>
+                           <div className="text-sm font-extrabold text-slate-800 font-mono">
+                               {visit.status === 'active' ? (
+                                   <span className="text-emerald-600 animate-pulse text-xs">چالاک...</span>
+                               ) : formatDuration(visit.durationMinutes)}
+                           </div>
+                      </div>
+                  </div>
+               ))}
+               {visits.length === 0 && (
+                  <div className="col-span-full text-center p-8 bg-white rounded-3xl border border-dashed border-slate-200 shadow-sm text-slate-500 font-bold">
+                     هیچ سەردانێکی بۆ نەکراوە.
+                  </div>
+               )}
+           </div>
+        ) : !selectedMandub ? (
            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {mandubStats.filter(m => m.name.includes(searchTerm)).map(stat => (
                  <div key={stat.name} onClick={() => setSelectedMandub(stat.name)} className="bg-white border flex flex-col border-slate-200 rounded-3xl p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer relative overflow-hidden group">

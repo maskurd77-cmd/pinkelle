@@ -23,7 +23,7 @@ import Placeholder from './pages/Placeholder';
 import AuthPage from './pages/Auth';
 
 export default function App() {
-  const [currentRoute, setCurrentRoute] = useState('pos');
+  const [currentRoute, setCurrentRoute] = useState('customers');
   const [user, setUser] = useState<User | null>(null);
   const [userData, setUserData] = useState<any>(null);
   const [loading, setLoading] = useState(true);

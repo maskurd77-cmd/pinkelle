@@ -55,7 +55,13 @@ body {
   background: #94a3b8;
 }
 
-/* Hide navigation bars and floating buttons on mobile when keyboard is open (input is focused) */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
 body:has(input:focus) .mobile-bottom-tabs,
 body:has(input:focus) .mobile-floating-cart {
   display: none !important;

@@ -25,7 +25,7 @@ import {
 import { DebtReceiptModal } from "../components/DebtReceiptModal";
 import AccountStatementModal from "../components/AccountStatementModal";
 
-export default function DebtPayments({ userRole, userName }: any) {
+export default function DebtPayments({ userRole, userName, preselectedCustomer, hideLayout }: any) {
   const [debts, setDebts] = useState<any[]>([]);
   const [selectedDebt, setSelectedDebt] = useState<any | null>(null);
   const [debtHistory, setDebtHistory] = useState<any[]>([]);
@@ -170,9 +170,11 @@ export default function DebtPayments({ userRole, userName }: any) {
   }, [selectedDebt?.id, debts]);
 
   const filteredDebts = debts.filter(
-    (d) =>
-      !!d.customerName &&
-      d.customerName.includes(search)
+    (d) => {
+        if (preselectedCustomer && d.customerName !== preselectedCustomer.name) return false;
+        return !!d.customerName &&
+        d.customerName.includes(search);
+    }
   );
 
   const handlePay = async (e: React.FormEvent) => {
@@ -265,30 +267,44 @@ export default function DebtPayments({ userRole, userName }: any) {
 
   if (!selectedDebt) {
     return (
-      <div className="h-[calc(100vh-8rem)] flex flex-col gap-6 p-4">
-        <div className="flex flex-col sm:flex-row bg-gradient-to-r from-sky-600 to-indigo-700 rounded-[24px] shadow-lg shadow-indigo-500/20 p-6 items-start sm:items-center justify-between gap-4 text-white">
-           <div>
-              <h2 className="text-xl sm:text-2xl font-black flex items-center gap-2 mb-1">
-                <ScrollText className="text-sky-200" size={28} /> دیوانی کەشف حساب
-              </h2>
-              <p className="text-sky-100/80 text-xs sm:text-sm font-medium">سەرجەم کڕیارە قەرزدارەکان و مێژووی وەرگرتنەوەی پێشینەکانیان</p>
-           </div>
-           <div className="w-full sm:w-1/3">
-              <div className="relative">
-                <Search
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-sky-200"
-                  size={18}
-                />
-                <input
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  type="text"
-                  placeholder="گەڕان بۆ کڕیار بە ناو..."
-                  className="w-full bg-white/10 border border-white/20 rounded-xl py-2.5 pr-10 pl-4 text-sm focus:outline-none focus:ring-2 focus:ring-white/40 focus:border-white transition-all font-medium text-white placeholder:text-sky-200/60"
-                />
-              </div>
-           </div>
-        </div>
+      <div className={`flex flex-col gap-6 ${hideLayout ? 'p-2 min-h-[500px]' : 'h-[calc(100vh-8rem)] p-4'}`}>
+        {!hideLayout && (
+          <div className="flex flex-col sm:flex-row bg-gradient-to-r from-sky-600 to-indigo-700 rounded-[24px] shadow-lg shadow-indigo-500/20 p-6 items-start sm:items-center justify-between gap-4 text-white">
+             <div>
+                <h2 className="text-xl sm:text-2xl font-black flex items-center gap-2 mb-1">
+                  <ScrollText className="text-sky-200" size={28} /> دیوانی کەشف حساب
+                </h2>
+                <p className="text-sky-100/80 text-xs sm:text-sm font-medium">سەرجەم کڕیارە قەرزدارەکان و مێژووی وەرگرتنەوەی پێشینەکانیان</p>
+             </div>
+             <div className="w-full sm:w-1/3">
+                <div className="relative">
+                  <Search
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-sky-200"
+                    size={18}
+                  />
+                  <input
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                    type="text"
+                    placeholder="گەڕان بۆ کڕیار..."
+                    className="w-full bg-white/10 border border-white/20 rounded-xl py-2.5 pr-10 pl-4 text-sm focus:outline-none focus:border-white focus:ring-2 focus:ring-white/20 transition-all font-medium placeholder:text-sky-200/50"
+                  />
+                </div>
+             </div>
+          </div>
+        )}
+        {hideLayout && (
+          <div className="relative mb-2">
+            <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              type="text"
+              placeholder="گەڕان بۆ کڕیار..."
+              className="w-full bg-white border border-slate-200 rounded-2xl py-3 pr-12 pl-4 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/30 font-medium text-slate-800 placeholder:text-slate-400 shadow-sm"
+            />
+          </div>
+        )}
         <div className="flex-1 overflow-auto custom-scrollbar pt-2 px-1">
            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-5">
               {filteredDebts.map((d) => (

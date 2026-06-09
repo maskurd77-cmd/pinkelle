@@ -36,10 +36,10 @@ const navItems = [
   { id: "dashboard", label: "داشبۆرد", icon: LayoutDashboard },
   { id: "menu", label: "مێنیو (Menu)", icon: Store },
   { id: "pos", label: "کاشێر (POS)", icon: ShoppingCart },
+  { id: "customers", label: "کڕیاران", icon: Users },
   { id: "products", label: "کالا", icon: Package },
   { id: "warehouse", label: "کۆگا", icon: Archive },
   { id: "categories", label: "کەتەگۆرییەکان", icon: Tags },
-  { id: "customers", label: "کڕیاران", icon: Users },
   { id: "visits", label: "سەردانەکان", icon: MapPin },
   { id: "companies", label: "شەریکەکان", icon: Users },
   { id: "safes", label: "قاسەکان", icon: Banknote },
@@ -174,8 +174,8 @@ export default function Layout({
               const adminDefaultTabs = [
                 { id: "dashboard", label: "داشبۆرد", icon: LayoutDashboard },
                 { id: "pos", label: "کاشێر", icon: ShoppingCart },
+                { id: "customers", label: "کڕیاران", icon: Users },
                 { id: "products", label: "کالا", icon: Package },
-                { id: "receipts", label: "وەسڵ", icon: ReceiptText },
               ];
               if (userData?.role === "admin") return adminDefaultTabs;
 

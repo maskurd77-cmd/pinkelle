@@ -8,6 +8,7 @@ import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
 import AccountStatementModal from '../components/AccountStatementModal';
+import CustomerProfile from './CustomerProfile';
 
 const skyElleIcon = L.divIcon({
   html: `<div class="flex flex-col items-center drop-shadow-xl">
@@ -173,6 +174,7 @@ export default function Customers() {
   const [tempMandubName, setTempMandubName] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
   const [showAccountStatement, setShowAccountStatement] = useState<Customer | null>(null);
+  const [selectedCustomerForProfile, setSelectedCustomerForProfile] = useState<Customer | null>(null);
 
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
 
@@ -319,6 +321,15 @@ export default function Customers() {
     });
   };
 
+  if (selectedCustomerForProfile) {
+    return (
+       <CustomerProfile 
+           customer={selectedCustomerForProfile} 
+           onBack={() => setSelectedCustomerForProfile(null)} 
+       />
+    );
+  }
+
   return (
     <div className="flex flex-col h-full bg-slate-50 relative rounded-[24px] lg:border border-slate-200 overflow-hidden" dir="rtl">
       {/* Header */}
@@ -391,32 +402,42 @@ export default function Customers() {
                   const totalDebt = customerDebts.reduce((sum, d) => sum + (d.remainingAmount || 0), 0);
 
                   return (
-                    <div key={customer.id} className="bg-white border border-slate-200 rounded-2xl p-5 hover:shadow-lg transition-shadow relative group">
-                      <div className="absolute top-4 left-4 flex gap-1 opacity-100 lg:opacity-0 group-hover:opacity-100 transition-opacity">
-                         <button onClick={() => openEditModal(customer)} className="w-8 h-8 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-500 flex items-center justify-center transition-colors">
+                    <div key={customer.id} className="bg-white border border-slate-200/60 rounded-[28px] p-6 hover:shadow-xl hover:shadow-slate-200/40 transition-all duration-300 relative group flex flex-col">
+                      <div className="absolute top-5 left-5 flex gap-1.5 opacity-100 lg:opacity-0 group-hover:opacity-100 transition-opacity">
+                         <button onClick={() => openEditModal(customer)} className="w-9 h-9 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-500 flex items-center justify-center transition-colors shadow-sm">
                             <Edit2 size={16} />
                          </button>
-                         <button onClick={() => handleDeleteCustomer(customer.id, customer.name)} className="w-8 h-8 rounded-lg bg-red-50 hover:bg-red-100 text-red-500 flex items-center justify-center transition-colors">
+                         <button onClick={() => handleDeleteCustomer(customer.id, customer.name)} className="w-9 h-9 rounded-xl bg-red-50 text-red-500 flex items-center justify-center transition-colors shadow-sm border border-transparent hover:border-red-100 hover:bg-red-100">
                             <Trash2 size={16} />
                          </button>
                       </div>
 
-                      <div className="flex items-center gap-3 mb-4">
-                         <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-pink-500 to-pink-600 flex items-center justify-center text-white font-bold text-lg shadow-sm">
+                      <div className="flex items-center gap-4 mb-5">
+                         <div 
+                           onClick={() => setSelectedCustomerForProfile(customer)}
+                           className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-pink-500 to-pink-600 flex items-center justify-center text-white font-black text-2xl shadow-lg shadow-pink-500/20 cursor-pointer hover:scale-105 transition-transform"
+                           title="کردنەوەی پڕۆفایل"
+                         >
                             {customer.name.charAt(0)}
                          </div>
-                         <div className="pl-16">
-                            <h3 className="font-extrabold text-slate-800 text-lg truncate max-w-full">{customer.name}</h3>
-                            <div className="flex items-center gap-1 mt-0.5 opacity-80">
-                               <Phone size={12} className="text-slate-400" />
-                               <span className="text-xs text-slate-500 font-mono" dir="ltr">{customer.phone || 'بێ ژمارە'}</span>
+                         <div className="flex-1 pr-1 truncate">
+                            <h3 
+                              onClick={() => setSelectedCustomerForProfile(customer)}
+                              className="font-black text-slate-800 text-lg truncate mb-1 cursor-pointer hover:text-pink-600 transition-colors"
+                              title="کردنەوەی پڕۆفایل"
+                            >
+                               {customer.name}
+                            </h3>
+                            <div className="flex items-center gap-1.5 opacity-80">
+                               <Phone size={14} className="text-pink-400" />
+                               <span className="text-[13px] font-bold text-slate-500 font-mono" dir="ltr">{customer.phone || 'بێ ژمارە'}</span>
                             </div>
                          </div>
                       </div>
 
-                      <div className="flex items-center gap-2 mb-4">
-                         <MapPin size={14} className="text-slate-400 shrink-0" />
-                         <span className="text-sm text-slate-500 truncate block w-full flex-1">{customer.address || 'ناونیشان دیارینەکراوە'}</span>
+                      <div className="flex items-center gap-2.5 mb-5 bg-slate-50/50 p-3 rounded-2xl border border-slate-100">
+                         <MapPin size={16} className="text-slate-400 shrink-0" />
+                         <span className="text-xs font-bold text-slate-600 truncate block w-full flex-1">{customer.address || 'ناونیشان دیارینەکراوە'}</span>
                          {customer.locationUrl && (
                              <a href={customer.locationUrl} target="_blank" rel="noopener noreferrer" className="shrink-0 w-8 h-8 flex items-center justify-center bg-pink-50 text-pink-600 rounded-lg hover:bg-pink-100 transition-colors" title="کردنەوەی نەخشە">
                                 <MapIcon size={16} />
@@ -547,7 +568,10 @@ export default function Customers() {
                                     <div className="flex items-center gap-1 text-xs font-mono text-slate-600 mb-2" dir="ltr">
                                        <Phone size={10} /> {customer.phone}
                                     </div>
-                                    <div className="mt-2 text-center">
+                                    <div className="mt-2 text-center flex flex-col gap-1.5 border-t border-slate-100 pt-2">
+                                       <button onClick={() => setSelectedCustomerForProfile(customer)} className="bg-pink-100 text-pink-700 hover:bg-pink-200 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors w-full">
+                                          کردنەوەی پڕۆفایل
+                                       </button>
                                        {activeVisit ? (
                                            <span className="text-xs font-bold text-emerald-600">لەسەرداندایە ({activeVisit.mandubName})</span>
                                        ) : (
@@ -586,32 +610,34 @@ export default function Customers() {
                    <input required type="text" value={newName} onChange={e => setNewName(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-pink-500/50 font-medium" />
                 </div>
                 <div>
-                   <label className="block text-sm font-bold text-slate-700 mb-1.5">ژمارە مۆبایل</label>
-                   <input type="text" value={newPhone} onChange={e => setNewPhone(e.target.value)} dir="ltr" className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-pink-500/50 font-mono text-left" />
-                               <label className="flex items-center justify-between text-sm font-bold text-slate-700 mb-1.5">
-                      <span className="flex items-center gap-1">
-                         <MapIcon size={14} className="text-pink-500" />
-                         لینکی نەخشە (یان شوێن دیاریبکە)
-                      </span>
-                      <div className="flex gap-2">
-                         <button 
-                           type="button" 
-                           onClick={() => setIsLocationPickerOpen(true)}
-                           className="text-xs text-pink-600 bg-pink-50 hover:bg-pink-100 px-2 py-1 rounded-md font-semibold transition-colors"
-                         >
-                            دیاریکردن لە نەخشە
-                         </button>
-                         <button 
-                           type="button" 
-                           onClick={handleGetCurrentLocation}
-                           className="text-xs text-pink-600 bg-pink-50 hover:bg-pink-100 px-2 py-1 rounded-md font-semibold transition-colors"
-                         >
-                            GPS شوێنی ئێستا
-                         </button>
-                      </div>
-                   </label>
-                   <input type="url" value={newLocationUrl} onChange={e => setNewLocationUrl(e.target.value)} dir="ltr" placeholder="https://maps.google.com/?q=..." className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-pink-500/50 font-mono text-left text-sm" />
-                </div>
+                    <label className="block text-sm font-bold text-slate-700 mb-1.5">ژمارە مۆبایل</label>
+                    <input type="text" value={newPhone} onChange={e => setNewPhone(e.target.value)} dir="ltr" className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-pink-500/50 font-mono text-left" />
+                 </div>
+                 <div>
+                    <label className="flex items-center justify-between text-sm font-bold text-slate-700 mb-1.5">
+                       <span className="flex items-center gap-1">
+                          <MapIcon size={14} className="text-pink-500" />
+                          لینکی نەخشە (یان شوێن دیاریبکە)
+                       </span>
+                       <div className="flex gap-2">
+                          <button 
+                            type="button" 
+                            onClick={() => setIsLocationPickerOpen(true)}
+                            className="text-[10px] sm:text-xs text-pink-600 bg-pink-50 hover:bg-pink-100 px-2 flex items-center justify-center py-1 rounded-md font-semibold transition-colors"
+                          >
+                             نەخشە
+                          </button>
+                          <button 
+                            type="button" 
+                            onClick={handleGetCurrentLocation}
+                            className="text-[10px] sm:text-xs text-pink-600 bg-pink-50 hover:bg-pink-100 px-2 flex items-center justify-center py-1 rounded-md font-semibold transition-colors"
+                          >
+                             GPS ئێستا
+                          </button>
+                       </div>
+                    </label>
+                    <input type="url" value={newLocationUrl} onChange={e => setNewLocationUrl(e.target.value)} dir="ltr" placeholder="https://maps.google.com/?q=..." className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-pink-500/50 font-mono text-left text-sm" />
+                 </div>
              </div>
              <div className="px-6 py-5 bg-slate-50 border-t border-slate-100 flex justify-end gap-3 rounded-b-3xl">
                <button type="button" onClick={() => setIsModalOpen(false)} className="px-6 py-2.5 text-slate-600 hover:bg-slate-200 rounded-xl text-sm font-bold transition-colors">

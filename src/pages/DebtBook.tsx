@@ -45,7 +45,7 @@ interface Debt {
   lastPaymentDate?: any;
 }
 
-export default function DebtBook() {
+export default function DebtBook({ preselectedCustomer, hideLayout }: { preselectedCustomer?: any, hideLayout?: boolean }) {
   const [debts, setDebts] = useState<Debt[]>([]);
   const [customers, setCustomers] = useState<any[]>([]);
   const [search, setSearch] = useState("");
@@ -152,7 +152,10 @@ export default function DebtBook() {
   }, []);
 
   const filtered = debts.filter(
-    (d) => d.customerName?.includes(search) || d.phone?.includes(search),
+    (d) => {
+      if (preselectedCustomer && d.customerName !== preselectedCustomer.name) return false;
+      return d.customerName?.includes(search) || d.phone?.includes(search);
+    }
   );
 
   const totalRemaining = useMemo(() => {
@@ -664,41 +667,51 @@ export default function DebtBook() {
   };
 
   return (
-    <div className="flex flex-col h-[100dvh] lg:h-full space-y-4 print:h-auto print:space-y-0 print:bg-white print:block">
+    <div className={`flex flex-col h-[100dvh] lg:-mx-0 ${hideLayout ? 'lg:h-auto' : 'lg:h-full space-y-4'} print:h-auto print:space-y-0 print:bg-white print:block`}>
       {/* Metrics */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 print:hidden">
-        <div className="bg-gradient-to-br from-red-50 to-red-100 p-6 rounded-[24px] border border-red-200 shadow-sm flex items-center justify-between relative overflow-hidden">
-          <div className="absolute -right-6 -top-6 text-red-500/10">
-            <FileClock size={120} />
-          </div>
-          <div className="relative z-10">
-            <p className="text-red-600 text-sm font-bold mb-2">
-              کۆی گشتی قەرزەکان (نەدراوە)
-            </p>
-            <h3 className="text-2xl font-black font-mono text-red-700 tracking-tight flex flex-col gap-1">
-              <span>
-                {formatCurrency(totalRemaining)}
-              </span>
-            </h3>
-          </div>
-          <div className="w-14 h-14 bg-white/60 backdrop-blur-sm rounded-2xl flex items-center justify-center text-red-600 shadow-sm relative z-10">
-            <FileClock size={28} />
+      {!hideLayout && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 print:hidden">
+          <div className="bg-gradient-to-br from-red-50 to-red-100 p-6 rounded-[24px] border border-red-200 shadow-sm flex items-center justify-between relative overflow-hidden">
+            <div className="absolute -right-6 -top-6 text-red-500/10">
+              <FileClock size={120} />
+            </div>
+            <div className="relative z-10">
+              <p className="text-red-600 text-sm font-bold mb-2">
+                کۆی گشتی قەرزەکان (نەدراوە)
+              </p>
+              <h3 className="text-2xl font-black font-mono text-red-700 tracking-tight flex flex-col gap-1">
+                <span>
+                  {formatCurrency(totalRemaining)}
+                </span>
+              </h3>
+            </div>
+            <div className="w-14 h-14 bg-white/60 backdrop-blur-sm rounded-2xl flex items-center justify-center text-red-600 shadow-sm relative z-10">
+              <FileClock size={28} />
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Table Container */}
-      <div className="flex-1 bg-white rounded-[24px] border border-slate-200 shadow-sm flex flex-col overflow-hidden print:hidden">
+      <div className={`flex-1 bg-white ${hideLayout ? 'min-h-[500px]' : 'rounded-[32px] border border-slate-200 shadow-xl shadow-slate-200/40'} flex flex-col overflow-hidden print:hidden`}>
         {/* Table Header */}
-        <div className="px-6 py-5 border-b border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between bg-white gap-4">
-          <div className="flex items-center gap-3">
-            <h2 className="text-xl font-black text-slate-800 flex items-center gap-2">
-              <FileText className="text-rose-600" /> دەفتەری قەرز
-            </h2>
-            <div className="flex bg-slate-100 p-1 rounded-xl mr-4">
+        <div className={`px-6 sm:px-8 py-6 border-b border-slate-100 flex flex-col xl:flex-row items-start xl:items-center ${hideLayout ? 'justify-end' : 'justify-between'} bg-white gap-5`}>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 w-full xl:w-auto">
+            {!hideLayout && (
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 bg-gradient-to-br from-rose-500 to-rose-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-rose-500/20 shrink-0">
+                  <FileText size={28} />
+                </div>
+                <div>
+                   <h2 className="text-2xl font-black text-slate-800 tracking-tight">دەفتەری قەرز</h2>
+                   <p className="text-sm font-medium text-slate-500 mt-1">تۆمار و بەڕێوەبردنی قەرزەکان</p>
+                </div>
+              </div>
+            )}
+            <div className="flex flex-wrap bg-slate-100/80 p-1.5 rounded-2xl border border-slate-200/60 overflow-hidden w-full sm:w-auto">
               <button
                 onClick={() => setActiveTab("debts")}
-                className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${activeTab === "debts" ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+                className={`px-5 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === "debts" ? "bg-white text-slate-800 shadow-sm border border-slate-200/50" : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50"}`}
               >
                 دەفتەر قەرز
               </button>
@@ -706,22 +719,22 @@ export default function DebtBook() {
                 <>
                   <button
                     onClick={() => setActiveTab("pending_tx")}
-                    className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${activeTab === "pending_tx" ? "bg-white text-orange-600 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+                    className={`px-5 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${activeTab === "pending_tx" ? "bg-white text-orange-600 shadow-sm border border-slate-200/50" : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50"}`}
                   >
                     چاوەڕێکراوی پارە
                     {pendingTransactions.length > 0 && (
-                      <span className="bg-orange-500 text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full leading-none">
+                      <span className="bg-gradient-to-r from-orange-500 to-orange-600 text-white text-[10px] min-w-[20px] h-5 px-1.5 flex items-center justify-center rounded-full leading-none shadow-sm font-mono">
                         {pendingTransactions.length}
                       </span>
                     )}
                   </button>
                   <button
                     onClick={() => setActiveTab("pending_returns")}
-                    className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${activeTab === "pending_returns" ? "bg-white text-red-600 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+                    className={`px-5 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${activeTab === "pending_returns" ? "bg-white text-red-600 shadow-sm border border-slate-200/50" : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50"}`}
                   >
                     چاوەڕێکراوی گەڕانەوە
                     {pendingReturns.length > 0 && (
-                      <span className="bg-red-500 text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full leading-none">
+                      <span className="bg-gradient-to-r from-red-500 to-red-600 text-white text-[10px] min-w-[20px] h-5 px-1.5 flex items-center justify-center rounded-full leading-none shadow-sm font-mono">
                         {pendingReturns.length}
                       </span>
                     )}
@@ -731,18 +744,18 @@ export default function DebtBook() {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
-            <div className="relative flex-1 sm:w-64 sm:flex-none">
+          <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto">
+            <div className="relative flex-1 sm:w-[320px]">
               <Search
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400"
-                size={16}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400"
+                size={18}
               />
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 type="text"
                 placeholder="گەڕان بۆ ناوی قەرزار..."
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 pr-10 pl-4 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-pink-500 transition-all font-medium text-slate-800 shadow-sm"
+                className="w-full bg-slate-50 hover:bg-slate-100 transition-colors border-none rounded-2xl py-3.5 pr-12 pl-4 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500/30 font-medium text-slate-800 placeholder:text-slate-400"
                 disabled={activeTab !== "debts"}
               />
             </div>
@@ -750,15 +763,15 @@ export default function DebtBook() {
               <>
                 <button
                   onClick={() => window.print()}
-                  className="px-4 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl text-sm font-bold hover:bg-slate-50 transition-colors whitespace-nowrap flex items-center gap-2 shadow-sm print:hidden"
+                  className="px-5 py-3.5 bg-white border border-slate-200 text-slate-700 rounded-2xl text-sm font-bold hover:bg-slate-50 hover:border-slate-300 transition-all whitespace-nowrap flex items-center gap-2 shadow-sm print:hidden"
                 >
-                  <Printer size={16} /> چاپکردن
+                  <Printer size={18} />
                 </button>
                 <button
                   onClick={() => setNewDebtModalOpen(true)}
-                  className="px-4 py-2.5 bg-rose-600 text-white rounded-xl text-sm font-bold hover:bg-rose-700 transition-all transform active:scale-95 whitespace-nowrap flex items-center gap-2 shadow-md shadow-pink-500/20 print:hidden"
+                  className="px-6 py-3.5 bg-rose-600 text-white rounded-2xl text-sm font-bold hover:bg-rose-700 transition-all transform active:scale-95 whitespace-nowrap flex items-center gap-2 shadow-lg shadow-rose-600/20 print:hidden"
                 >
-                  <UserPlus size={16} /> قەرزی پێشوو زیاد بکە
+                  <UserPlus size={18} /> قەرزی نوێ
                 </button>
               </>
             )}
