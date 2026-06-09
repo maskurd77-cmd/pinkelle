@@ -78,11 +78,13 @@ export default function AccountStatementModal({
             });
             batch.set(doc(collection(db, "safe_transactions")), {
                safeId: safeId,
+               safeName: safeSnap.name || "قاسەی سەرەکی",
                amount: Math.abs(syncAmountDiff),
-               type: syncAmountDiff > 0 ? "in" : "out",
-               origin: "دەستکاری و گواستنەوەی پارەی قەرز",
+               type: syncAmountDiff > 0 ? "deposit" : "withdrawal",
+               currency: "USD",
+               note: `کەشف حساب (دەستکاری دانەوەی قەرز): ${customer.name}${editPaymentNote ? ` - ${editPaymentNote}` : ""}`,
                timestamp: Timestamp.now(),
-               notes: "دەستکاری پێشوو / نەگواستراوە",
+               status: "completed",
             });
          }
       }
@@ -130,11 +132,13 @@ export default function AccountStatementModal({
           });
           batch.set(doc(collection(db, "safe_transactions")), {
              safeId: settings.defaultSafeForDebt,
+             safeName: safeSnap.name || "قاسەی سەرەکی",
              amount: totalAmount,
-             type: "in",
-             origin: "گواستنەوەی پارەی قەرزە کۆنەکان",
+             type: "deposit",
+             currency: "USD",
+             note: `کەشف حساب (گواستنەوەی ${unsynced.length} وەسڵی قەرز بۆ قاسە): ${customer.name}`,
              timestamp: Timestamp.now(),
-             notes: `کۆی ${unsynced.length} وەسڵ`,
+             status: "completed",
           });
        }
        

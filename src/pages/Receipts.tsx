@@ -703,14 +703,14 @@ export function ReceiptPrintLayout({ receipt, debts = [] }: { receipt: any; debt
               </th>
               <th className="border-l border-black px-1 py-1 w-20">
                 <div className="flex flex-col items-center">
-                  <span>نرخ</span>
-                  <span className="text-[9px] text-gray-600 font-normal">السعر</span>
+                  <span>نرخی کارتۆن</span>
+                  <span className="text-[9px] text-gray-600 font-normal">سعر الكارتون</span>
                 </div>
               </th>
               <th className="border-l border-black px-1 py-1 w-18">
                 <div className="flex flex-col items-center">
                   <span>نرخی دانە</span>
-                  <span className="text-[9px] text-gray-600 font-normal">سعر م</span>
+                  <span className="text-[9px] text-gray-600 font-normal">سعر المفرد</span>
                 </div>
               </th>
               <th className="border-l border-black px-1 py-1 w-16">
@@ -747,14 +747,15 @@ export function ReceiptPrintLayout({ receipt, debts = [] }: { receipt: any; debt
 
               const isCarton = item.unitType === 'carton';
               const displayQty = isCarton ? (item.originalQuantity || item.quantity) : item.quantity;
-              const displayUnit = isCarton ? `${item.cartonSize || 1} دانە` : 'دانە';
+              const displayUnit = isCarton ? `${item.cartonSize || 1}` : '1';
               
               // unitPriceObj is the base price per single piece (as inputted or default)
               const basePiecePrice = item.originalUnitPrice || item.unitPrice;
               
-              // The main price column ("نرخ") shows the carton price if carton, otherwise individual piece price
-              const mainPrice = isCarton ? (basePiecePrice * (item.cartonSize || 1)) : basePiecePrice;
-              
+              const cartonPriceFormatted = isCarton 
+                ? formatCurrency(basePiecePrice * (item.cartonSize || 1), itemCurrency).replace(itemCurrency, "")
+                : "-";
+
               // The single piece price column ("نرخی دانە") shows the single piece price in all cases
               const piecePriceFormatted = formatCurrency(basePiecePrice, itemCurrency).replace(itemCurrency, "");
 
@@ -767,23 +768,25 @@ export function ReceiptPrintLayout({ receipt, debts = [] }: { receipt: any; debt
                   <td className="border-l border-black p-1 font-mono text-sm leading-tight align-middle text-center">
                     {displayQty}
                   </td>
-                  <td className="border-l border-black p-1 text-xs leading-tight text-center">
+                  <td className="border-l border-black p-1 font-mono text-sm leading-tight align-center text-center">
                     <span className="font-bold">{displayUnit}</span>
                   </td>
                   <td className="border-l border-black p-1 font-mono text-sm leading-tight align-middle text-center">
                     <div>
-                      {formatCurrency(mainPrice, itemCurrency).replace(itemCurrency, "")}
+                      {cartonPriceFormatted}
                     </div>
                   </td>
-                  <td className="border-l border-black p-1 font-mono text-sm leading-tight align-middle text-center text-slate-800">
-                    {piecePriceFormatted}
+                  <td className="border-l border-black p-1 font-mono text-sm leading-tight align-middle text-center">
+                    <div>
+                      {piecePriceFormatted}
+                    </div>
                   </td>
-                  <td className="border-l border-black p-1 font-mono text-sm text-red-600 leading-none">
+                  <td className="border-l border-black p-1 font-mono text-sm text-red-600 leading-none text-center">
                     {diff > 0 ? diff.toLocaleString() : "0"}
                   </td>
-                  <td className="p-1 font-mono text-sm leading-none">
+                  <td className="p-1 font-mono text-sm leading-none text-center">
                     {formatCurrency(
-                      item.unitPrice * item.quantity,
+                      displayQty * parseInt(displayUnit) * basePiecePrice,
                       itemCurrency,
                     ).replace(itemCurrency, "")}
                   </td>

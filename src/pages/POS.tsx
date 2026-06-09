@@ -311,12 +311,24 @@ export default function POS() {
   const total = Math.max(0, subtotal - discountAmount);
   const cartItemCount = cart.reduce((s, i) => s + getActualPieceQuantity(i), 0);
 
+  const [clientTxId, setClientTxId] = useState(() => crypto.randomUUID());
+
   const handleCheckoutSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (cart.length === 0) return;
+    if (cart.length === 0 || isProcessing) return;
 
     setIsProcessing(true);
     try {
+      const existingReceipt = await getDocs(query(collection(db, "receipts"), where("clientTxId", "==", clientTxId)));
+      if (!existingReceipt.empty) {
+         // Duplicate detected, just return success without saving
+         setIsProcessing(false);
+         setCart([]);
+         setSaleCompleted(true);
+         setClientTxId(crypto.randomUUID());
+         return;
+      }
+
       const batch = writeBatch(db);
 
       const isPending = userRole !== "admin" && userRole !== "accountant";
@@ -400,6 +412,7 @@ export default function POS() {
         discountAmount: discountAmount,
         totalAmount: total, // In invoiceCurrency
         invoiceCurrency: "USD",
+        clientTxId,
         updatedAt: Timestamp.now(),
         ...(isEditing && editingDate ? { timestamp: Timestamp.fromDate(new Date(editingDate)) } : isEditing ? {} : { timestamp: Timestamp.now() })
       });
@@ -415,6 +428,7 @@ export default function POS() {
         isWholesale,
         status: isPending && !isEditing ? "pending" : "completed",
         invoiceNo: nextInvoiceNo,
+        clientTxId,
         items: cart.map((c) => {
           let applicablePrice;
           if (c.editedPrice !== undefined) {
@@ -648,6 +662,7 @@ export default function POS() {
     setCheckoutModalOpen(false);
     setMobileCartOpen(false);
     setCurrentReceiptId(null);
+    setClientTxId(crypto.randomUUID());
   };
 
   return (

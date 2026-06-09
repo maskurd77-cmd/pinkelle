@@ -58,6 +58,7 @@ export default function DebtBook() {
   const [statementCustomer, setStatementCustomer] = useState<any>(null);
   const [actionType, setActionType] = useState<"pay" | "add">("pay");
   const [selectedDebt, setSelectedDebt] = useState<Debt | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentNote, setPaymentNote] = useState("");
 
@@ -328,6 +329,31 @@ export default function DebtBook() {
 
       if (tx.type === "pay") {
         newRemaining -= tx.amount;
+        
+        // Find safe: use tx.safeId if exists, otherwise first safe
+        const safeIdToUse = tx.safeId || safes[0]?.id;
+        if (safeIdToUse && tx.amount > 0) {
+           const safeRef = doc(db, "safes", safeIdToUse);
+           const safeSnap = await getDoc(safeRef);
+           if (safeSnap.exists()) {
+              const safeData = safeSnap.data();
+              batch.update(safeRef, {
+                 balance: (safeData.balance || 0) + tx.amount,
+              });
+              batch.set(doc(collection(db, "safe_transactions")), {
+                 safeId: safeIdToUse,
+                 safeName: safeData.name || "قاسەی سەرەکی",
+                 amount: tx.amount,
+                 type: "deposit",
+                 currency: "USD",
+                 note: `پەسەندکردنی وەرگرتنەوەی قەرز لە კڕیار: ${debt.customerName}`,
+                 timestamp: Timestamp.now(),
+                 status: "completed",
+                 createdBy: userName || "نەزانراو",
+                 referenceId: tx.id,
+              });
+           }
+        }
       } else {
         newRemaining += tx.amount;
         newTotalAmount += tx.amount;
@@ -345,6 +371,7 @@ export default function DebtBook() {
 
       batch.update(doc(db, "debt_transactions", tx.id), {
         status: "completed",
+        syncedToSafe: tx.type === "pay" ? true : undefined,
       });
       await batch.commit();
     } catch (err) {
@@ -354,12 +381,19 @@ export default function DebtBook() {
 
   const handleDebtAction = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedDebt || !paymentAmount) return;
+    if (!selectedDebt || !paymentAmount || isSubmitting) return;
+
+    if (!selectedSafeId && safes.length > 0 && actionType === "pay") {
+       alert("تکایە قاسەیەک دیاری بکە بۆ پارە وەرگرتن");
+       return;
+    }
 
     const amountInputRaw = parseFloat(paymentAmount);
     if (amountInputRaw <= 0) return;
 
-    let newRemaining = selectedDebt.remainingAmount;
+    setIsSubmitting(true);
+    try {
+      let newRemaining = selectedDebt.remainingAmount;
     let newTotalAmount = selectedDebt.amount;
 
     const isPending = userRole !== "admin" && userRole !== "accountant";
@@ -380,9 +414,11 @@ export default function DebtBook() {
              
              await addDoc(collection(db, "safe_transactions"), {
                safeId: selectedSafeId,
-               type: "in",
+               safeName: safeData.name || "قاسەی سەرەکی",
+               type: "deposit",
+               currency: "USD",
                amount: amountInputRaw,
-               note: `وەرگرتنەوەی قەرز لە کڕیار: ${selectedDebt.customerName} - ${paymentNote}`,
+               note: `وەرگرتنەوەی قەرز لە کڕیار: ${selectedDebt.customerName}${paymentNote ? ` - ${paymentNote}` : ""}`,
                timestamp: Timestamp.now(),
                status: "completed",
                createdBy: userName || "نەزانراو",
@@ -424,6 +460,16 @@ export default function DebtBook() {
     setSelectedDebt(null);
     setPaymentAmount("");
     setPaymentNote("");
+    if (isPending) {
+      alert("مامەڵەکە نێردرا بۆ پەسەندکردن.");
+    } else {
+      alert("سەرکەوتوو بوو.");
+    }
+    } catch (err: any) {
+      alert("هەڵە ڕوویدا: " + err.message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleCreateDebt = async (e: React.FormEvent) => {
@@ -1137,8 +1183,9 @@ export default function DebtBook() {
                 پاشگەزبوونەوە
               </button>
               <button
+                disabled={isSubmitting}
                 type="submit"
-                className={`px-6 py-2.5 text-white rounded-xl text-sm font-bold transition-all shadow-sm ${actionType === "pay" ? "bg-emerald-600 hover:bg-emerald-700 shadow-emerald-200" : "bg-red-600 hover:bg-red-700 shadow-red-200"}`}
+                className={`px-6 py-2.5 text-white rounded-xl text-sm font-bold transition-all shadow-sm disabled:opacity-50 ${actionType === "pay" ? "bg-emerald-600 hover:bg-emerald-700 shadow-emerald-200" : "bg-red-600 hover:bg-red-700 shadow-red-200"}`}
               >
                 {actionType === "pay"
                   ? "پەسەندکردنی وەرگرتن"
@@ -1260,8 +1307,9 @@ export default function DebtBook() {
                 پاشگەزبوونەوە
               </button>
               <button
+                disabled={isSubmitting}
                 type="submit"
-                className="px-6 py-2.5 bg-rose-600 text-white hover:bg-rose-700 rounded-xl text-sm font-bold transition-all shadow-sm shadow-pink-200"
+                className="px-6 py-2.5 bg-rose-600 text-white hover:bg-rose-700 rounded-xl text-sm font-bold transition-all shadow-sm shadow-pink-200 disabled:opacity-50"
               >
                 پاشەکەوتکردن
               </button>
@@ -1470,8 +1518,9 @@ export default function DebtBook() {
                   پاشگەزبوونەوە
                 </button>
                 <button
+                  disabled={isSubmitting}
                   type="submit"
-                  className="px-6 py-2.5 bg-orange-500 text-white hover:bg-orange-600 rounded-xl text-sm font-bold transition-all shadow-sm shadow-orange-200"
+                  className="px-6 py-2.5 bg-orange-500 text-white hover:bg-orange-600 rounded-xl text-sm font-bold transition-all shadow-sm shadow-orange-200 disabled:opacity-50"
                 >
                   گۆڕین و پاشەکەوتکردن
                 </button>

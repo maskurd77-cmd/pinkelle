@@ -44,6 +44,7 @@ export default function DebtPayments({ userRole, userName }: any) {
   const [editPaymentAmount, setEditPaymentAmount] = useState("");
   const [editPaymentReduction, setEditPaymentReduction] = useState("");
   const [editPaymentNote, setEditPaymentNote] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleOpenEditTx = (tx: any) => {
     setEditingTx(tx);
@@ -54,7 +55,8 @@ export default function DebtPayments({ userRole, userName }: any) {
 
   const handleSaveEditTx = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingTx || !selectedDebt) return;
+    if (!editingTx || !selectedDebt || isSubmitting) return;
+    setIsSubmitting(true);
     try {
       const newAmount = parseFloat(editPaymentAmount) || 0;
       const newReduction = parseFloat(editPaymentReduction) || 0;
@@ -96,11 +98,13 @@ export default function DebtPayments({ userRole, userName }: any) {
             });
             batch.set(doc(collection(db, "safe_transactions")), {
                safeId: safeId,
+               safeName: safeSnap.name || "قاسەی سەرەکی",
                amount: Math.abs(syncAmountDiff),
-               type: syncAmountDiff > 0 ? "in" : "out",
-               origin: "دەستکاری و گواستنەوەی پارەی قەرز",
+               type: syncAmountDiff > 0 ? "deposit" : "withdrawal",
+               currency: "USD",
+               note: `دانەوەی قەرز (دەستکاری): ${selectedDebt.customerName}${editPaymentNote ? ` - ${editPaymentNote}` : ""}`,
                timestamp: Timestamp.now(),
-               notes: "جیاوازی دەستکاری / نەگواستراوە",
+               status: "completed",
             });
          }
       }
@@ -109,6 +113,8 @@ export default function DebtPayments({ userRole, userName }: any) {
       setEditingTx(null);
     } catch (err: any) {
       alert("Error: " + err.message);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -171,7 +177,7 @@ export default function DebtPayments({ userRole, userName }: any) {
 
   const handlePay = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedDebt || !paymentAmount) return;
+    if (!selectedDebt || !paymentAmount || isSubmitting) return;
 
     const amount = parseFloat(paymentAmount) || 0;
     const reduction = parseFloat(paymentReduction) || 0;
@@ -183,6 +189,7 @@ export default function DebtPayments({ userRole, userName }: any) {
        return;
     }
 
+    setIsSubmitting(true);
     try {
       const batch = writeBatch(db);
       
@@ -224,11 +231,13 @@ export default function DebtPayments({ userRole, userName }: any) {
               });
               batch.set(doc(collection(db, "safe_transactions")), {
                  safeId: safeIdToUse,
+                 safeName: safeSnap.name || "قاسەی سەرەکی",
                  amount: amount,
-                 type: "in",
-                 origin: "پارە وەرگرتنی قەرز",
+                 type: "deposit",
+                 currency: "USD",
+                 note: `دانەوەی قەرز (وەرگرتنەوە): ${selectedDebt.customerName}${paymentNote ? ` - ${paymentNote}` : ""}`,
                  timestamp: Timestamp.now(),
-                 notes: "وەرگرتنی قەرز لە " + selectedDebt.customerName,
+                 status: "completed",
               });
            }
         }
@@ -241,6 +250,8 @@ export default function DebtPayments({ userRole, userName }: any) {
       alert(requireApproval ? "مامەڵەکە نێردرا بۆ پەسەندکردن." : "سەرکەوتوو بوو.");
     } catch (e: any) {
       alert("Error: " + e.message);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -389,7 +400,7 @@ export default function DebtPayments({ userRole, userName }: any) {
                     placeholder="هەر تێبینییەکت هەیە بیپێچەرەوە..."
                   />
                 </div>
-                <button type="submit" className="w-full py-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl font-black text-lg shadow-lg shadow-emerald-500/25 transition-all mt-6 active:scale-[0.98]">
+                <button disabled={isSubmitting} type="submit" className="w-full py-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl font-black text-lg shadow-lg shadow-emerald-500/25 transition-all mt-6 active:scale-[0.98] disabled:opacity-50">
                    تۆمارکردن لە قاسە
                 </button>
              </div>
@@ -599,7 +610,7 @@ export default function DebtPayments({ userRole, userName }: any) {
                  <button type="button" onClick={() => setEditingTx(null)} className="flex-1 px-4 py-3 font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors">
                    پاشگەزبوونەوە
                  </button>
-                 <button type="submit" className="flex-1 px-4 py-3 font-bold text-white bg-amber-600 hover:bg-amber-700 rounded-xl transition-colors">
+                 <button disabled={isSubmitting} type="submit" className="flex-1 px-4 py-3 font-bold text-white bg-amber-600 hover:bg-amber-700 rounded-xl transition-colors disabled:opacity-50">
                    هەڵگرتن
                  </button>
                </div>

@@ -122,269 +122,6 @@ export default function SafesPage({ settings: propSettings }: any) {
     };
   }, []);
 
-  // One-time automatic migration for Himdad Rizgar Hassan safe:
-  // Cleans up previous transactions, keeps only the $281 deposit, and sets safe balance to exactly $281.
-  useEffect(() => {
-    const runMigration = async () => {
-      if (localStorage.getItem("himdad_safe_cleaned_v3")) return;
-      try {
-        console.log("Starting Himdad Rizgar Hassan safe cleanup...");
-        const safesSnap = await getDocs(collection(db, "safes"));
-        let targetSafe: any = null;
-        safesSnap.forEach((doc) => {
-          const data = doc.data();
-          if (
-            data.name &&
-            (data.name.includes("هيمداد") ||
-              data.name.includes("Himdad") ||
-              data.name.includes("hemdad"))
-          ) {
-            targetSafe = { id: doc.id, ...data };
-          }
-        });
-
-        if (!targetSafe) {
-          console.log("No safe found for Himdad");
-          return;
-        }
-
-        console.log("Found Himdad's safe:", targetSafe);
-
-        // Get all transactions
-        const txSnap = await getDocs(collection(db, "safe_transactions"));
-        const toDelete: string[] = [];
-        let found281 = false;
-
-        txSnap.forEach((doc) => {
-          const t = doc.data();
-          const matchesSafe =
-            t.safeId === targetSafe.id ||
-            t.fromSafeId === targetSafe.id ||
-            t.toSafeId === targetSafe.id;
-
-          if (matchesSafe) {
-            // Keep exactly the transaction showing 281 USD
-            if (t.amount === 281 || t.receivedAmount === 281) {
-              found281 = true;
-              console.log("Keeping 281 transaction:", doc.id, t);
-            } else {
-              toDelete.push(doc.id);
-            }
-          }
-        });
-
-        const batch = writeBatch(db);
-
-        // Delete all other historical transactions of this safe
-        for (const id of toDelete) {
-          batch.delete(doc(db, "safe_transactions", id));
-        }
-
-        // If no $281 transaction was found, create a deposit of $281
-        if (!found281) {
-          console.log("281 USD transaction not found. Creating a $281 deposit...");
-          const newTxRef = doc(collection(db, "safe_transactions"));
-          batch.set(newTxRef, {
-            type: "deposit",
-            safeId: targetSafe.id,
-            safeName: targetSafe.name,
-            amount: 281,
-            currency: "USD",
-            note: "پارەی وەرگیراو",
-            status: "completed",
-            timestamp: Timestamp.now(),
-          });
-        }
-
-        // Force update the safe's balance to exactly 281 USD
-        batch.update(doc(db, "safes", targetSafe.id), {
-          balance: 281,
-        });
-
-        await batch.commit();
-        console.log("Himdad's safe successfully cleaned and set to $281.");
-        localStorage.setItem("himdad_safe_cleaned_v3", "true");
-      } catch (err) {
-        console.error("Himdad safe cleanup failed:", err);
-      }
-    };
-
-    runMigration();
-  }, []);
-
-  // One-time AUTO reversion of the ~6000 USD transfer to the safe specified in settings
-  useEffect(() => {
-    const autoRevertSub = async () => {
-      // Check if already auto reverted to prevent loops
-      if (localStorage.getItem("himdad_safe_auto_revert_v5")) return;
-      if (safes.length === 0) return;
-
-      try {
-        // Find Himdad's safe
-        const himdadSafe = safes.find(s => 
-          s.name && (s.name.includes("هيمداد") || s.name.includes("هئمداد") || s.name.includes("Himdad"))
-        );
-        if (!himdadSafe) return;
-
-        // Find settings-specified safe or fallback
-        const settingsSafeId = sysSettings?.defaultSafeForDebt;
-        const targetSafe = safes.find(s => s.id === settingsSafeId) || 
-                           safes.find(s => s.name?.includes("سەرەکی") || s.name?.includes("Main")) || 
-                           safes.find(s => s.id !== himdadSafe.id);
-        
-        if (!targetSafe) return;
-
-        console.log("Auto-reverting 6000 USD from Himdad's safe to settings/default safe:", targetSafe.name);
-
-        const batch = writeBatch(db);
-
-        // Add 6000 USD to settings/default safe
-        batch.update(doc(db, "safes", targetSafe.id), {
-          balance: (targetSafe.balance || 0) + 6000
-        });
-
-        // Ensure Himdad's safe is exactly 281 USD
-        batch.update(doc(db, "safes", himdadSafe.id), {
-          balance: 281
-        });
-
-        // Create transaction record for the reversion (pure safe adjustment, no invoice/debt influence)
-        const revTxRef = doc(collection(db, "safe_transactions"));
-        batch.set(revTxRef, {
-          type: "transfer",
-          fromSafeId: himdadSafe.id,
-          fromSafeName: himdadSafe.name,
-          toSafeId: targetSafe.id,
-          toSafeName: targetSafe.name,
-          amount: 6000,
-          receivedAmount: 6000,
-          currency: "USD",
-          receivedCurrency: "USD",
-          exchangeRate: 1,
-          note: "گەراندنەوەی خۆکاری حەواڵەی پێشووی قاسمی هیمداد بۆ قاسمی ڕێکخستنی سێتینگ",
-          status: "completed",
-          timestamp: Timestamp.now()
-        });
-
-        await batch.commit();
-        localStorage.setItem("himdad_safe_auto_revert_v5", "true");
-        console.log("Himdad safe 6000 USD auto-reversion successfully executed.");
-      } catch (err) {
-        console.error("Auto reversion failed:", err);
-      }
-    };
-
-    if (safes.length > 0 && sysSettings) {
-      autoRevertSub();
-    }
-  }, [safes, sysSettings]);
-
-  const handleHimdadRevert = async () => {
-    if (!himdadDestSafeId) {
-      alert("تکایە قاسەیەکی مەبەست هەڵبژێرە بۆ گەڕاندنەوەی پارەکە.");
-      return;
-    }
-    const amountToReturn = Number(himdadRevertAmount) || 0;
-    if (amountToReturn <= 0) {
-      alert("تکایە بڕی گەڕاندنەوە بە دروستی بنووسە.");
-      return;
-    }
-
-    setIsExecutingHimdadRevert(true);
-    try {
-      // Find Himdad safe
-      let himdadSafe = safes.find(s => 
-        s.name && (s.name.includes("هيمداد") || s.name.includes("هئمداد") || s.name.includes("Himdad"))
-      );
-
-      if (!himdadSafe) {
-        alert("قاسەی هیمداد ڕزگار نەدۆزرایەوە!");
-        setIsExecutingHimdadRevert(false);
-        return;
-      }
-
-      const destSafe = safes.find((s) => s.id === himdadDestSafeId);
-      if (!destSafe) {
-        alert("قاسەی مەبەست بۆ گەڕاندنەوە نەدۆزرایەوە!");
-        setIsExecutingHimdadRevert(false);
-        return;
-      }
-
-      const batch = writeBatch(db);
-
-      // 1. Force Himdad's safe balance to exactly 281 USD
-      batch.update(doc(db, "safes", himdadSafe.id), {
-        balance: 281,
-      });
-
-      // 2. Add the reverted amount to the destination safe
-      batch.update(doc(db, "safes", destSafe.id), {
-        balance: (destSafe.balance || 0) + amountToReturn,
-      });
-
-      // 3. Clear other transactions or create the 281 if missing
-      const txSnap = await getDocs(collection(db, "safe_transactions"));
-      let found281 = false;
-      txSnap.forEach((doc) => {
-        const t = doc.data();
-        const matchesHimdad =
-          t.safeId === himdadSafe.id ||
-          t.fromSafeId === himdadSafe.id ||
-          t.toSafeId === himdadSafe.id;
-
-        if (matchesHimdad) {
-          if (t.amount === 281 || t.receivedAmount === 281) {
-            found281 = true;
-          } else {
-            batch.delete(doc.ref);
-          }
-        }
-      });
-
-      if (!found281) {
-        const newTxRef = doc(collection(db, "safe_transactions"));
-        batch.set(newTxRef, {
-          type: "deposit",
-          safeId: himdadSafe.id,
-          safeName: himdadSafe.name,
-          amount: 281,
-          currency: "USD",
-          note: "پارەی وەرگیراوی جێگیر",
-          status: "completed",
-          timestamp: Timestamp.now(),
-        });
-      }
-
-      // 4. Create a transaction for the reversion
-      const revTxRef = doc(collection(db, "safe_transactions"));
-      batch.set(revTxRef, {
-        type: "transfer",
-        fromSafeId: himdadSafe.id,
-        fromSafeName: himdadSafe.name,
-        toSafeId: destSafe.id,
-        toSafeName: destSafe.name,
-        amount: amountToReturn,
-        receivedAmount: amountToReturn,
-        currency: "USD",
-        receivedCurrency: "USD",
-        exchangeRate: 1,
-        note: `گەڕاندنەوەی حەواڵەی پێشوو بۆ قاسمی سەرەکی بەپێی داوای کڕیار`,
-        status: "completed",
-        timestamp: Timestamp.now(),
-      });
-
-      await batch.commit();
-      setHimdadRevertSuccess(true);
-      localStorage.setItem("himdad_safe_revert_done_v5", "true");
-      alert("حەواڵەکە بە سەرکەوتوویی گەڕێندرایەوە و باڵانسەکان چاککران!");
-    } catch (err: any) {
-      console.error(err);
-      alert("هەڵەیەک ڕوویدا لە کاتی چاککردن: " + err.message);
-    } finally {
-      setIsExecutingHimdadRevert(false);
-    }
-  };
-
   const handleEditTransactionClick = (tx: any) => {
     setEditingTransaction(tx);
     setEditTxAmount(tx.amount.toString());
@@ -1047,12 +784,12 @@ export default function SafesPage({ settings: propSettings }: any) {
                           <ArrowRightLeft size={13} /> گواستنەوە
                         </span>
                       )}
-                      {t.type === "deposit" && (
+                      {(t.type === "deposit" || t.type === "in") && (
                         <span className="text-emerald-600 bg-emerald-50 border border-emerald-100 px-2.5 py-1 rounded-xl inline-flex items-center gap-1 font-bold">
                           <ArrowDownToLine size={13} /> دانان
                         </span>
                       )}
-                      {t.type === "withdrawal" && (
+                      {(t.type === "withdrawal" || t.type === "out") && (
                         <span className="text-red-600 bg-red-50 border border-red-100 px-2.5 py-1 rounded-xl inline-flex items-center gap-1 font-bold">
                           <ArrowUpFromLine size={13} /> دەرهێنان
                         </span>
@@ -1072,7 +809,7 @@ export default function SafesPage({ settings: propSettings }: any) {
                           -{formatCurrency(t.amount, t.currency || "USD")}
                         </span>
                       )}
-                      {t.type === "withdrawal" && (
+                      {(t.type === "withdrawal" || t.type === "out") && (
                         <span className="text-red-500">
                           -{formatCurrency(t.amount, t.currency || "USD")}
                         </span>
@@ -1082,7 +819,7 @@ export default function SafesPage({ settings: propSettings }: any) {
                           -{formatCurrency(t.amount, t.currency || "USD")}
                         </span>
                       )}
-                      {t.type === "deposit" && (
+                      {(t.type === "deposit" || t.type === "in") && (
                         <span className="text-slate-300">-</span>
                       )}
                     </td>
@@ -1099,12 +836,12 @@ export default function SafesPage({ settings: propSettings }: any) {
                           )}
                         </span>
                       )}
-                      {t.type === "deposit" && (
+                      {(t.type === "deposit" || t.type === "in") && (
                         <span className="text-emerald-600">
                           +{formatCurrency(t.amount, t.currency || "USD")}
                         </span>
                       )}
-                      {t.type === "withdrawal" && (
+                      {(t.type === "withdrawal" || t.type === "out") && (
                         <span className="text-slate-300">-</span>
                       )}
                       {t.type === "hawala" && (
@@ -1114,13 +851,13 @@ export default function SafesPage({ settings: propSettings }: any) {
                     <td className="px-6 py-4 text-xs font-extrabold text-slate-600 truncate max-w-[150px]">
                       {t.type === "transfer"
                         ? `لە ${t.fromSafeName} ← ${t.toSafeName}`
-                        : t.safeName}
+                        : t.safeName || safes.find((s: any) => s.id === t.safeId)?.name || "قاسەی سەرەکی"}
                     </td>
                     <td className="px-6 py-4 text-xs font-bold text-slate-500 max-w-[240px]">
                       <div className="truncate">
                         {t.type === "hawala"
-                          ? `بۆ: ${t.receiver} (${t.office}) - عمولە: ${formatCurrency(t.fee || 0, t.currency)} - ${t.note || ""}`
-                          : t.note || "-"}
+                          ? `بۆ: ${t.receiver} (${t.office}) - عمولە: ${formatCurrency(t.fee || 0, t.currency)} - ${t.note || t.notes || ""}`
+                          : t.note || t.notes || "-"}
                       </div>
                       {t.exchangeRate && (
                         <span className="block text-[10px] text-slate-400 mt-0.5 font-bold">
